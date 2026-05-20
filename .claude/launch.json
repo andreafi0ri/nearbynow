@@ -1,0 +1,18 @@
+{
+  "version": "0.0.1",
+  "autoPort": false,
+  "configurations": [
+    {
+      "name": "Expo (Metro bundler)",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["expo", "start", "--clear"],
+      "port": 8081
+    },
+    {
+      "name": "Expo Web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "web", "--", "--port", "8082"],
+      "port": 8082
+    }
+  ]
+}

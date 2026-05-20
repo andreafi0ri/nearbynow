@@ -1,0 +1,55 @@
+<svg width="100%" viewBox="0 0 680 420" role="img" style="" xmlns="http://www.w3.org/2000/svg">
+  <title style="fill:rgb(0, 0, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">Nearby &amp; Now logo</title>
+  <desc style="fill:rgb(0, 0, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">The Nearby &amp; Now app logo — a bold pin icon with a pulse ring, paired with the wordmark in black and gold</desc>
+
+  
+
+  <!-- ── Icon mark ────────────────────────────────── -->
+  <!-- Outer pulse ring -->
+  <circle cx="108" cy="178" r="72" fill="none" stroke="#B8920A" stroke-width="1.5" opacity="0.25" style="fill:none;stroke:rgb(184, 146, 10);color:rgb(255, 255, 255);stroke-width:1.5px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.25;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <circle cx="108" cy="178" r="56" fill="none" stroke="#B8920A" stroke-width="1" opacity="0.45" style="fill:none;stroke:rgb(184, 146, 10);color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.45;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- Pin body -->
+  <path d="M108 108&#10;           C84 108 64 128 64 152&#10;           C64 185 108 238 108 238&#10;           C108 238 152 185 152 152&#10;           C152 128 132 108 108 108 Z" fill="#1A1A1A" stroke="#1A1A1A" stroke-width="0" style="fill:rgb(26, 26, 26);stroke:rgb(26, 26, 26);color:rgb(255, 255, 255);stroke-width:0px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- Pin inner circle — gold -->
+  <circle cx="108" cy="152" r="18" fill="#B8920A" style="fill:rgb(184, 146, 10);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- Small dot centre -->
+  <circle cx="108" cy="152" r="6" fill="#1A1A1A" style="fill:rgb(26, 26, 26);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- Subtle pin shadow line -->
+  <ellipse cx="108" cy="241" rx="14" ry="4" fill="#B8920A" opacity="0.3" style="fill:rgb(184, 146, 10);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.3;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- Dark mode pin override -->
+  
+
+  <!-- ── Wordmark ──────────────────────────────────── -->
+  <!-- "Nearby" -->
+  <text x="200" y="175" style="fill:rgb(244, 244, 246);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:Georgia, serif;font-size:52px;font-weight:700;text-anchor:start;dominant-baseline:auto">Nearby</text>
+
+  <!-- "&" ampersand -->
+  <text x="200" y="225" style="fill:rgb(240, 201, 106);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:Georgia, serif;font-size:40px;font-weight:400;text-anchor:start;dominant-baseline:auto">&amp;</text>
+
+  <!-- "Now" -->
+  <text x="243" y="225" style="fill:rgb(240, 201, 106);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:Georgia, serif;font-size:52px;font-weight:700;text-anchor:start;dominant-baseline:auto">Now</text>
+
+  <!-- ── Divider line ──────────────────────────────── -->
+  <line x1="200" y1="246" x2="560" y2="246" stroke="#B8920A" stroke-width="1.5" style="fill:rgb(0, 0, 0);stroke:rgb(184, 146, 10);color:rgb(255, 255, 255);stroke-width:1.5px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- ── Tagline ───────────────────────────────────── -->
+  <text x="200" y="270" style="fill:rgb(194, 192, 182);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Helvetica Neue&quot;, sans-serif;font-size:13px;font-weight:400;text-anchor:start;dominant-baseline:auto">What's happening near you</text>
+
+  <!-- ── Icon-only version (small, bottom right) ────── -->
+  <g transform="translate(490, 310) scale(0.55)" style="fill:rgb(0, 0, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">
+    <circle cx="50" cy="50" r="46" fill="none" stroke="#B8920A" stroke-width="1.5" opacity="0.3" style="fill:none;stroke:rgb(184, 146, 10);color:rgb(255, 255, 255);stroke-width:1.5px;stroke-linecap:butt;stroke-linejoin:miter;opacity:0.3;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+    <path d="M50 8 C30 8 14 24 14 44 C14 68 50 96 50 96 C50 96 86 68 86 44 C86 24 70 8 50 8 Z" fill="#1A1A1A" style="fill:rgb(26, 26, 26);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+    <circle cx="50" cy="44" r="14" fill="#B8920A" style="fill:rgb(184, 146, 10);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+    <circle cx="50" cy="44" r="5" fill="#1A1A1A" style="fill:rgb(26, 26, 26);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, &quot;system-ui&quot;, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  </g>
+  <text x="522" y="382" text-anchor="middle" style="fill:rgb(194, 192, 182);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Helvetica Neue&quot;, sans-serif;font-size:11px;font-weight:400;text-anchor:middle;dominant-baseline:auto">App icon</text>
+
+  <!-- ── Wordmark-only version label ──────────────────── -->
+  <text x="340" y="382" text-anchor="middle" style="fill:rgb(194, 192, 182);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Helvetica Neue&quot;, sans-serif;font-size:11px;font-weight:400;text-anchor:middle;dominant-baseline:auto">Full lockup</text>
+
+</svg>

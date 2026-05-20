@@ -1,0 +1,51 @@
+{
+  "expo": {
+    "name": "Hearby",
+    "slug": "hearby",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "backgroundColor": "#FFFFFF"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.hearby.app"
+    },
+    "android": {
+      "package": "com.hearby.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#FFFFFF"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/icon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Hearby uses your location to show nearby events and recommendations."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#B8920A",
+          "sounds": [],
+          "androidMode": "default",
+          "androidCollapsedTitle": "Nearby & Now"
+        }
+      ],
+      // expo-notifications requires a rebuild after adding.
+      // Run: npx expo prebuild --clean && npx expo run:ios
+      // The bell button in the feed header will not work in
+      // Expo Go — use a development build for testing.
+    ],
+    "scheme": "hearby"
+  }
+}

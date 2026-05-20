@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(find /Users/andreafioriniello -name \"*local-pulse*\" -o -name \"*app-plan*\" 2>/dev/null | grep -v node_modules | head -20)",
+      "Bash(sed -i '' 's|from \"../../src/hooks/useSavedAreas\"|from \"../../src/context/SavedAreasContext\"|g' '/Users/andreafioriniello/Projects/hearby/app/\\(tabs\\)/feed.tsx' '/Users/andreafioriniello/Projects/hearby/app/\\(tabs\\)/profile.tsx' '/Users/andreafioriniello/Projects/hearby/app/\\(tabs\\)/search.tsx' '/Users/andreafioriniello/Projects/hearby/app/\\(tabs\\)/map.tsx' '/Users/andreafioriniello/Projects/hearby/app/\\(tabs\\)/map.web.tsx')",
+      "Bash(sed -i '' 's|from \"../src/hooks/useSavedAreas\"|from \"../src/context/SavedAreasContext\"|g' /Users/andreafioriniello/Projects/hearby/app/location.tsx)",
+      "Bash(curl -s \"https://www.reddit.com/r/nashville/hot.json?limit=25&raw_json=1\" -H \"User-Agent: hearby-test/1.0\")",
+      "Bash(python3 -c ' *)",
+      "WebFetch(domain:visitlancastercity.com)",
+      "WebFetch(domain:lancasteronline.com)",
+      "WebFetch(domain:lnpnews.com)",
+      "Bash(curl -s \"https://visitlancastercity.com/events/\")",
+      "Bash(curl -s \"https://visitlancastercity.com/events/red-rose-run/\")",
+      "Bash(grep -oE \"\\(January|February|March|April|May|June|July|August|September|October|November|December\\)\\\\s+[0-9]{1,2}[^<]{0,30}[0-9]{4}\")",
+      "Bash(curl -s \"https://visitlancastercity.com/events/international-soccer-watch-party-and-festival/\")",
+      "Bash(curl -s \"https://visitlancastercity.com/events/freedom-jazz-festival/\")",
+      "Bash(curl -s \"https://visitlancastercity.com/events/lancaster-city-for-the-holidays/\")",
+      "Bash(curl -s https://visitlancastercity.com/events/__TRACKED_VAR__/)",
+      "Bash(curl -s --max-time 8 \"https://lancasteronline.com/search/?f=rss&t=article&c=news&l=25&s=start_time&sd=desc\")",
+      "Bash(curl -s --max-time 8 \"https://graph.facebook.com/v19.0/oauth/access_token?client_id=test&client_secret=test&grant_type=client_credentials\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('expo',{}\\).get\\('plugins',[]\\), indent=2\\)\\)\")"
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+node_modules/
+.expo/
+dist/
+web-build/
+*.log
+
+# Local env — never commit real API keys
+.env
+.env.local
+.env.*.local

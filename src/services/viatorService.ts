@@ -59,6 +59,14 @@ function getApiKey(): string {
 }
 
 function buildHeaders(): Record<string, string> {
+  if (Platform.OS === "web") {
+    // On web, requests go through the /api/viator proxy which adds the API key
+    // server-side. Sending it from the browser is unnecessary.
+    return {
+      "Content-Type": "application/json",
+      "Accept":       "application/json;version=2.0",
+    };
+  }
   return {
     "exp-api-key":     getApiKey(),
     "Accept-Language": "en-US",
@@ -321,12 +329,17 @@ export async function searchViatorExperiences(
   area: string,
   _coords?: { lat: number; lng: number },
 ): Promise<EventItem[]> {
-  const apiKey = getApiKey();
-  console.log(`[Viator] searchViatorExperiences called for "${area}" — key: ${apiKey ? apiKey.slice(0, 8) + "…" : "MISSING"}`);
-
-  if (!apiKey) {
-    console.warn("[Viator] ❌ No API key — set EXPO_PUBLIC_VIATOR_API_KEY in .env and restart Metro with --clear");
-    return [];
+  if (Platform.OS === "web") {
+    // Web: API calls route through the /api/viator proxy (auth is handled server-side).
+    // The EXPO_PUBLIC_VIATOR_API_KEY env var is not needed in the client bundle.
+    console.log(`[Viator] searchViatorExperiences called for "${area}" — via server proxy`);
+  } else {
+    const apiKey = getApiKey();
+    console.log(`[Viator] searchViatorExperiences called for "${area}" — key: ${apiKey ? apiKey.slice(0, 8) + "…" : "MISSING"}`);
+    if (!apiKey) {
+      console.warn("[Viator] ❌ No API key — set EXPO_PUBLIC_VIATOR_API_KEY in .env and restart Metro with --clear");
+      return [];
+    }
   }
 
   // Step 1 — Resolve area to a Viator destination ID

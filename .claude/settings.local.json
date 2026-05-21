@@ -21,7 +21,9 @@
       "Bash(curl -s --max-time 8 \"https://lancasteronline.com/search/?f=rss&t=article&c=news&l=25&s=start_time&sd=desc\")",
       "Bash(curl -s --max-time 8 \"https://graph.facebook.com/v19.0/oauth/access_token?client_id=test&client_secret=test&grant_type=client_credentials\")",
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('expo',{}\\).get\\('plugins',[]\\), indent=2\\)\\)\")",
-      "Bash(git -C /Users/andreafioriniello/Projects/nearbynow ls-files dist/index.html)"
+      "Bash(git -C /Users/andreafioriniello/Projects/nearbynow ls-files dist/index.html)",
+      "Bash(git -C /Users/andreafioriniello/Projects/nearbynow ls-files .env)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); p=d.get\\('products',{}\\); r=p.get\\('results',[]\\) if isinstance\\(p,dict\\) else p; print\\('top-level keys:', list\\(d.keys\\(\\)\\)\\); print\\('products type:', type\\(p\\).__name__\\); print\\('results count:', len\\(r\\)\\); print\\('first product keys:', list\\(r[0].keys\\(\\)\\) if r else 'NONE'\\)\")"
     ]
   }
 }

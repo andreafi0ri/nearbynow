@@ -6,6 +6,7 @@
 // Affiliate dashboard: https://www.viator.com/partner/reports
 // API docs: https://docs.viator.com/partner-api/merchant/
 
+import { Platform } from "react-native";
 import { EventItem } from "../data/mockEvents";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -44,7 +45,11 @@ type ViatorProduct = {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const BASE_URL = "https://api.viator.com/partner";
+// On web the browser blocks cross-origin requests to api.viator.com (CORS).
+// The Vercel Edge Function at /api/viator/* proxies them server-side instead.
+const BASE_URL = Platform.OS === "web"
+  ? "/api/viator"
+  : "https://api.viator.com/partner";
 
 // Read lazily inside each function — module-level constants bake the value in at
 // Metro bundle time. Reading inside the function ensures the live .env value is

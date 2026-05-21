@@ -1,5 +1,19 @@
 {
   "expo": {
+    "name": "Nearby & Now",
+    "slug": "nearbynow",
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/nearbynow-app-icon.png",
+      "name": "Nearby & Now",
+      "shortName": "Nearby & Now",
+      "description": "Discover what's happening near you — local events, things to do, and recommendations all in one feed.",
+      "backgroundColor": "#FFFFFF",
+      "themeColor": "#B8920A"
+    }
+  }
+}{
+  "expo": {
     "name": "Hearby",
     "slug": "hearby",
     "version": "1.0.0",

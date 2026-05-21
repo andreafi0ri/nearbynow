@@ -59,6 +59,23 @@ function CalendarModal({ item, onClose, T }: { item: EventItem; onClose: () => v
     setTimeout(onClose, 1200);
   };
 
+  // Web: trigger a browser download of the .ics file
+  const handleICalWeb = () => {
+    const ics = buildICS(item);
+    const blob = new Blob([ics], { type: "text/calendar" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = item.title.replace(/\s+/g, "-") + ".ics";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setAdded("ical");
+    setTimeout(onClose, 1200);
+  };
+
+  // Native: write to cache then open system share sheet
   const handleICal = async () => {
     const ics = buildICS(item);
     const filename = item.title.replace(/\s+/g, "-") + ".ics";
@@ -66,7 +83,6 @@ function CalendarModal({ item, onClose, T }: { item: EventItem; onClose: () => v
     await FileSystem.writeAsStringAsync(path, ics, {
       encoding: FileSystem.EncodingType.UTF8,
     });
-    // Both iOS and Android — share sheet handles it
     await Sharing.shareAsync(path, {
       mimeType: "text/calendar",
       dialogTitle: "Add to Calendar",
@@ -98,18 +114,19 @@ function CalendarModal({ item, onClose, T }: { item: EventItem; onClose: () => v
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={handleICal} activeOpacity={0.8}
-            style={[styles.calOption, { backgroundColor: added==="ical" ? T.green+"15" : T.bgCardHi, borderColor: added==="ical" ? T.green : T.border, shadowColor: added==="ical" ? T.green : T.border }]}>
-            <View style={styles.calIconWrap}><Text style={styles.calIcon}>🍎</Text></View>
-            <View>
-              <Text style={[styles.calOptionTitle, { color: added==="ical" ? T.green : T.text }]}>
-                {added==="ical" ? "✓ Added to Calendar" : "Apple Calendar (iCal)"}
-              </Text>
-              <Text style={[styles.calOptionSub, { color: T.muted }]}>
-                {Platform.OS === "ios" ? "Opens Calendar app directly" : "Downloads .ics file"}
-              </Text>
-            </View>
-          </TouchableOpacity>
+          {/* iCal download — web only. Native uses expo-sharing (system share sheet). */}
+          {Platform.OS === "web" && (
+            <TouchableOpacity onPress={handleICalWeb} activeOpacity={0.8}
+              style={[styles.calOption, { backgroundColor: added==="ical" ? T.green+"15" : T.bgCardHi, borderColor: added==="ical" ? T.green : T.border, shadowColor: added==="ical" ? T.green : T.border }]}>
+              <View style={styles.calIconWrap}><Text style={styles.calIcon}>🍎</Text></View>
+              <View>
+                <Text style={[styles.calOptionTitle, { color: added==="ical" ? T.green : T.text }]}>
+                  {added==="ical" ? "✓ Downloaded!" : "Apple Calendar (iCal)"}
+                </Text>
+                <Text style={[styles.calOptionSub, { color: T.muted }]}>Downloads .ics file</Text>
+              </View>
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity onPress={onClose} style={[styles.cancelBtn, { borderColor: T.borderSub }]}>
             <Text style={[styles.cancelText, { color: T.muted }]}>Cancel</Text>

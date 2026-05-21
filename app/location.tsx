@@ -33,6 +33,40 @@ export default function LocationScreen() {
   const handleUseLocation = async () => {
     setLoading(true);
     setError("");
+
+    if (Platform.OS === "web") {
+      // Web: expo-location doesn't work — fall back to browser geolocation API
+      if (!navigator?.geolocation) {
+        setError("Geolocation is not supported by your browser. Please enter your area manually.");
+        setManual(true);
+        setLoading(false);
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          try {
+            const { latitude, longitude } = position.coords;
+            const areaName = (await reverseGeocode(latitude, longitude)) || "Your area";
+            await AsyncStorage.setItem("hearby_lat", String(latitude));
+            await AsyncStorage.setItem("hearby_lng", String(longitude));
+            await AsyncStorage.setItem("hearby_coords_area", areaName);
+            await saveAndProceed(areaName);
+          } catch {
+            setError("Couldn't detect location. Please enter your area manually.");
+            setManual(true);
+          }
+          setLoading(false);
+        },
+        () => {
+          setError("Couldn't detect location. Please enter your area manually.");
+          setManual(true);
+          setLoading(false);
+        },
+      );
+      return; // loading state is resolved inside the callbacks above
+    }
+
+    // Native: use expo-location
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {

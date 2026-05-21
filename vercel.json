@@ -1,4 +1,17 @@
 {
+  "cleanUrls": true,
+  "framework": null,
+  "rewrites": [
+    {
+      "source": "/_expo/static/js/:path*",
+      "destination": "/_expo/static/js/:path*"
+    },
+    {
+      "source": "/:path*",
+      "destination": "/"
+    }
+  ]
+}{
   "buildCommand": "expo export -p web",
   "outputDirectory": "dist",
   "devCommand": "expo",

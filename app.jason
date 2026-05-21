@@ -1,0 +1,11 @@
+{
+     "expo": {
+       "name": "Nearby & Now",
+       "slug": "nearby-and-now",
+       "version": "1.0.0",
+       "web": {
+         "bundler": "metro",
+         "output": "static"
+       }
+     }
+   }

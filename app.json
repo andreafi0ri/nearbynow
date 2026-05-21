@@ -2,6 +2,23 @@
   "expo": {
     "name": "Nearby & Now",
     "slug": "nearbynow",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/nearbynow-app-icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "backgroundColor": "#FFFFFF"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.nearbynow.app"
+    },
+    "android": {
+      "package": "com.nearbynow.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#FFFFFF"
+      }
+    },
     "web": {
       "bundler": "metro",
       "favicon": "./assets/nearbynow-app-icon.png",
@@ -10,56 +27,31 @@
       "description": "Discover what's happening near you — local events, things to do, and recommendations all in one feed.",
       "backgroundColor": "#FFFFFF",
       "themeColor": "#B8920A"
-    }
-  }
-}{
-  "expo": {
-    "name": "Hearby",
-    "slug": "hearby",
-    "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "automatic",
-    "splash": {
-      "backgroundColor": "#FFFFFF"
-    },
-    "ios": {
-      "supportsTablet": false,
-      "bundleIdentifier": "com.hearby.app"
-    },
-    "android": {
-      "package": "com.hearby.app",
-      "adaptiveIcon": {
-        "backgroundColor": "#FFFFFF"
-      }
-    },
-    "web": {
-      "bundler": "metro",
-      "favicon": "./assets/icon.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Hearby uses your location to show nearby events and recommendations."
+          "locationAlwaysAndWhenInUsePermission": "Nearby & Now uses your location to show nearby events and recommendations."
         }
       ],
       [
         "expo-notifications",
         {
-          "icon": "./assets/icon.png",
+          "icon": "./assets/nearbynow-app-icon.png",
           "color": "#B8920A",
           "sounds": [],
           "androidMode": "default",
           "androidCollapsedTitle": "Nearby & Now"
         }
-      ],
-      // expo-notifications requires a rebuild after adding.
-      // Run: npx expo prebuild --clean && npx expo run:ios
-      // The bell button in the feed header will not work in
-      // Expo Go — use a development build for testing.
+      ]
     ],
-    "scheme": "hearby"
+    "scheme": "nearbynow",
+    "extra": {
+      "eas": {
+        "projectId": "your-eas-project-id"
+      }
+    }
   }
 }

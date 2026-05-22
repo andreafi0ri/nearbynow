@@ -1,6 +1,6 @@
 {
   "framework": null,
-  "buildCommand": "npx expo export -p web",
+  "buildCommand": "npx expo export -p web && node scripts/inject-html-tags.mjs",
   "outputDirectory": "dist",
   "functions": {
     "api/viator-search.js":   { "memory": 128, "maxDuration": 15 },

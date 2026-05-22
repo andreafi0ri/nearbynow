@@ -23,7 +23,21 @@
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('expo',{}\\).get\\('plugins',[]\\), indent=2\\)\\)\")",
       "Bash(git -C /Users/andreafioriniello/Projects/nearbynow ls-files dist/index.html)",
       "Bash(git -C /Users/andreafioriniello/Projects/nearbynow ls-files .env)",
-      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); p=d.get\\('products',{}\\); r=p.get\\('results',[]\\) if isinstance\\(p,dict\\) else p; print\\('top-level keys:', list\\(d.keys\\(\\)\\)\\); print\\('products type:', type\\(p\\).__name__\\); print\\('results count:', len\\(r\\)\\); print\\('first product keys:', list\\(r[0].keys\\(\\)\\) if r else 'NONE'\\)\")"
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); p=d.get\\('products',{}\\); r=p.get\\('results',[]\\) if isinstance\\(p,dict\\) else p; print\\('top-level keys:', list\\(d.keys\\(\\)\\)\\); print\\('products type:', type\\(p\\).__name__\\); print\\('results count:', len\\(r\\)\\); print\\('first product keys:', list\\(r[0].keys\\(\\)\\) if r else 'NONE'\\)\")",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(curl -s -X POST https://nearbyandnow.com/api/viator/search/freetext -H 'Content-Type: application/json' -H 'Accept: application/json;version=2.0' -d '{\"searchTerm\":\"New York City\",\"searchTypes\":[{\"searchType\":\"DESTINATIONS\",\"pagination\":{\"start\":1,\"count\":1}}],\"currency\":\"USD\"}')",
+      "Bash(python3 -m json.tool)",
+      "Bash(curl -sv -X POST https://nearbyandnow.com/api/viator/search/freetext -H 'Content-Type: application/json' -H 'Accept: application/json;version=2.0' -d '{\"searchTerm\":\"New York City\",\"searchTypes\":[{\"searchType\":\"DESTINATIONS\",\"pagination\":{\"start\":1,\"count\":1}}],\"currency\":\"USD\"}')",
+      "Bash(git push *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" -X POST \"https://nearbyandnow.com/api/viator/search/freetext\" -H \"Content-Type: application/json\" -d '{}')",
+      "Bash(rm \"/Users/andreafioriniello/Projects/nearbynow/api/viator/[...path].ts\")",
+      "Bash(curl -sv -X POST https://nearbyandnow.com/api/viator/search/freetext -H 'Content-Type: application/json' -d '{}')",
+      "Bash(git -C /Users/andreafioriniello/Projects/nearbynow add api/ping.js)",
+      "Bash(git -C /Users/andreafioriniello/Projects/nearbynow commit -m \"Add /api/ping health check to diagnose function deployment\")",
+      "Bash(git -C /Users/andreafioriniello/Projects/nearbynow push origin main)",
+      "Bash(git -C /Users/andreafioriniello/Projects/nearbynow add -A)",
+      "Bash(git -C /Users/andreafioriniello/Projects/nearbynow status)"
     ]
   }
 }

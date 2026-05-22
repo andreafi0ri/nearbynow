@@ -45,11 +45,14 @@ type ViatorProduct = {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-// On web the browser blocks cross-origin requests to api.viator.com (CORS).
-// The Vercel Edge Function at /api/viator/* proxies them server-side instead.
-const BASE_URL = Platform.OS === "web"
-  ? "/api/viator"
-  : "https://api.viator.com/partner";
+const NATIVE_BASE = "https://api.viator.com/partner";
+
+// On web requests go through dedicated Vercel proxy functions (CORS workaround).
+function viatorURL(path: "search/freetext" | "products/search"): string {
+  if (Platform.OS !== "web") return `${NATIVE_BASE}/${path}`;
+  if (path === "search/freetext") return "/api/viator-search";
+  return "/api/viator-products";
+}
 
 // Read lazily inside each function — module-level constants bake the value in at
 // Metro bundle time. Reading inside the function ensures the live .env value is
@@ -142,7 +145,7 @@ async function getDestinationId(area: string): Promise<number | null> {
 
   try {
     // Pagination must be nested inside searchTypes, not at the top level
-    const data = await viatorFetch(`${BASE_URL}/search/freetext`, {
+    const data = await viatorFetch(viatorURL("search/freetext"), {
       searchTerm:  area,
       searchTypes: [{ searchType: "DESTINATIONS", pagination: { start: 1, count: 1 } }],
       currency:    "USD",
@@ -351,7 +354,7 @@ export async function searchViatorExperiences(
 
   // Step 2 — Search experiences
   try {
-    const data = await viatorFetch(`${BASE_URL}/products/search`, {
+    const data = await viatorFetch(viatorURL("products/search"), {
       filtering: {
         destination: String(destId),
         rating:      { from: 3 },

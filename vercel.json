@@ -1,6 +1,13 @@
 {
+  "framework": null,
   "buildCommand": "npx expo export -p web",
   "outputDirectory": "dist",
+  "functions": {
+    "api/viator/[...path].js": {
+      "memory": 128,
+      "maxDuration": 15
+    }
+  },
   "rewrites": [
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]

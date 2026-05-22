@@ -353,8 +353,8 @@ export async function searchViatorExperiences(
   try {
     const data = await viatorFetch(`${BASE_URL}/products/search`, {
       filtering: {
-        destination: destId,          // must be an integer, not a string
-        rating:      { minimum: 3.5 },
+        destination: String(destId),
+        rating:      { from: 3 },
       },
       sorting: {
         sort:  "TRAVELER_RATING",

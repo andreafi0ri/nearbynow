@@ -1,8 +1,16 @@
-// app/(tabs)/map.tsx — native only; web uses map.web.tsx
+// app/(tabs)/map.tsx — native only; web uses map.web.tsx (Expo Router platform extension)
+//
+// @rnmapbox/maps requires a development build — it will NOT work in Expo Go.
+// Run: npx expo run:ios  (or run:android) for native testing.
+// Web fallback is handled automatically via map.web.tsx.
+//
+// Mapbox free tier: 25,000 MAU/month on mobile — monitor usage at
+// https://account.mapbox.com
+
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   View, Text, TouchableOpacity, ScrollView, TextInput, Platform,
-  StyleSheet, ViewStyle, TextStyle,
+  StyleSheet, ViewStyle, TextStyle, Linking,
 } from "react-native";
 import MapboxGL from "@rnmapbox/maps";
 import * as Location from "expo-location";
@@ -14,6 +22,7 @@ import { useSavedAreas } from "../../src/context/SavedAreasContext";
 import { EventItem } from "../../src/data/mockEvents";
 import { EventCard } from "../../src/components/EventCard";
 import { getFeed } from "../../src/services/feedService";
+import { searchViatorExperiences } from "../../src/services/viatorService";
 import { FILTERS, SOURCE_FILTERS, FilterOption } from "../../src/config/filterConfig";
 import { SEARCH_CONFIG } from "../../src/config/searchConfig";
 import { LocationInput } from "../../src/components/LocationInput";
@@ -50,17 +59,18 @@ export default function MapScreen() {
 
   const cameraRef = useRef<MapboxGL.Camera>(null);
 
-  const [feedItems, setFeedItems]     = useState<EventItem[]>([]);
-  const [loading, setLoading]         = useState(false);
-  const [selected, setSelected]       = useState<EventItem | null>(null);
+  const [feedItems, setFeedItems]       = useState<EventItem[]>([]);
+  const [viatorItems, setViatorItems]   = useState<EventItem[]>([]);
+  const [loading, setLoading]           = useState(false);
+  const [selected, setSelected]         = useState<EventItem | null>(null);
   const [activeFilter, setActiveFilter] = useState("All");
   const [activeSources, setActiveSources] = useState<Set<string>>(new Set());
-  const [sourcesOpen, setSourcesOpen] = useState(false);
-  const [searchVal, setSearchVal]     = useState("");
-  const [drawMode, setDrawMode]     = useState(false);
-  const [drawPoints, setDrawPoints] = useState<DrawPoint[]>([]);
-  const [drawClosed, setDrawClosed] = useState(false);
-  const [centre, setCentre]         = useState<[number, number]>(DEFAULT_COORD);
+  const [sourcesOpen, setSourcesOpen]   = useState(false);
+  const [searchVal, setSearchVal]       = useState("");
+  const [drawMode, setDrawMode]         = useState(false);
+  const [drawPoints, setDrawPoints]     = useState<DrawPoint[]>([]);
+  const [drawClosed, setDrawClosed]     = useState(false);
+  const [centre, setCentre]             = useState<[number, number]>(DEFAULT_COORD);
   const [radiusMetres, setRadiusMetres] = useState<number>(SEARCH_CONFIG.DEFAULT_RADIUS_METRES);
 
   const [dateOpen, setDateOpen]     = useState(false);
@@ -70,8 +80,9 @@ export default function MapScreen() {
 
   const mapStyle = scheme === "dark"
     ? "mapbox://styles/mapbox/dark-v11"
-    : "mapbox://styles/mapbox/light-v11";
+    : "mapbox://styles/mapbox/streets-v12";
 
+  // ── Load feed + fly camera when active area changes ─────────────────────────
   useEffect(() => {
     if (!activeArea) return;
     setSearchVal(activeArea);
@@ -86,22 +97,17 @@ export default function MapScreen() {
       let coords: { lat: number; lng: number } | undefined;
 
       if (latStr && lngStr && coordsArea === activeArea) {
-        // Stored coords match this area — use them directly
         coords = { lat: parseFloat(latStr), lng: parseFloat(lngStr) };
       } else {
-        // No matching coords — geocode the area name via Mapbox
         try {
           const suggestions = await searchLocations(activeArea);
           if (suggestions.length > 0) {
             coords = { lat: suggestions[0].lat, lng: suggestions[0].lng };
-            // Persist so future loads skip the geocode round-trip
             await AsyncStorage.setItem("hearby_lat", String(coords.lat));
             await AsyncStorage.setItem("hearby_lng", String(coords.lng));
             await AsyncStorage.setItem("hearby_coords_area", activeArea);
           }
-        } catch {
-          // Geocode failed — map stays at current centre, feed still loads
-        }
+        } catch { /* feed loads without coords */ }
       }
 
       if (coords) {
@@ -116,6 +122,21 @@ export default function MapScreen() {
       .catch(() => setFeedItems([]))
       .finally(() => setLoading(false));
   }, [activeArea]);
+
+  // ── Fetch Viator pins separately so they appear on the map ─────────────────
+  useEffect(() => {
+    const area = activeArea || searchVal;
+    if (!area) return;
+
+    const [centerLng, centerLat] = centre;
+    const coords = (centerLat !== SEARCH_CONFIG.DEFAULT_LAT || centerLng !== SEARCH_CONFIG.DEFAULT_LNG)
+      ? { lat: centerLat, lng: centerLng }
+      : undefined;
+
+    searchViatorExperiences(area, coords)
+      .then(results => setViatorItems(results.filter(e => e.lat != null && e.lng != null)))
+      .catch(() => setViatorItems([]));
+  }, [activeArea, centre]);
 
   const handleAreaSelect = async (s: LocationSuggestion) => {
     setSearchVal(s.shortName);
@@ -164,22 +185,32 @@ export default function MapScreen() {
     return next;
   });
 
-  const visible = useMemo(() => feedItems.filter(e => {
+  // All items available for the map (feed + Viator pins with coords)
+  const allItems = useMemo(() => {
+    const feedWithCoords = feedItems.filter(e => e.lat != null && e.lng != null);
+    // Viator items are already in feedItems via getFeed; viatorItems adds extras
+    // that have coords but might not have appeared in the feed threshold check.
+    const viatorIds = new Set(feedItems.map(e => e.id));
+    const extraViator = viatorItems.filter(e => !viatorIds.has(e.id));
+    return [...feedItems, ...extraViator];
+  }, [feedItems, viatorItems]);
+
+  const visible = useMemo(() => allItems.filter(e => {
     if (!catFilter.matchFn(e)) return false;
     if (srcFilters.length > 0 && !srcFilters.some(f => f.matchFn(e))) return false;
     if (e.lat == null || e.lng == null) return false;
     if (range && e.date) return e.date >= range[0] && e.date <= range[1];
     return true;
-  }), [feedItems, catFilter, srcFilters, range]);
+  }), [allItems, catFilter, srcFilters, range]);
 
-  const listItems = useMemo(() => feedItems.filter(e => {
+  const listItems = useMemo(() => allItems.filter(e => {
     if (!catFilter.matchFn(e)) return false;
     if (srcFilters.length > 0 && !srcFilters.some(f => f.matchFn(e))) return false;
     if (range && e.date) return e.date >= range[0] && e.date <= range[1];
     return true;
-  }), [feedItems, catFilter, srcFilters, range]);
+  }), [allItems, catFilter, srcFilters, range]);
 
-  // GeoJSON for draw overlay
+  // GeoJSON for draw polygon overlay
   const drawGeoJSON = useMemo((): GeoJSON.Feature | null => {
     if (drawPoints.length < 2) return null;
     const coords = drawPoints.map(p => [p.lng, p.lat]);
@@ -225,7 +256,7 @@ export default function MapScreen() {
           T={T}
         />
 
-        {/* Filter chips — wrapping, Date + Sources locked left */}
+        {/* Filter chips */}
         <View style={styles.filtersWrap}>
           {/* Date chip */}
           <View style={[styles.chip, {
@@ -267,7 +298,7 @@ export default function MapScreen() {
 
           <View style={[styles.chipDivider, { backgroundColor: T.borderSub }]} />
 
-          {/* Category chips — wrap freely */}
+          {/* Category chips */}
           {FILTERS.map(f => {
             const on = activeFilter === f.id;
             return (
@@ -287,7 +318,7 @@ export default function MapScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Radius selector chips */}
+        {/* Radius chips */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -305,15 +336,13 @@ export default function MapScreen() {
                   borderColor: on ? T.text : T.borderSub,
                 }]}
               >
-                <Text style={[styles.chipText, { color: on ? T.goldBri : T.muted }]}>
-                  {opt.label}
-                </Text>
+                <Text style={[styles.chipText, { color: on ? T.goldBri : T.muted }]}>{opt.label}</Text>
               </TouchableOpacity>
             );
           })}
         </ScrollView>
 
-        {/* Source chips panel (collapsible) */}
+        {/* Sources panel */}
         {sourcesOpen && (
           <View style={[styles.filtersWrap, { paddingTop: 2, paddingBottom: 6 }]}>
             {activeSources.size > 0 && (
@@ -333,6 +362,7 @@ export default function MapScreen() {
           </View>
         )}
 
+        {/* Date picker dropdown */}
         {dateOpen && (
           <View style={[styles.dateDropdown, { backgroundColor: T.bg, borderColor: T.border, shadowColor: T.border }]}>
             <View style={styles.presetsRow}>
@@ -349,19 +379,9 @@ export default function MapScreen() {
             <View style={[styles.dateDivider, { backgroundColor: T.borderSub }]} />
             <Text style={[styles.customLabel, { color: T.muted }]}>CUSTOM RANGE</Text>
             <View style={styles.customRow}>
-              {Platform.OS === "web" ? (
-                <>
-                  {React.createElement("input", { type: "date", value: customFrom, onChange: (e: React.ChangeEvent<HTMLInputElement>) => setCustomFrom(e.target.value), style: { flex: 1, borderWidth: 2, borderStyle: "solid", borderColor: customFrom ? T.text : T.borderSub, borderRadius: 10, fontSize: 12, padding: 8, fontFamily: "DMSans_400Regular", backgroundColor: T.bgCardHi, color: T.text, outline: "none" } })}
-                  <Text style={[styles.toLabel, { color: T.muted }]}>to</Text>
-                  {React.createElement("input", { type: "date", value: customTo, onChange: (e: React.ChangeEvent<HTMLInputElement>) => setCustomTo(e.target.value), style: { flex: 1, borderWidth: 2, borderStyle: "solid", borderColor: customTo ? T.text : T.borderSub, borderRadius: 10, fontSize: 12, padding: 8, fontFamily: "DMSans_400Regular", backgroundColor: T.bgCardHi, color: T.text, outline: "none" } })}
-                </>
-              ) : (
-                <>
-                  <TextInput value={customFrom} onChangeText={setCustomFrom} placeholder="YYYY-MM-DD" placeholderTextColor={T.mutedL} style={[styles.dateInput, { backgroundColor: T.bgCardHi, color: T.text, borderColor: customFrom ? T.text : T.borderSub }]} />
-                  <Text style={[styles.toLabel, { color: T.muted }]}>to</Text>
-                  <TextInput value={customTo} onChangeText={setCustomTo} placeholder="YYYY-MM-DD" placeholderTextColor={T.mutedL} style={[styles.dateInput, { backgroundColor: T.bgCardHi, color: T.text, borderColor: customTo ? T.text : T.borderSub }]} />
-                </>
-              )}
+              <TextInput value={customFrom} onChangeText={setCustomFrom} placeholder="YYYY-MM-DD" placeholderTextColor={T.mutedL} style={[styles.dateInput, { backgroundColor: T.bgCardHi, color: T.text, borderColor: customFrom ? T.text : T.borderSub }]} />
+              <Text style={[styles.toLabel, { color: T.muted }]}>to</Text>
+              <TextInput value={customTo} onChangeText={setCustomTo} placeholder="YYYY-MM-DD" placeholderTextColor={T.mutedL} style={[styles.dateInput, { backgroundColor: T.bgCardHi, color: T.text, borderColor: customTo ? T.text : T.borderSub }]} />
             </View>
             {customFrom && customTo && (
               <TouchableOpacity onPress={() => { setDatePreset("Custom"); setDateOpen(false); }} style={[styles.applyBtn, { backgroundColor: T.text, borderColor: T.text }]}>
@@ -373,13 +393,16 @@ export default function MapScreen() {
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
+        {/* ── Mapbox MapView ─────────────────────────────────────────────────── */}
         <View style={[styles.mapWrap, { borderColor: T.border, shadowColor: T.border }]}>
           <MapboxGL.MapView
             style={styles.map}
             styleURL={mapStyle}
             onPress={handleMapPress}
-            compassEnabled
+            compassEnabled={false}
+            scaleBarEnabled={false}
             logoEnabled={false}
+            attributionEnabled={true}
             attributionPosition={{ bottom: 4, right: 4 }}
           >
             <MapboxGL.Camera
@@ -390,7 +413,7 @@ export default function MapScreen() {
               animationDuration={600}
             />
 
-            {/* Radius circle overlay */}
+            {/* Radius circle */}
             <MapboxGL.ShapeSource
               id="radiusCircle"
               shape={{
@@ -415,7 +438,7 @@ export default function MapScreen() {
               />
             </MapboxGL.ShapeSource>
 
-            {/* Draw overlay */}
+            {/* Draw polygon overlay */}
             {drawGeoJSON && (
               <MapboxGL.ShapeSource id="draw-source" shape={drawGeoJSON}>
                 {drawClosed ? (
@@ -438,29 +461,30 @@ export default function MapScreen() {
               </MapboxGL.ShapeSource>
             )}
 
-            {/* Event markers */}
+            {/* Event + Viator pins */}
             {visible.map(item => (
               <MapboxGL.MarkerView
-                key={item.id}
+                key={String(item.id)}
                 coordinate={[item.lng!, item.lat!]}
+                anchor={{ x: 0.5, y: 1 }}
               >
                 <TouchableOpacity
                   onPress={() => setSelected(selected?.id === item.id ? null : item)}
                   activeOpacity={0.85}
-                >
-                  <View style={[styles.markerBubble, {
+                  style={[styles.pin, {
                     backgroundColor: selected?.id === item.id ? item.catColor : T.bg,
                     borderColor: item.catColor,
                     transform: [{ scale: selected?.id === item.id ? 1.2 : 1 }],
-                  }]}>
-                    <Text style={{ fontSize: selected?.id === item.id ? 16 : 13 }}>{item.img}</Text>
-                  </View>
+                  }]}
+                >
+                  <Text style={{ fontSize: selected?.id === item.id ? 16 : 13 }}>{item.img}</Text>
                 </TouchableOpacity>
               </MapboxGL.MarkerView>
             ))}
           </MapboxGL.MapView>
         </View>
 
+        {/* Draw controls bar */}
         {drawMode && (
           <View style={[styles.drawBar, { backgroundColor: T.bgCard, borderColor: T.border }]}>
             {drawPoints.length === 0 ? (
@@ -492,6 +516,53 @@ export default function MapScreen() {
           </View>
         )}
 
+        {/* ── Selected pin callout ───────────────────────────────────────────── */}
+        {selected && (
+          <View style={[styles.callout, { backgroundColor: T.bgCard, borderColor: T.border }]}>
+            <Text style={[styles.calloutTitle, { color: T.text }]} numberOfLines={2}>
+              {selected.title}
+            </Text>
+            {selected.rating != null && (
+              <Text style={[styles.calloutRating, { color: T.gold }]}>
+                {"★".repeat(Math.round(selected.rating))}{" "}
+                {selected.rating.toFixed(1)}
+                {selected.reviews ? ` (${selected.reviews.toLocaleString()} reviews)` : ""}
+              </Text>
+            )}
+            <Text style={[styles.calloutSub, { color: T.muted }]}>
+              {selected.time} · {selected.location}
+            </Text>
+            <View style={styles.calloutActions}>
+              <TouchableOpacity
+                onPress={() => setSelected(null)}
+                style={[styles.calloutClose, { borderColor: T.borderSub }]}
+              >
+                <Text style={{ color: T.muted, fontSize: 13 }}>✕</Text>
+              </TouchableOpacity>
+              {selected.booking ? (
+                <TouchableOpacity
+                  onPress={() => Linking.openURL(selected!.booking!.url)}
+                  style={[styles.calloutCTA, { backgroundColor: T.text, borderColor: T.text }]}
+                >
+                  <Text style={[styles.calloutCTAText, { color: T.goldBri }]}>
+                    {selected.booking.label} ↗
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  onPress={() => {
+                    // Scroll to the full card in the list below
+                  }}
+                  style={[styles.calloutCTA, { backgroundColor: T.text, borderColor: T.text }]}
+                >
+                  <Text style={[styles.calloutCTAText, { color: T.goldBri }]}>View details</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* ── Event list ────────────────────────────────────────────────────── */}
         <View style={{ padding: 12 }}>
           {noAreaData ? (
             <View style={styles.empty}>
@@ -505,12 +576,14 @@ export default function MapScreen() {
               <Text style={[styles.emptyTitle, { color: T.text }]}>No results for this date</Text>
               <Text style={[styles.emptySub, { color: T.muted }]}>Try a different date or tap × to clear</Text>
             </View>
-          ) : selected ? (
-            <EventCard item={selected} saved={saved.has(selected.id)} onSave={toggle} T={T} />
           ) : (
             listItems.map(item => (
-              <TouchableOpacity key={item.id} onPress={() => setSelected(item)}
-                style={[styles.listRow, { backgroundColor: T.bgCard, borderColor: T.borderSub, shadowColor: T.borderSub }]}>
+              <TouchableOpacity key={item.id} onPress={() => setSelected(selected?.id === item.id ? null : item)}
+                style={[styles.listRow, {
+                  backgroundColor: selected?.id === item.id ? T.bgCardHi : T.bgCard,
+                  borderColor: selected?.id === item.id ? item.catColor : T.borderSub,
+                  shadowColor: T.borderSub,
+                }]}>
                 <View style={[styles.listIcon, { backgroundColor: item.catColor + "20", borderColor: item.catColor }]}>
                   <Text style={{ fontSize: 18 }}>{item.img}</Text>
                 </View>
@@ -529,37 +602,45 @@ export default function MapScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe:           { flex: 1 } as ViewStyle,
-  header:         { borderBottomWidth: 2, padding: 14 } as ViewStyle,
-  filtersWrap:    { flexDirection: "row", flexWrap: "wrap", gap: 7, alignItems: "center", marginTop: 10, paddingBottom: 4 } as ViewStyle,
-  chip:           { borderWidth: 2, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6, flexDirection: "row", alignItems: "center" } as ViewStyle,
-  chipText:       { fontSize: 12, fontWeight: "600", fontFamily: "DMSans_700Bold" } as TextStyle,
-  chipDivider:    { width: 2, height: 22, borderRadius: 2 } as ViewStyle,
-  badge:          { borderRadius: 8, minWidth: 16, height: 16, alignItems: "center", justifyContent: "center", paddingHorizontal: 4 } as ViewStyle,
-  badgeText:      { fontSize: 10, fontWeight: "700", fontFamily: "DMSans_700Bold" } as TextStyle,
-  dateDropdown:   { borderWidth: 2, borderRadius: 14, padding: 14, marginTop: 10, shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 0, elevation: 4 } as ViewStyle,
-  presetsRow:     { flexDirection: "row", flexWrap: "wrap", gap: 7, marginBottom: 12 } as ViewStyle,
-  presetChip:     { borderWidth: 2, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6 } as ViewStyle,
-  presetText:     { fontSize: 12, fontWeight: "600", fontFamily: "DMSans_700Bold" } as TextStyle,
-  dateDivider:    { height: 1.5, marginBottom: 12 } as ViewStyle,
-  customLabel:    { fontSize: 10, fontWeight: "700", letterSpacing: 1, fontFamily: "DMSans_700Bold", marginBottom: 8 } as TextStyle,
-  customRow:      { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 } as ViewStyle,
-  dateInput:      { flex: 1, borderWidth: 2, borderRadius: 10, fontSize: 12, padding: 8, fontFamily: "DMSans_400Regular" } as TextStyle,
-  toLabel:        { fontSize: 12, fontFamily: "DMSans_400Regular" } as TextStyle,
-  applyBtn:       { borderWidth: 2, borderRadius: 10, padding: 10, alignItems: "center" } as ViewStyle,
-  applyText:      { fontSize: 13, fontWeight: "700", fontFamily: "DMSans_700Bold" } as TextStyle,
-  mapWrap:        { margin: 12, borderRadius: 16, borderWidth: 2, overflow: "hidden", shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 0, elevation: 4, height: 320 } as ViewStyle,
-  map:            { flex: 1 } as ViewStyle,
-  markerBubble:   { width: 36, height: 36, borderRadius: 18, borderWidth: 2.5, alignItems: "center", justifyContent: "center" } as ViewStyle,
-  drawBar:        { flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 12, borderWidth: 2, borderRadius: 14, padding: 10 } as ViewStyle,
-  drawHint:       { fontSize: 12, fontFamily: "DMSans_400Regular" } as TextStyle,
-  drawBtn:        { borderWidth: 2, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5 } as ViewStyle,
-  listRow:        { flexDirection: "row", alignItems: "center", gap: 12, borderWidth: 2, borderRadius: 12, padding: 10, marginBottom: 8, shadowOffset: { width: 2, height: 2 }, shadowOpacity: 1, shadowRadius: 0, elevation: 2 } as ViewStyle,
-  listIcon:       { width: 36, height: 36, borderRadius: 10, borderWidth: 1.5, alignItems: "center", justifyContent: "center" } as ViewStyle,
-  listTitle:      { fontSize: 13, fontWeight: "700", fontFamily: "DMSans_700Bold" } as TextStyle,
-  listSub:        { fontSize: 11, fontFamily: "DMSans_400Regular" } as TextStyle,
-  empty:          { alignItems: "center", paddingTop: 60, paddingHorizontal: 24 } as ViewStyle,
-  emptyIcon:      { fontSize: 36, marginBottom: 12 } as TextStyle,
-  emptyTitle:     { fontSize: 16, fontWeight: "700", fontFamily: "PlayfairDisplay_700Bold", marginBottom: 6 } as TextStyle,
-  emptySub:       { fontSize: 13, fontFamily: "DMSans_400Regular", textAlign: "center" } as TextStyle,
+  safe:            { flex: 1 } as ViewStyle,
+  header:          { borderBottomWidth: 2, padding: 14 } as ViewStyle,
+  filtersWrap:     { flexDirection: "row", flexWrap: "wrap", gap: 7, alignItems: "center", marginTop: 10, paddingBottom: 4 } as ViewStyle,
+  chip:            { borderWidth: 2, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6, flexDirection: "row", alignItems: "center" } as ViewStyle,
+  chipText:        { fontSize: 12, fontWeight: "600", fontFamily: "DMSans_700Bold" } as TextStyle,
+  chipDivider:     { width: 2, height: 22, borderRadius: 2 } as ViewStyle,
+  badge:           { borderRadius: 8, minWidth: 16, height: 16, alignItems: "center", justifyContent: "center", paddingHorizontal: 4 } as ViewStyle,
+  badgeText:       { fontSize: 10, fontWeight: "700", fontFamily: "DMSans_700Bold" } as TextStyle,
+  dateDropdown:    { borderWidth: 2, borderRadius: 14, padding: 14, marginTop: 10, shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 0, elevation: 4 } as ViewStyle,
+  presetsRow:      { flexDirection: "row", flexWrap: "wrap", gap: 7, marginBottom: 12 } as ViewStyle,
+  presetChip:      { borderWidth: 2, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6 } as ViewStyle,
+  presetText:      { fontSize: 12, fontWeight: "600", fontFamily: "DMSans_700Bold" } as TextStyle,
+  dateDivider:     { height: 1.5, marginBottom: 12 } as ViewStyle,
+  customLabel:     { fontSize: 10, fontWeight: "700", letterSpacing: 1, fontFamily: "DMSans_700Bold", marginBottom: 8 } as TextStyle,
+  customRow:       { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 } as ViewStyle,
+  dateInput:       { flex: 1, borderWidth: 2, borderRadius: 10, fontSize: 12, padding: 8, fontFamily: "DMSans_400Regular" } as TextStyle,
+  toLabel:         { fontSize: 12, fontFamily: "DMSans_400Regular" } as TextStyle,
+  applyBtn:        { borderWidth: 2, borderRadius: 10, padding: 10, alignItems: "center" } as ViewStyle,
+  applyText:       { fontSize: 13, fontWeight: "700", fontFamily: "DMSans_700Bold" } as TextStyle,
+  mapWrap:         { margin: 12, borderRadius: 16, borderWidth: 2, overflow: "hidden", shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 0, elevation: 4, height: 320 } as ViewStyle,
+  map:             { flex: 1 } as ViewStyle,
+  pin:             { width: 36, height: 36, borderRadius: 18, borderWidth: 2, alignItems: "center", justifyContent: "center", shadowOffset: { width: 2, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 4 } as ViewStyle,
+  drawBar:         { flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 12, borderWidth: 2, borderRadius: 14, padding: 10, marginBottom: 4 } as ViewStyle,
+  drawHint:        { fontSize: 12, fontFamily: "DMSans_400Regular" } as TextStyle,
+  drawBtn:         { borderWidth: 2, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5 } as ViewStyle,
+  callout:         { margin: 12, borderWidth: 2, borderRadius: 16, padding: 14, shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 0, elevation: 4 } as ViewStyle,
+  calloutTitle:    { fontSize: 16, fontWeight: "800", fontFamily: "PlayfairDisplay_800ExtraBold", marginBottom: 4 } as TextStyle,
+  calloutRating:   { fontSize: 13, fontFamily: "DMSans_600SemiBold", marginBottom: 4 } as TextStyle,
+  calloutSub:      { fontSize: 12, fontFamily: "DMSans_400Regular", marginBottom: 10 } as TextStyle,
+  calloutActions:  { flexDirection: "row", gap: 8, alignItems: "center" } as ViewStyle,
+  calloutClose:    { borderWidth: 2, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 6 } as ViewStyle,
+  calloutCTA:      { flex: 1, borderWidth: 2, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, alignItems: "center" } as ViewStyle,
+  calloutCTAText:  { fontSize: 13, fontWeight: "700", fontFamily: "DMSans_700Bold" } as TextStyle,
+  listRow:         { flexDirection: "row", alignItems: "center", gap: 12, borderWidth: 2, borderRadius: 12, padding: 10, marginBottom: 8, shadowOffset: { width: 2, height: 2 }, shadowOpacity: 1, shadowRadius: 0, elevation: 2 } as ViewStyle,
+  listIcon:        { width: 36, height: 36, borderRadius: 10, borderWidth: 1.5, alignItems: "center", justifyContent: "center" } as ViewStyle,
+  listTitle:       { fontSize: 13, fontWeight: "700", fontFamily: "DMSans_700Bold" } as TextStyle,
+  listSub:         { fontSize: 11, fontFamily: "DMSans_400Regular" } as TextStyle,
+  empty:           { alignItems: "center", paddingTop: 60, paddingHorizontal: 24 } as ViewStyle,
+  emptyIcon:       { fontSize: 36, marginBottom: 12 } as TextStyle,
+  emptyTitle:      { fontSize: 16, fontWeight: "700", fontFamily: "PlayfairDisplay_700Bold", marginBottom: 6 } as TextStyle,
+  emptySub:        { fontSize: 13, fontFamily: "DMSans_400Regular", textAlign: "center" } as TextStyle,
 });

@@ -7,7 +7,9 @@ let html = readFileSync(indexPath, "utf8");
 
 const tags = [
   `  <meta name="google-site-verification" content="m7iJAREJhSRrNVZ2UJbdNmzE9DXqijeOrqhEeXEsozI" />`,
+  `  <meta name="theme-color" content="#FAF7F3" />`,
   `  <link rel="manifest" href="/manifest.json" />`,
+  `  <link rel="apple-touch-icon" href="/nearbynow-apple-icon.png" />`,
   `  <script async src="https://www.googletagmanager.com/gtag/js?id=G-6ENK256D12"></script>`,
   `  <script>`,
   `    window.dataLayer = window.dataLayer || [];`,
@@ -15,6 +17,7 @@ const tags = [
   `    gtag('js', new Date());`,
   `    gtag('config', 'G-6ENK256D12');`,
   `  </script>`,
+  `  <script>if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js'));</script>`,
 ].join("\n");
 
 if (html.includes("G-6ENK256D12")) {

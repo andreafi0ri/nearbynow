@@ -1,21 +1,32 @@
 {
   "name": "Nearby & Now",
   "short_name": "Nearby & Now",
-  "description": "Discover what's happening near you",
-  "start_url": "/",
+  "description": "Discover local events, news and recommendations happening near you.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#FFFFFF",
-  "theme_color": "#B8920A",
+  "orientation": "portrait",
+  "background_color": "#FAF7F3",
+  "theme_color": "#FAF7F3",
+  "categories": ["lifestyle", "news", "entertainment"],
   "icons": [
     {
       "src": "/nearbynow-icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "/nearbynow-app-icon.png",
-      "sizes": "1024x1024",
-      "type": "image/png"
+      "src": "/nearbynow-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/nearbynow-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

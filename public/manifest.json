@@ -1,0 +1,21 @@
+{
+  "name": "Nearby & Now",
+  "short_name": "Nearby & Now",
+  "description": "Discover what's happening near you",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#B8920A",
+  "icons": [
+    {
+      "src": "/nearbynow-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/nearbynow-app-icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png"
+    }
+  ]
+}

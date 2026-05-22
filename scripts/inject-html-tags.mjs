@@ -7,6 +7,7 @@ let html = readFileSync(indexPath, "utf8");
 
 const tags = [
   `  <meta name="google-site-verification" content="m7iJAREJhSRrNVZ2UJbdNmzE9DXqijeOrqhEeXEsozI" />`,
+  `  <link rel="manifest" href="/manifest.json" />`,
   `  <script async src="https://www.googletagmanager.com/gtag/js?id=G-6ENK256D12"></script>`,
   `  <script>`,
   `    window.dataLayer = window.dataLayer || [];`,
@@ -23,4 +24,4 @@ if (html.includes("G-6ENK256D12")) {
 
 html = html.replace("</head>", `${tags}\n</head>`);
 writeFileSync(indexPath, html, "utf8");
-console.log("✓ Injected Google verification + Analytics into dist/index.html");
+console.log("✓ Injected Google verification, PWA manifest link, and Analytics into dist/index.html");

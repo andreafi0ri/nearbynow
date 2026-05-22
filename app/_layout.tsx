@@ -18,12 +18,19 @@ import {
   useFonts,
   PlayfairDisplay_700Bold,
   PlayfairDisplay_800ExtraBold,
+  PlayfairDisplay_500Medium_Italic,
 } from "@expo-google-fonts/playfair-display";
 import {
   DMSans_400Regular,
   DMSans_500Medium,
   DMSans_700Bold,
 } from "@expo-google-fonts/dm-sans";
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+} from "@expo-google-fonts/inter";
 import * as SplashScreen from "expo-splash-screen";
 import { supabase } from "../src/lib/supabase";
 
@@ -43,9 +50,14 @@ export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     PlayfairDisplay_700Bold,
     PlayfairDisplay_800ExtraBold,
+    PlayfairDisplay_500Medium_Italic,
     DMSans_400Regular,
     DMSans_500Medium,
     DMSans_700Bold,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
   });
 
   useEffect(() => {

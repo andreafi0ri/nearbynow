@@ -9,7 +9,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
-  View, Text, TouchableOpacity, ScrollView, TextInput, Platform,
+  View, Text, TouchableOpacity, ScrollView, TextInput, Platform, Switch,
   StyleSheet, ViewStyle, TextStyle, Linking,
 } from "react-native";
 import MapboxGL from "@rnmapbox/maps";
@@ -21,6 +21,7 @@ import { useSavedEvents } from "../../src/hooks/useSavedEvents";
 import { useSavedAreas } from "../../src/context/SavedAreasContext";
 import { EventItem } from "../../src/data/mockEvents";
 import { EventCard } from "../../src/components/EventCard";
+import { BottomSheet } from "../../src/components/BottomSheet";
 import { getFeed } from "../../src/services/feedService";
 import { searchViatorExperiences } from "../../src/services/viatorService";
 import { FILTERS, SOURCE_FILTERS, FilterOption } from "../../src/config/filterConfig";
@@ -49,6 +50,35 @@ const fmt     = (d: Date) => d.toISOString().split("T")[0];
 const addDays = (d: Date, n: number) => { const r = new Date(d); r.setDate(r.getDate() + n); return r; };
 const TODAY   = new Date();
 
+const CATEGORY_FILTERS = FILTERS.filter(f => !["All", "Free"].includes(f.id));
+
+const SOURCE_DESCS: Record<string, string> = {
+  "Reddit":        "Local subreddits and community posts",
+  "Local News":    "News sites and local publications",
+  "Eventbrite":    "Ticketed events and workshops",
+  "Meetup":        "Groups and gatherings",
+  "Ticketmaster":  "Concerts, sports, theater",
+  "Google Places": "Restaurants, venues, points of interest",
+  "Facebook":      "Public events from local pages",
+  "Viator":        "Tours and experiences",
+};
+
+function PillButton({ T, label, value, active, onPress }: {
+  T: any; label: string; value: string; active: boolean; onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.8}
+      style={[styles.pill, { backgroundColor: T.surface, borderColor: active ? T.gold : T.border }]}
+    >
+      <Text style={[styles.pillLabel, { color: T.muted }]}>{label}</Text>
+      <Text style={[styles.pillValue, { color: active ? T.gold : T.text }]} numberOfLines={1}>{value}</Text>
+      <Text style={[styles.pillChevron, { color: T.muted }]}>▾</Text>
+    </TouchableOpacity>
+  );
+}
+
 type DrawPoint = { lat: number; lng: number };
 
 export default function MapScreen() {
@@ -64,8 +94,11 @@ export default function MapScreen() {
   const [loading, setLoading]           = useState(false);
   const [selected, setSelected]         = useState<EventItem | null>(null);
   const [activeFilter, setActiveFilter] = useState("All");
+  const [freeOnly, setFreeOnly]         = useState(false);
   const [activeSources, setActiveSources] = useState<Set<string>>(new Set());
-  const [sourcesOpen, setSourcesOpen]   = useState(false);
+  const [dateSheetOpen,    setDateSheetOpen]    = useState(false);
+  const [filtersSheetOpen, setFiltersSheetOpen] = useState(false);
+  const [sourcesSheetOpen, setSourcesSheetOpen] = useState(false);
   const [searchVal, setSearchVal]       = useState("");
   const [drawMode, setDrawMode]         = useState(false);
   const [drawPoints, setDrawPoints]     = useState<DrawPoint[]>([]);
@@ -73,7 +106,6 @@ export default function MapScreen() {
   const [centre, setCentre]             = useState<[number, number]>(DEFAULT_COORD);
   const [radiusMetres, setRadiusMetres] = useState<number>(SEARCH_CONFIG.DEFAULT_RADIUS_METRES);
 
-  const [dateOpen, setDateOpen]     = useState(false);
   const [datePreset, setDatePreset] = useState<string | null>(null);
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo]     = useState("");
@@ -169,10 +201,13 @@ export default function MapScreen() {
 
   const range      = dateRange();
   const dateLabel  = datePreset === "Custom" && customFrom && customTo
-    ? `${customFrom.slice(5)} – ${customTo.slice(5)}` : datePreset ?? "Date";
+    ? `${customFrom.slice(5)} – ${customTo.slice(5)}` : datePreset ?? "Anytime";
   const dateActive = !!datePreset;
   const noAreaData = !loading && feedItems.length === 0;
-  const clearDate  = () => { setDatePreset(null); setCustomFrom(""); setCustomTo(""); setDateOpen(false); };
+  const clearDate  = () => { setDatePreset(null); setCustomFrom(""); setCustomTo(""); setDateSheetOpen(false); };
+  const filterCount = (activeFilter !== "All" ? 1 : 0) + (freeOnly ? 1 : 0);
+  const filterLabel = filterCount > 0 ? String(filterCount) : "All";
+  const freeFn = FILTERS.find(f => f.id === "Free")?.matchFn;
 
   const catFilter  = useMemo(() => FILTERS.find(f => f.id === activeFilter) ?? FILTERS[0], [activeFilter]);
   const srcFilters = useMemo<FilterOption[]>(() =>
@@ -196,19 +231,21 @@ export default function MapScreen() {
   }, [feedItems, viatorItems]);
 
   const visible = useMemo(() => allItems.filter(e => {
+    if (freeOnly && freeFn && !freeFn(e)) return false;
     if (!catFilter.matchFn(e)) return false;
     if (srcFilters.length > 0 && !srcFilters.some(f => f.matchFn(e))) return false;
     if (e.lat == null || e.lng == null) return false;
     if (range && e.date) return e.date >= range[0] && e.date <= range[1];
     return true;
-  }), [allItems, catFilter, srcFilters, range]);
+  }), [allItems, catFilter, srcFilters, range, freeOnly]);
 
   const listItems = useMemo(() => allItems.filter(e => {
+    if (freeOnly && freeFn && !freeFn(e)) return false;
     if (!catFilter.matchFn(e)) return false;
     if (srcFilters.length > 0 && !srcFilters.some(f => f.matchFn(e))) return false;
     if (range && e.date) return e.date >= range[0] && e.date <= range[1];
     return true;
-  }), [allItems, catFilter, srcFilters, range]);
+  }), [allItems, catFilter, srcFilters, range, freeOnly]);
 
   // GeoJSON for draw polygon overlay
   const drawGeoJSON = useMemo((): GeoJSON.Feature | null => {
@@ -256,65 +293,18 @@ export default function MapScreen() {
           T={T}
         />
 
-        {/* Filter chips */}
-        <View style={styles.filtersWrap}>
-          {/* Date chip */}
-          <View style={[styles.chip, {
-            backgroundColor: dateActive ? T.text : "transparent",
-            borderColor: dateActive ? T.text : T.gold,
-            paddingHorizontal: 0, paddingVertical: 0,
-          }]}>
-            <TouchableOpacity
-              onPress={() => { setDateOpen(o => !o); setSelected(null); }}
-              style={{ paddingHorizontal: 14, paddingVertical: 6 }}
-            >
-              <Text style={[styles.chipText, { color: dateActive ? T.goldBri : T.gold }]}>📅 {dateLabel}</Text>
-            </TouchableOpacity>
-            {dateActive && (
-              <TouchableOpacity onPress={clearDate} hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }} style={{ paddingRight: 12, paddingVertical: 6 }}>
-                <Text style={{ color: T.goldBri, fontSize: 16, lineHeight: 18 }}>×</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Sources toggle */}
+        {/* 3-pill filter bar */}
+        <View style={styles.pillBar}>
+          <PillButton T={T} label="DATE"    value={dateLabel}   active={dateActive}          onPress={() => { setDateSheetOpen(true); setSelected(null); }} />
+          <PillButton T={T} label="FILTERS" value={filterLabel} active={filterCount > 0}     onPress={() => setFiltersSheetOpen(true)} />
+          <PillButton T={T} label="SOURCES" value={activeSources.size > 0 ? String(activeSources.size) : "All"} active={activeSources.size > 0} onPress={() => setSourcesSheetOpen(true)} />
           <TouchableOpacity
-            onPress={() => setSourcesOpen(o => !o)}
-            style={[styles.chip, {
-              backgroundColor: activeSources.size > 0 ? T.text : "transparent",
-              borderColor: activeSources.size > 0 ? T.text : T.borderSub,
-              flexDirection: "row", alignItems: "center", gap: 4,
-            }]}
+            onPress={() => { setDrawMode(m => !m); setDrawPoints([]); setDrawClosed(false); }}
+            activeOpacity={0.8}
+            style={[styles.drawPill, { backgroundColor: drawMode ? T.text : T.surface, borderColor: drawMode ? T.gold : T.border }]}
           >
-            <Text style={[styles.chipText, { color: activeSources.size > 0 ? T.goldBri : T.muted }]}>
-              {sourcesOpen ? "▴" : "▾"} Sources
-            </Text>
-            {activeSources.size > 0 && (
-              <View style={[styles.badge, { backgroundColor: T.gold }]}>
-                <Text style={[styles.badgeText, { color: T.bg }]}>{activeSources.size}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-
-          <View style={[styles.chipDivider, { backgroundColor: T.borderSub }]} />
-
-          {/* Category chips */}
-          {FILTERS.map(f => {
-            const on = activeFilter === f.id;
-            return (
-              <TouchableOpacity key={f.id}
-                onPress={() => { setActiveFilter(f.id); setSelected(null); setDateOpen(false); }}
-                style={[styles.chip, { backgroundColor: on ? T.text : "transparent", borderColor: on ? T.text : T.borderSub }]}>
-                <Text style={[styles.chipText, { color: on ? T.goldBri : T.muted }]}>{f.icon} {f.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-
-          {/* Draw button */}
-          <TouchableOpacity
-            onPress={() => { setDrawMode(m => !m); setDrawPoints([]); setDrawClosed(false); setDateOpen(false); }}
-            style={[styles.chip, { backgroundColor: drawMode ? T.text : "transparent", borderColor: drawMode ? T.gold : T.borderSub }]}>
-            <Text style={[styles.chipText, { color: drawMode ? T.goldBri : T.gold }]}>✏️ Draw</Text>
+            <Text style={{ fontSize: 15 }}>✏️</Text>
+            {drawMode && <Text style={[styles.pillLabel, { color: T.goldBri, letterSpacing: 0.5 }]}>ON</Text>}
           </TouchableOpacity>
         </View>
 
@@ -322,8 +312,8 @@ export default function MapScreen() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={{ marginTop: 8 }}
-          contentContainerStyle={{ gap: 7, paddingBottom: 2 }}
+          style={{ marginTop: 4 }}
+          contentContainerStyle={{ gap: 6, paddingBottom: 10 }}
         >
           {RADIUS_OPTIONS.map(opt => {
             const on = radiusMetres === opt.metres;
@@ -331,66 +321,134 @@ export default function MapScreen() {
               <TouchableOpacity
                 key={opt.label}
                 onPress={() => setRadiusMetres(opt.metres)}
-                style={[styles.chip, {
+                style={[styles.radiusChip, {
                   backgroundColor: on ? T.text : "transparent",
                   borderColor: on ? T.text : T.borderSub,
                 }]}
               >
-                <Text style={[styles.chipText, { color: on ? T.goldBri : T.muted }]}>{opt.label}</Text>
+                <Text style={[styles.radiusChipText, { color: on ? T.goldBri : T.muted }]}>{opt.label}</Text>
               </TouchableOpacity>
             );
           })}
         </ScrollView>
-
-        {/* Sources panel */}
-        {sourcesOpen && (
-          <View style={[styles.filtersWrap, { paddingTop: 2, paddingBottom: 6 }]}>
-            {activeSources.size > 0 && (
-              <TouchableOpacity onPress={() => setActiveSources(new Set())} style={[styles.chip, { backgroundColor: T.red + "18", borderColor: T.red }]}>
-                <Text style={[styles.chipText, { color: T.red }]}>× Clear</Text>
-              </TouchableOpacity>
-            )}
-            {SOURCE_FILTERS.map(f => {
-              const on = activeSources.has(f.id);
-              return (
-                <TouchableOpacity key={f.id} onPress={() => toggleSource(f.id)}
-                  style={[styles.chip, { backgroundColor: on ? T.text : "transparent", borderColor: on ? T.text : T.borderSub }]}>
-                  <Text style={[styles.chipText, { color: on ? T.goldBri : T.muted }]}>{f.icon} {f.label}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        )}
-
-        {/* Date picker dropdown */}
-        {dateOpen && (
-          <View style={[styles.dateDropdown, { backgroundColor: T.bg, borderColor: T.border, shadowColor: T.border }]}>
-            <View style={styles.presetsRow}>
-              {QUICK_PRESETS.map(p => {
-                const on = datePreset === p;
-                return (
-                  <TouchableOpacity key={p} onPress={() => { setDatePreset(p); setDateOpen(false); }}
-                    style={[styles.presetChip, { backgroundColor: on ? T.text : T.bgCardHi, borderColor: on ? T.text : T.borderSub }]}>
-                    <Text style={[styles.presetText, { color: on ? T.goldBri : T.textSub }]}>{p}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-            <View style={[styles.dateDivider, { backgroundColor: T.borderSub }]} />
-            <Text style={[styles.customLabel, { color: T.muted }]}>CUSTOM RANGE</Text>
-            <View style={styles.customRow}>
-              <TextInput value={customFrom} onChangeText={setCustomFrom} placeholder="YYYY-MM-DD" placeholderTextColor={T.mutedL} style={[styles.dateInput, { backgroundColor: T.bgCardHi, color: T.text, borderColor: customFrom ? T.text : T.borderSub }]} />
-              <Text style={[styles.toLabel, { color: T.muted }]}>to</Text>
-              <TextInput value={customTo} onChangeText={setCustomTo} placeholder="YYYY-MM-DD" placeholderTextColor={T.mutedL} style={[styles.dateInput, { backgroundColor: T.bgCardHi, color: T.text, borderColor: customTo ? T.text : T.borderSub }]} />
-            </View>
-            {customFrom && customTo && (
-              <TouchableOpacity onPress={() => { setDatePreset("Custom"); setDateOpen(false); }} style={[styles.applyBtn, { backgroundColor: T.text, borderColor: T.text }]}>
-                <Text style={[styles.applyText, { color: T.goldBri }]}>Apply date range</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
       </View>
+
+      {/* Date sheet */}
+      <BottomSheet open={dateSheetOpen} onClose={() => setDateSheetOpen(false)} title="When" T={T}>
+        {[
+          { id: null,           label: "Anytime",      sub: "No date filter" },
+          { id: "Today",        label: "Today",        sub: fmt(TODAY) },
+          { id: "Tomorrow",     label: "Tomorrow",     sub: fmt(addDays(TODAY, 1)) },
+          { id: "This Weekend", label: "This weekend", sub: "Sat – Sun" },
+          { id: "This Week",    label: "This week",    sub: "Mon – Sun" },
+          { id: "This Month",   label: "This month",   sub: new Date(TODAY.getFullYear(), TODAY.getMonth(), 1).toLocaleString("default", { month: "long" }) },
+        ].map(opt => {
+          const on = opt.id === null ? !datePreset : datePreset === opt.id;
+          return (
+            <TouchableOpacity key={String(opt.id)} onPress={() => { setDatePreset(opt.id); setDateSheetOpen(false); }}
+              style={[styles.sheetRow, { backgroundColor: on ? T.surface : "transparent", borderColor: on ? T.gold : "transparent" }]}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.sheetRowLabel, { color: T.text }]}>{opt.label}</Text>
+                <Text style={[styles.sheetRowSub,   { color: T.muted }]}>{opt.sub}</Text>
+              </View>
+              {on && <Text style={{ color: T.gold, fontSize: 18 }}>✓</Text>}
+            </TouchableOpacity>
+          );
+        })}
+        <View style={[styles.dateDivider, { backgroundColor: T.borderSub, marginTop: 8 }]} />
+        <Text style={[styles.customLabel, { color: T.muted }]}>CUSTOM RANGE</Text>
+        <View style={styles.customRow}>
+          <TextInput value={customFrom} onChangeText={setCustomFrom} placeholder="YYYY-MM-DD" placeholderTextColor={T.mutedL}
+            style={[styles.dateInput, { backgroundColor: T.bgCardHi, color: T.text, borderColor: customFrom ? T.text : T.borderSub }]} />
+          <Text style={[styles.toLabel, { color: T.muted }]}>to</Text>
+          <TextInput value={customTo} onChangeText={setCustomTo} placeholder="YYYY-MM-DD" placeholderTextColor={T.mutedL}
+            style={[styles.dateInput, { backgroundColor: T.bgCardHi, color: T.text, borderColor: customTo ? T.text : T.borderSub }]} />
+        </View>
+        {customFrom && customTo && (
+          <TouchableOpacity onPress={() => { setDatePreset("Custom"); setDateSheetOpen(false); }}
+            style={[styles.applyBtn, { backgroundColor: T.text }]}>
+            <Text style={[styles.applyText, { color: T.goldBri }]}>Apply date range</Text>
+          </TouchableOpacity>
+        )}
+      </BottomSheet>
+
+      {/* Filters sheet */}
+      <BottomSheet open={filtersSheetOpen} onClose={() => setFiltersSheetOpen(false)} title="Filter by category" T={T} maxHeightRatio={0.85}>
+        <View style={[styles.freeRow, { backgroundColor: T.surface, borderColor: freeOnly ? T.gold : T.border }]}>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.sheetRowLabel, { color: T.text }]}>Free only</Text>
+            <Text style={[styles.sheetRowSub,   { color: T.muted }]}>Hide ticketed events</Text>
+          </View>
+          <Switch value={freeOnly} onValueChange={setFreeOnly}
+            trackColor={{ false: T.borderSub, true: T.text }}
+            thumbColor={freeOnly ? T.goldBri : T.bg} />
+        </View>
+        <Text style={[styles.customLabel, { color: T.muted, marginTop: 16, marginBottom: 10 }]}>CATEGORIES</Text>
+        <View style={styles.catGrid}>
+          {CATEGORY_FILTERS.map(f => {
+            const on = activeFilter === f.id;
+            return (
+              <TouchableOpacity key={f.id} onPress={() => setActiveFilter(on ? "All" : f.id)}
+                style={[styles.catCell, { backgroundColor: on ? T.surface : T.bgSub, borderColor: on ? T.gold : "transparent" }]}>
+                <View style={[styles.catIcon, { backgroundColor: T.bgCard, borderColor: T.borderSub }]}>
+                  <Text style={{ fontSize: 20 }}>{f.icon}</Text>
+                </View>
+                <Text style={[styles.catLabel, { color: T.text }]}>{f.label}</Text>
+                {on && (
+                  <View style={[styles.catCheck, { backgroundColor: T.gold }]}>
+                    <Text style={{ color: T.bg, fontSize: 10, fontWeight: "700" }}>✓</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        <View style={styles.sheetActions}>
+          <TouchableOpacity onPress={() => { setActiveFilter("All"); setFreeOnly(false); }}
+            style={[styles.resetBtn, { borderColor: T.border }]}>
+            <Text style={[styles.resetText, { color: T.text }]}>Reset</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setFiltersSheetOpen(false)}
+            style={[styles.showBtn, { backgroundColor: T.text }]}>
+            <Text style={[styles.showText, { color: T.goldBri }]}>
+              {filterCount > 0 ? `Show ${filterCount} filter${filterCount > 1 ? "s" : ""}` : "Show all results"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </BottomSheet>
+
+      {/* Sources sheet */}
+      <BottomSheet open={sourcesSheetOpen} onClose={() => setSourcesSheetOpen(false)} title="Sources" T={T}>
+        <Text style={[styles.sheetRowSub, { color: T.textSub, marginBottom: 14 }]}>
+          We aggregate from these places. Untick to mute any of them.
+        </Text>
+        {SOURCE_FILTERS.map(f => {
+          const on = activeSources.has(f.id);
+          return (
+            <TouchableOpacity key={f.id} onPress={() => toggleSource(f.id)}
+              style={[styles.sourceRow, { backgroundColor: T.surface, borderColor: on ? T.gold : T.border }]}>
+              <View style={[styles.sourceIcon, { backgroundColor: T.bgSub, borderColor: T.borderSub }]}>
+                <Text style={{ fontSize: 18 }}>{f.icon}</Text>
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={[styles.sheetRowLabel, { color: T.text }]}>{f.label}</Text>
+                <Text style={[styles.sheetRowSub,   { color: T.muted }]} numberOfLines={1}>
+                  {SOURCE_DESCS[f.label] ?? ""}
+                </Text>
+              </View>
+              <View style={[styles.checkbox, { borderColor: on ? T.gold : T.border, backgroundColor: on ? T.gold : "transparent" }]}>
+                {on && <Text style={{ color: T.bg, fontSize: 12, fontWeight: "700" }}>✓</Text>}
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+        {activeSources.size > 0 && (
+          <TouchableOpacity onPress={() => setActiveSources(new Set())}
+            style={[styles.resetBtn, { borderColor: T.red, marginTop: 14 }]}>
+            <Text style={[styles.resetText, { color: T.red }]}>Clear all source filters</Text>
+          </TouchableOpacity>
+        )}
+      </BottomSheet>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
         {/* ── Mapbox MapView ─────────────────────────────────────────────────── */}
@@ -602,45 +660,63 @@ export default function MapScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe:            { flex: 1 } as ViewStyle,
-  header:          { borderBottomWidth: 2, padding: 14 } as ViewStyle,
-  filtersWrap:     { flexDirection: "row", flexWrap: "wrap", gap: 7, alignItems: "center", marginTop: 10, paddingBottom: 4 } as ViewStyle,
-  chip:            { borderWidth: 2, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6, flexDirection: "row", alignItems: "center" } as ViewStyle,
-  chipText:        { fontSize: 12, fontWeight: "600", fontFamily: "DMSans_700Bold" } as TextStyle,
-  chipDivider:     { width: 2, height: 22, borderRadius: 2 } as ViewStyle,
-  badge:           { borderRadius: 8, minWidth: 16, height: 16, alignItems: "center", justifyContent: "center", paddingHorizontal: 4 } as ViewStyle,
-  badgeText:       { fontSize: 10, fontWeight: "700", fontFamily: "DMSans_700Bold" } as TextStyle,
-  dateDropdown:    { borderWidth: 2, borderRadius: 14, padding: 14, marginTop: 10, shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 0, elevation: 4 } as ViewStyle,
-  presetsRow:      { flexDirection: "row", flexWrap: "wrap", gap: 7, marginBottom: 12 } as ViewStyle,
-  presetChip:      { borderWidth: 2, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6 } as ViewStyle,
-  presetText:      { fontSize: 12, fontWeight: "600", fontFamily: "DMSans_700Bold" } as TextStyle,
-  dateDivider:     { height: 1.5, marginBottom: 12 } as ViewStyle,
-  customLabel:     { fontSize: 10, fontWeight: "700", letterSpacing: 1, fontFamily: "DMSans_700Bold", marginBottom: 8 } as TextStyle,
-  customRow:       { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 } as ViewStyle,
-  dateInput:       { flex: 1, borderWidth: 2, borderRadius: 10, fontSize: 12, padding: 8, fontFamily: "DMSans_400Regular" } as TextStyle,
-  toLabel:         { fontSize: 12, fontFamily: "DMSans_400Regular" } as TextStyle,
-  applyBtn:        { borderWidth: 2, borderRadius: 10, padding: 10, alignItems: "center" } as ViewStyle,
-  applyText:       { fontSize: 13, fontWeight: "700", fontFamily: "DMSans_700Bold" } as TextStyle,
-  mapWrap:         { margin: 12, borderRadius: 16, borderWidth: 2, overflow: "hidden", shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 0, elevation: 4, height: 320 } as ViewStyle,
-  map:             { flex: 1 } as ViewStyle,
-  pin:             { width: 36, height: 36, borderRadius: 18, borderWidth: 2, alignItems: "center", justifyContent: "center", shadowOffset: { width: 2, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 4 } as ViewStyle,
-  drawBar:         { flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 12, borderWidth: 2, borderRadius: 14, padding: 10, marginBottom: 4 } as ViewStyle,
-  drawHint:        { fontSize: 12, fontFamily: "DMSans_400Regular" } as TextStyle,
-  drawBtn:         { borderWidth: 2, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5 } as ViewStyle,
-  callout:         { margin: 12, borderWidth: 2, borderRadius: 16, padding: 14, shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 0, elevation: 4 } as ViewStyle,
-  calloutTitle:    { fontSize: 16, fontWeight: "800", fontFamily: "PlayfairDisplay_800ExtraBold", marginBottom: 4 } as TextStyle,
-  calloutRating:   { fontSize: 13, fontFamily: "DMSans_600SemiBold", marginBottom: 4 } as TextStyle,
-  calloutSub:      { fontSize: 12, fontFamily: "DMSans_400Regular", marginBottom: 10 } as TextStyle,
-  calloutActions:  { flexDirection: "row", gap: 8, alignItems: "center" } as ViewStyle,
-  calloutClose:    { borderWidth: 2, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 6 } as ViewStyle,
-  calloutCTA:      { flex: 1, borderWidth: 2, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, alignItems: "center" } as ViewStyle,
-  calloutCTAText:  { fontSize: 13, fontWeight: "700", fontFamily: "DMSans_700Bold" } as TextStyle,
-  listRow:         { flexDirection: "row", alignItems: "center", gap: 12, borderWidth: 2, borderRadius: 12, padding: 10, marginBottom: 8, shadowOffset: { width: 2, height: 2 }, shadowOpacity: 1, shadowRadius: 0, elevation: 2 } as ViewStyle,
-  listIcon:        { width: 36, height: 36, borderRadius: 10, borderWidth: 1.5, alignItems: "center", justifyContent: "center" } as ViewStyle,
-  listTitle:       { fontSize: 13, fontWeight: "700", fontFamily: "DMSans_700Bold" } as TextStyle,
-  listSub:         { fontSize: 11, fontFamily: "DMSans_400Regular" } as TextStyle,
-  empty:           { alignItems: "center", paddingTop: 60, paddingHorizontal: 24 } as ViewStyle,
-  emptyIcon:       { fontSize: 36, marginBottom: 12 } as TextStyle,
-  emptyTitle:      { fontSize: 16, fontWeight: "700", fontFamily: "PlayfairDisplay_700Bold", marginBottom: 6 } as TextStyle,
-  emptySub:        { fontSize: 13, fontFamily: "DMSans_400Regular", textAlign: "center" } as TextStyle,
+  safe:           { flex: 1 } as ViewStyle,
+  header:         { borderBottomWidth: 2, padding: 14 } as ViewStyle,
+  // ── 3-pill bar ──────────────────────────────────────────────────────────
+  pillBar:        { flexDirection: "row", gap: 8, marginTop: 10 } as ViewStyle,
+  pill:           { flex: 1, borderWidth: 1.5, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, flexDirection: "row", alignItems: "center", gap: 4 } as ViewStyle,
+  pillLabel:      { fontSize: 9, fontWeight: "700", letterSpacing: 0.18, textTransform: "uppercase", fontFamily: "DMSans_700Bold", lineHeight: 11 } as TextStyle,
+  pillValue:      { flex: 1, fontSize: 13, fontWeight: "600", fontFamily: "DMSans_700Bold", lineHeight: 16 } as TextStyle,
+  pillChevron:    { fontSize: 9 } as TextStyle,
+  drawPill:       { borderWidth: 1.5, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2, minWidth: 44 } as ViewStyle,
+  radiusChip:     { borderWidth: 1.5, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5 } as ViewStyle,
+  radiusChipText: { fontSize: 12, fontWeight: "600", fontFamily: "DMSans_700Bold" } as TextStyle,
+  // ── Sheet rows ───────────────────────────────────────────────────────────
+  sheetRow:       { flexDirection: "row", alignItems: "center", padding: 14, borderRadius: 12, borderWidth: 1.5, marginBottom: 6 } as ViewStyle,
+  sheetRowLabel:  { fontSize: 15, fontWeight: "600", fontFamily: "DMSans_700Bold" } as TextStyle,
+  sheetRowSub:    { fontSize: 12.5, fontFamily: "Inter_400Regular", marginTop: 2 } as TextStyle,
+  freeRow:        { flexDirection: "row", alignItems: "center", padding: 14, borderRadius: 12, borderWidth: 1.5, marginBottom: 4 } as ViewStyle,
+  catGrid:        { flexDirection: "row", flexWrap: "wrap", gap: 8 } as ViewStyle,
+  catCell:        { width: "30.5%", borderWidth: 1.5, borderRadius: 14, padding: 12, alignItems: "center", gap: 8, position: "relative" } as ViewStyle,
+  catIcon:        { width: 44, height: 44, borderRadius: 12, borderWidth: 1, alignItems: "center", justifyContent: "center" } as ViewStyle,
+  catLabel:       { fontSize: 13, fontWeight: "600", fontFamily: "DMSans_700Bold", textAlign: "center" } as TextStyle,
+  catCheck:       { position: "absolute", top: 6, right: 6, width: 18, height: 18, borderRadius: 9, alignItems: "center", justifyContent: "center" } as ViewStyle,
+  sheetActions:   { flexDirection: "row", gap: 10, marginTop: 20 } as ViewStyle,
+  resetBtn:       { flex: 1, height: 48, borderRadius: 14, borderWidth: 1.5, alignItems: "center", justifyContent: "center" } as ViewStyle,
+  resetText:      { fontSize: 14, fontWeight: "600", fontFamily: "DMSans_700Bold" } as TextStyle,
+  showBtn:        { flex: 2, height: 48, borderRadius: 14, alignItems: "center", justifyContent: "center" } as ViewStyle,
+  showText:       { fontSize: 14, fontWeight: "700", fontFamily: "DMSans_700Bold" } as TextStyle,
+  sourceRow:      { flexDirection: "row", alignItems: "center", gap: 14, padding: 12, borderRadius: 12, borderWidth: 1.5, marginBottom: 8 } as ViewStyle,
+  sourceIcon:     { width: 36, height: 36, borderRadius: 10, borderWidth: 1, alignItems: "center", justifyContent: "center" } as ViewStyle,
+  checkbox:       { width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, alignItems: "center", justifyContent: "center" } as ViewStyle,
+  dateDivider:    { height: 1.5, marginBottom: 12 } as ViewStyle,
+  customLabel:    { fontSize: 10, fontWeight: "700", letterSpacing: 1, fontFamily: "DMSans_700Bold", marginBottom: 8 } as TextStyle,
+  customRow:      { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 } as ViewStyle,
+  dateInput:      { flex: 1, borderWidth: 2, borderRadius: 10, fontSize: 12, padding: 8, fontFamily: "DMSans_400Regular" } as TextStyle,
+  toLabel:        { fontSize: 12, fontFamily: "DMSans_400Regular" } as TextStyle,
+  applyBtn:       { borderRadius: 10, padding: 10, alignItems: "center" } as ViewStyle,
+  applyText:      { fontSize: 13, fontWeight: "700", fontFamily: "DMSans_700Bold" } as TextStyle,
+  // ── Map & list ──────────────────────────────────────────────────────────
+  mapWrap:        { margin: 12, borderRadius: 16, borderWidth: 2, overflow: "hidden", shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 0, elevation: 4, height: 320 } as ViewStyle,
+  map:            { flex: 1 } as ViewStyle,
+  pin:            { width: 36, height: 36, borderRadius: 18, borderWidth: 2, alignItems: "center", justifyContent: "center", shadowOffset: { width: 2, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 4 } as ViewStyle,
+  drawBar:        { flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 12, borderWidth: 2, borderRadius: 14, padding: 10, marginBottom: 4 } as ViewStyle,
+  drawHint:       { fontSize: 12, fontFamily: "DMSans_400Regular" } as TextStyle,
+  drawBtn:        { borderWidth: 2, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5 } as ViewStyle,
+  callout:        { margin: 12, borderWidth: 2, borderRadius: 16, padding: 14, shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 0, elevation: 4 } as ViewStyle,
+  calloutTitle:   { fontSize: 16, fontWeight: "800", fontFamily: "PlayfairDisplay_800ExtraBold", marginBottom: 4 } as TextStyle,
+  calloutRating:  { fontSize: 13, fontFamily: "DMSans_600SemiBold", marginBottom: 4 } as TextStyle,
+  calloutSub:     { fontSize: 12, fontFamily: "DMSans_400Regular", marginBottom: 10 } as TextStyle,
+  calloutActions: { flexDirection: "row", gap: 8, alignItems: "center" } as ViewStyle,
+  calloutClose:   { borderWidth: 2, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 6 } as ViewStyle,
+  calloutCTA:     { flex: 1, borderWidth: 2, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, alignItems: "center" } as ViewStyle,
+  calloutCTAText: { fontSize: 13, fontWeight: "700", fontFamily: "DMSans_700Bold" } as TextStyle,
+  listRow:        { flexDirection: "row", alignItems: "center", gap: 12, borderWidth: 2, borderRadius: 12, padding: 10, marginBottom: 8, shadowOffset: { width: 2, height: 2 }, shadowOpacity: 1, shadowRadius: 0, elevation: 2 } as ViewStyle,
+  listIcon:       { width: 36, height: 36, borderRadius: 10, borderWidth: 1.5, alignItems: "center", justifyContent: "center" } as ViewStyle,
+  listTitle:      { fontSize: 13, fontWeight: "700", fontFamily: "DMSans_700Bold" } as TextStyle,
+  listSub:        { fontSize: 11, fontFamily: "DMSans_400Regular" } as TextStyle,
+  empty:          { alignItems: "center", paddingTop: 60, paddingHorizontal: 24 } as ViewStyle,
+  emptyIcon:      { fontSize: 36, marginBottom: 12 } as TextStyle,
+  emptyTitle:     { fontSize: 16, fontWeight: "700", fontFamily: "PlayfairDisplay_700Bold", marginBottom: 6 } as TextStyle,
+  emptySub:       { fontSize: 13, fontFamily: "DMSans_400Regular", textAlign: "center" } as TextStyle,
 });

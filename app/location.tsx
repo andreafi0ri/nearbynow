@@ -420,7 +420,7 @@ const s = StyleSheet.create({
   } as TextStyle,
 
   // ── Manual entry ──────────────────────────────────────────────────────────
-  manualWrap:    { width: "100%", marginTop: 20 } as ViewStyle,
+  manualWrap:    { width: "100%", marginTop: 20, zIndex: 20 } as ViewStyle,
 
   manualHint:    {
     fontFamily: "Inter_400Regular",

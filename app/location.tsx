@@ -10,6 +10,7 @@ import {
   StyleSheet, KeyboardAvoidingView, Platform,
   ScrollView, ViewStyle, TextStyle,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Defs, RadialGradient, Stop, Ellipse, Circle as SvgCircle } from "react-native-svg";
 import { useRouter } from "expo-router";
 import * as Location from "expo-location";
@@ -38,6 +39,7 @@ export default function LocationScreen() {
   const { theme: T, isDark } = useTheme();
   const router  = useRouter();
   const { addArea } = useSavedAreas();
+  const insets = useSafeAreaInsets();
 
   const [manual,  setManual]  = useState(false);
   const [area,    setArea]    = useState("");
@@ -133,14 +135,17 @@ export default function LocationScreen() {
   return (
     <KeyboardAvoidingView
       style={[s.flex, { backgroundColor: T.bg }]}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <View style={s.flex}>
         {/* ── Absolute map background ───────────────────────────────────── */}
         <MapBackground T={T} isDark={isDark} opacity={0.7} />
 
         <ScrollView
-          contentContainerStyle={s.scroll}
+          contentContainerStyle={[s.scroll, {
+            paddingTop: Math.max(52, insets.top + 16),
+            paddingBottom: Math.max(30, insets.bottom + 20),
+          }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
@@ -303,8 +308,6 @@ const s = StyleSheet.create({
     alignItems: "center",
     textAlign: "center" as any,
     paddingHorizontal: 28,
-    paddingTop: 52,
-    paddingBottom: 30,
   } as ViewStyle,
 
   // ── Hero ────────────────────────────────────────────────────────────────

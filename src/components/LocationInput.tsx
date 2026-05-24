@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from "react";
 import {
   View, Text, TextInput, TouchableOpacity, ActivityIndicator,
-  StyleSheet, ViewStyle, TextStyle,
+  StyleSheet, Platform, ViewStyle, TextStyle,
 } from "react-native";
 import { Theme } from "../theme";
 import { searchLocations, LocationSuggestion } from "../services/locationService";
@@ -72,7 +72,7 @@ export function LocationInput({
           returnKeyType={returnKeyType}
           autoFocus={autoFocus}
           onSubmitEditing={dismiss}
-          style={[styles.input, { color: T.text }]}
+          style={[styles.input, { color: T.text }, Platform.OS === "web" && { fontSize: 16 }]}
         />
         {loading && (
           <ActivityIndicator size="small" color={T.muted} style={styles.spinner} />

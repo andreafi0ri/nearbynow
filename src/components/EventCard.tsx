@@ -296,7 +296,11 @@ export function EventCard({
                 </Text>
               </TouchableOpacity>
             ) : (
-              <TouchableOpacity style={[styles.viewBtn, { borderColor: T.borderSub, shadowColor: T.borderSub }]}>
+              <TouchableOpacity
+                onPress={() => { const url = item.sourceUrl ?? sourceLinks[0]?.url; if (url) Linking.openURL(url); }}
+                activeOpacity={0.8}
+                style={[styles.viewBtn, { borderColor: T.borderSub, shadowColor: T.borderSub }]}
+              >
                 <Text style={[styles.viewBtnText, { color: T.text }]}>View →</Text>
               </TouchableOpacity>
             )}

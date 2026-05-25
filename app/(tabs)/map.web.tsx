@@ -93,7 +93,10 @@ export default function MapScreen() {
   const [mapboxLoaded, setMapboxLoaded] = useState(!!(window as any).mapboxgl);
   const [feedPosts, setFeedPosts]       = useState<EventItem[]>([]);
   const [recItems, setRecItems]         = useState<EventItem[]>([]);
+  // feedItems drives map markers (incl. dynamic recs as map pans)
   const feedItems = useMemo(() => [...feedPosts, ...recItems], [feedPosts, recItems]);
+  // listFeedItems is frozen to the getFeed result so the list matches the feed screen
+  const [listFeedItems, setListFeedItems] = useState<EventItem[]>([]);
   const [loading, setLoading]           = useState(false);
   const [searchVal, setSearchVal]       = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
@@ -157,13 +160,13 @@ export default function MapScreen() {
     return true;
   }), [feedItems, catFilter, srcFilters, range, freeOnly]);
 
-  const listItems = useMemo(() => feedItems.filter(e => {
+  const listItems = useMemo(() => listFeedItems.filter(e => {
     if (freeOnly && freeFn && !freeFn(e)) return false;
     if (!catFilter.matchFn(e)) return false;
     if (srcFilters.length > 0 && !srcFilters.some(f => f.matchFn(e))) return false;
     if (range && e.date) return e.date >= range[0] && e.date <= range[1];
     return true;
-  }), [feedItems, catFilter, srcFilters, range, freeOnly]);
+  }), [listFeedItems, catFilter, srcFilters, range, freeOnly]);
 
   // ── Load Mapbox GL JS from CDN ───────────────────────────────────────────────
   useEffect(() => {
@@ -263,6 +266,7 @@ export default function MapScreen() {
   useEffect(() => {
     if (!activeArea) return;
     setSearchVal(activeArea);
+    setListFeedItems([]);
     setFeedPosts([]);          // clear stale events from previous area immediately
     setRecItems([]);
     setLoading(true);
@@ -293,6 +297,7 @@ export default function MapScreen() {
         return getFeed(activeArea, coords);
       })
       .then(result => {
+        setListFeedItems(result.items);
         setFeedPosts(result.items.filter(i => i.type === "event"));
         setRecItems(result.items.filter(i => i.type === "recommendation"));
       })
@@ -562,6 +567,15 @@ export default function MapScreen() {
           </View>
         )}
 
+        {/* Events counter */}
+        {!loading && listFeedItems.length > 0 && (
+          <View style={[styles.countBar, { borderBottomColor: T.borderSub }]}>
+            <Text style={[styles.countText, { color: T.muted }]}>
+              {listItems.length} event{listItems.length !== 1 ? "s" : ""} found
+            </Text>
+          </View>
+        )}
+
         {/* Event list */}
         <View style={{ padding: 12 }}>
           {noAreaData ? (
@@ -647,6 +661,8 @@ const styles = StyleSheet.create({
   applyBtn:      { borderRadius: 10, padding: 10, alignItems: "center" } as ViewStyle,
   applyText:     { fontSize: 13, fontWeight: "700", fontFamily: "DMSans_700Bold" } as TextStyle,
   // ── Map & list ──────────────────────────────────────────────────────────
+  countBar:      { paddingHorizontal: 16, paddingVertical: 8, borderBottomWidth: 1 } as ViewStyle,
+  countText:     { fontSize: 11, fontWeight: "700", letterSpacing: 0.8, textTransform: "uppercase", fontFamily: "DMSans_700Bold" } as TextStyle,
   mapWrap:       { margin: 12, borderRadius: 16, borderWidth: 2, overflow: "hidden", height: 360 } as ViewStyle,
   drawBar:       { flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 12, borderWidth: 2, borderRadius: 14, padding: 10, marginBottom: 4 } as ViewStyle,
   drawHint:      { fontSize: 12, fontFamily: "DMSans_400Regular" } as TextStyle,

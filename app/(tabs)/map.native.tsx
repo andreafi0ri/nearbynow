@@ -239,13 +239,13 @@ export default function MapScreen() {
     return true;
   }), [allItems, catFilter, srcFilters, range, freeOnly]);
 
-  const listItems = useMemo(() => allItems.filter(e => {
+  const listItems = useMemo(() => feedItems.filter(e => {
     if (freeOnly && freeFn && !freeFn(e)) return false;
     if (!catFilter.matchFn(e)) return false;
     if (srcFilters.length > 0 && !srcFilters.some(f => f.matchFn(e))) return false;
     if (range && e.date) return e.date >= range[0] && e.date <= range[1];
     return true;
-  }), [allItems, catFilter, srcFilters, range, freeOnly]);
+  }), [feedItems, catFilter, srcFilters, range, freeOnly]);
 
   // GeoJSON for draw polygon overlay
   const drawGeoJSON = useMemo((): GeoJSON.Feature | null => {
@@ -620,6 +620,15 @@ export default function MapScreen() {
           </View>
         )}
 
+        {/* Events counter */}
+        {!loading && feedItems.length > 0 && (
+          <View style={[styles.countBar, { borderBottomColor: T.borderSub }]}>
+            <Text style={[styles.countText, { color: T.muted }]}>
+              {listItems.length} event{listItems.length !== 1 ? "s" : ""} found
+            </Text>
+          </View>
+        )}
+
         {/* ── Event list ────────────────────────────────────────────────────── */}
         <View style={{ padding: 12 }}>
           {noAreaData ? (
@@ -697,6 +706,8 @@ const styles = StyleSheet.create({
   applyBtn:       { borderRadius: 10, padding: 10, alignItems: "center" } as ViewStyle,
   applyText:      { fontSize: 13, fontWeight: "700", fontFamily: "DMSans_700Bold" } as TextStyle,
   // ── Map & list ──────────────────────────────────────────────────────────
+  countBar:       { paddingHorizontal: 16, paddingVertical: 8, borderBottomWidth: 1 } as ViewStyle,
+  countText:      { fontSize: 11, fontWeight: "700", letterSpacing: 0.8, textTransform: "uppercase", fontFamily: "DMSans_700Bold" } as TextStyle,
   mapWrap:        { margin: 12, borderRadius: 16, borderWidth: 2, overflow: "hidden", shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 0, elevation: 4, height: 320 } as ViewStyle,
   map:            { flex: 1 } as ViewStyle,
   pin:            { width: 36, height: 36, borderRadius: 18, borderWidth: 2, alignItems: "center", justifyContent: "center", shadowOffset: { width: 2, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 4 } as ViewStyle,

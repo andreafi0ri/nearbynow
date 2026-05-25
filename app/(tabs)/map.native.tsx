@@ -209,6 +209,12 @@ export default function MapScreen() {
   const filterLabel = filterCount > 0 ? String(filterCount) : "All";
   const freeFn = FILTERS.find(f => f.id === "Free")?.matchFn;
 
+  // Mirror feed's guard: some recommendation sources only appear under their own category filter
+  const FILTER_ONLY_SOURCE_MAP: Record<string, string> = {
+    "Food Places": "Food & Drink",
+    "Showtimes":   "Cinema",
+  };
+
   const catFilter  = useMemo(() => FILTERS.find(f => f.id === activeFilter) ?? FILTERS[0], [activeFilter]);
   const srcFilters = useMemo<FilterOption[]>(() =>
     activeSources.size === 0 ? [] : SOURCE_FILTERS.filter(f => activeSources.has(f.id)),
@@ -241,11 +247,19 @@ export default function MapScreen() {
 
   const listItems = useMemo(() => feedItems.filter(e => {
     if (freeOnly && freeFn && !freeFn(e)) return false;
+    // Match feed's FILTER_ONLY_SOURCE_MAP: hide food/showtime recs outside their category
+    const requiredCat = FILTER_ONLY_SOURCE_MAP[e.source];
+    if (requiredCat && activeFilter !== requiredCat) return false;
     if (!catFilter.matchFn(e)) return false;
     if (srcFilters.length > 0 && !srcFilters.some(f => f.matchFn(e))) return false;
-    if (range && e.date) return e.date >= range[0] && e.date <= range[1];
+    // Recommendations pass date filter regardless (same as feed screen)
+    if (range) {
+      if (e.type === "recommendation") return true;
+      if (!e.date) return false;
+      return e.date >= range[0] && e.date <= range[1];
+    }
     return true;
-  }), [feedItems, catFilter, srcFilters, range, freeOnly]);
+  }), [feedItems, catFilter, srcFilters, range, freeOnly, activeFilter]);
 
   // GeoJSON for draw polygon overlay
   const drawGeoJSON = useMemo((): GeoJSON.Feature | null => {

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView, Switch,
-  StyleSheet, ViewStyle, TextStyle,
+  StyleSheet, Platform, Linking, ViewStyle, TextStyle,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -277,10 +277,23 @@ export default function ProfileScreen() {
         {/* ── Account ── */}
         <Text style={[styles.sectionLabel, { color: T.muted, marginTop: 8 }]}>ACCOUNT</Text>
         <View style={[styles.card, { backgroundColor: T.bgCard, borderColor: T.border, shadowColor: T.border, padding: 0, overflow: "hidden" }]}>
-          {["Privacy Policy", "Terms of Service", "Send feedback"].map(label => (
-            <TouchableOpacity key={label}
-              style={[styles.accountRow, { borderBottomColor: T.borderSub, borderBottomWidth: 1.5 }]}>
-              <Text style={[styles.accountLabel, { color: T.text }]}>{label}</Text>
+          {[
+            { label: "Privacy Policy",   url: "https://www.nearbyandnow.com/privacy",          isDestructive: false },
+            { label: "Terms of Service", url: "https://www.nearbyandnow.com/terms",            isDestructive: false },
+            { label: "Send feedback",    url: "mailto:hello@nearbyandnow.com",                 isDestructive: false },
+          ].map((item, i) => (
+            <TouchableOpacity
+              key={item.label}
+              onPress={() => {
+                if (Platform.OS === "web") {
+                  window.open(item.url, item.url.startsWith("mailto") ? "_self" : "_blank", "noopener,noreferrer");
+                } else {
+                  Linking.openURL(item.url);
+                }
+              }}
+              style={[styles.accountRow, { borderBottomColor: T.borderSub, borderBottomWidth: 1.5 }]}
+            >
+              <Text style={[styles.accountLabel, { color: T.text }]}>{item.label}</Text>
               <Text style={{ color: T.muted }}>→</Text>
             </TouchableOpacity>
           ))}

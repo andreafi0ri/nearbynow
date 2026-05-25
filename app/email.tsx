@@ -7,7 +7,7 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   View, Text, TextInput, TouchableOpacity, Animated,
   StyleSheet, KeyboardAvoidingView, Platform,
-  ScrollView, ViewStyle, TextStyle,
+  ScrollView, Linking, ViewStyle, TextStyle,
 } from "react-native";
 import Svg, { Defs, RadialGradient, Stop, Ellipse, Rect, Path, Circle as SvgCircle } from "react-native-svg";
 import { useRouter } from "expo-router";
@@ -18,6 +18,15 @@ import { Pin } from "../src/components/Pin";
 import { supabase } from "../src/lib/supabase";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// ─── Helper: open URL in new tab on web, in-app browser on native ────────────
+function openLegal(url: string) {
+  if (Platform.OS === "web") {
+    window.open(url, "_blank", "noopener,noreferrer");
+  } else {
+    Linking.openURL(url);
+  }
+}
 
 // ─── Envelope SVG (prototype EnvelopeIcon, verbatim) ────────────────────────
 function EnvelopeIcon({ size = 36, color = "currentColor" }: { size?: number; color?: string }) {
@@ -59,10 +68,12 @@ export default function EmailScreen() {
   const { theme: T, isDark } = useTheme();
   const router = useRouter();
 
-  const [email,   setEmail]   = useState("");
-  const [sending, setSending] = useState(false);  // real API in-flight
-  const [sent,    setSent]    = useState(false);   // API done → show spinner briefly
-  const [error,   setError]   = useState("");
+  const [email,      setEmail]      = useState("");
+  const [sending,    setSending]    = useState(false);  // real API in-flight
+  const [sent,       setSent]       = useState(false);  // API done → show spinner briefly
+  const [error,      setError]      = useState("");
+  const [agreed,     setAgreed]     = useState(false);
+  const [agreeError, setAgreeError] = useState(false);
 
   const valid = EMAIL_RE.test(email);
 
@@ -74,6 +85,13 @@ export default function EmailScreen() {
   }, []);
 
   const handleSubmit = async () => {
+    // Check agreement first
+    if (!agreed) {
+      setAgreeError(true);
+      return;
+    }
+    setAgreeError(false);
+
     if (!valid || sending || sent) return;
     setError("");
     setSending(true);
@@ -94,7 +112,13 @@ export default function EmailScreen() {
     }
   };
 
-  const handleSkip = () => router.replace("/feed");
+  const handleSkip = () => {
+    if (!agreed) {
+      setAgreeError(true);
+      return;
+    }
+    router.replace("/feed");
+  };
 
   const btnActive  = valid && !sending && !sent;
   const btnBg      = btnActive
@@ -107,7 +131,7 @@ export default function EmailScreen() {
   return (
     <KeyboardAvoidingView
       style={[s.flex, { backgroundColor: T.bg }]}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <View style={s.flex}>
         {/* ── Map background at reduced opacity ───────────────────────── */}
@@ -191,6 +215,7 @@ export default function EmailScreen() {
                   backgroundColor: T.surface,
                   color:           T.text,
                   borderColor:     valid ? T.gold : T.border,
+                  fontSize:        Platform.OS === "web" ? 16 : 15,
                 },
               ]}
             />
@@ -216,6 +241,66 @@ export default function EmailScreen() {
           )}
 
           <View style={s.gap12} />
+
+          {/* ── Terms & Privacy checkbox ──────────────────────────────── */}
+          <TouchableOpacity
+            onPress={() => { setAgreed(a => !a); setAgreeError(false); }}
+            style={[
+              s.checkboxRow,
+              agreeError && {
+                borderColor: T.red,
+                borderWidth: 1.5,
+                borderRadius: 10,
+                padding: 8,
+                backgroundColor: T.red + "08",
+              },
+            ]}
+            activeOpacity={0.7}
+          >
+            {/* The box */}
+            <View style={[
+              s.checkbox,
+              {
+                borderColor:     agreeError ? T.red : agreed ? T.text : T.borderSub,
+                backgroundColor: agreed ? T.text : "transparent",
+              },
+            ]}>
+              {agreed && (
+                <Text style={{ color: T.goldBri, fontSize: 11, fontWeight: "700" }}>✓</Text>
+              )}
+            </View>
+
+            {/* The label — with tappable links that do NOT toggle the checkbox */}
+            <Text style={[s.checkboxLabel, { color: T.textSub }]}>
+              I agree to the{" "}
+              <Text
+                style={[s.checkboxLink, { color: T.gold }]}
+                onPress={e => {
+                  e.stopPropagation();
+                  openLegal("https://www.nearbyandnow.com/terms");
+                }}
+              >
+                Terms &amp; Conditions
+              </Text>
+              {" "}and{" "}
+              <Text
+                style={[s.checkboxLink, { color: T.gold }]}
+                onPress={e => {
+                  e.stopPropagation();
+                  openLegal("https://www.nearbyandnow.com/privacy");
+                }}
+              >
+                Privacy Policy
+              </Text>
+            </Text>
+          </TouchableOpacity>
+
+          {/* Error shown when user taps Continue without agreeing */}
+          {agreeError && (
+            <Text style={[s.agreeError, { color: T.red }]}>
+              Please agree to the Terms and Privacy Policy to continue
+            </Text>
+          )}
 
           {/* ── Send magic link button ────────────────────────────────── */}
           <TouchableOpacity
@@ -396,6 +481,48 @@ const s = StyleSheet.create({
     marginTop: 6,
     textAlign: "center",
     width: "100%",
+  } as TextStyle,
+
+  // ── Checkbox ─────────────────────────────────────────────────────────────
+  checkboxRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    width: "100%",
+    marginBottom: 16,
+    paddingHorizontal: 2,
+  } as ViewStyle,
+
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+    marginTop: 1,
+  } as ViewStyle,
+
+  checkboxLabel: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: "DMSans_400Regular",
+    lineHeight: 20,
+  } as TextStyle,
+
+  checkboxLink: {
+    fontFamily: "DMSans_600SemiBold",
+    textDecorationLine: "underline",
+  } as TextStyle,
+
+  agreeError: {
+    fontSize: 12,
+    fontFamily: "DMSans_400Regular",
+    marginTop: -10,
+    marginBottom: 12,
+    alignSelf: "flex-start",
+    paddingHorizontal: 2,
   } as TextStyle,
 
   // ── Send button ───────────────────────────────────────────────────────────

@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Nearby &amp; Now — home screen explorations</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="design-canvas.jsx"></script>
+  <script type="text/babel" src="screens.jsx"></script>
+  <script type="text/babel" src="screens-refined.jsx"></script>
+
+  <script type="text/babel" data-presets="react">
+    const Critique = () => (
+      <div className="crit">
+        <h2>What's working — and what we can push <em>much</em> further.</h2>
+        <p className="lede">
+          The wordmark is genuinely lovely, and the dark/gold palette has personality.
+          But the home screen does very little work for a product called "what's happening near you" — it tells me nothing about what's happening,
+          and the tonal switch into the cream-paper app feels like a different brand. Here's where I'd push it.
+        </p>
+        <div className="grid">
+          <div className="item">
+            <div className="num">01 ·  DUAL-MODE COMMITMENT</div>
+            <h3>You have dark mode and light mode — design both home screens.</h3>
+            <p>You said the dark screenshot was just dark mode. Good — but right now only the dark home is mocked up. <b>The home screen has to feel premium in both palettes</b>, since first impressions land before the user gets to pick. Below, every option ships in both.</p>
+          </div>
+          <div className="item">
+            <div className="num">02 ·  REDUNDANCY</div>
+            <h3>"What's happening near you" is said twice.</h3>
+            <p>The tagline under the wordmark and the body copy below it say the same thing in slightly different words. <b>Pick one line and make it confident</b> — or replace one with a peek at real content.</p>
+          </div>
+          <div className="item">
+            <div className="num">03 ·  CTA CONTRAST</div>
+            <h3>White button + gold text is the weakest pixel on the page.</h3>
+            <p>Primary actions should be the loudest thing on the screen. Right now the "Use my location" button is paler than its surrounding paragraph. <b>Make it filled gold-on-dark, or dark-on-cream — anything but low-contrast on white.</b></p>
+          </div>
+          <div className="item">
+            <div className="num">04 ·  EMPTY PROMISE</div>
+            <h3>The screen doesn't show what's inside.</h3>
+            <p>Look at the feed — the categories, the red accent cards, the magazine-y typography are charming. <b>Tease that on the home screen.</b> Two faded sample cards, or a row of category chips, would convert way better than a single sentence.</p>
+          </div>
+          <div className="item">
+            <div className="num">05 ·  LOGO PRESENCE</div>
+            <h3>The pin is small and lost in negative space.</h3>
+            <p>The wordmark is the hero, not the pin — but right now the pin is the size of a UI icon. Either lean into the wordmark and shrink the pin to a true mark, or make the pin a proper hero moment with a halo and presence.</p>
+          </div>
+          <div className="item">
+            <div className="num">06 ·  THE LITTLE STUFF</div>
+            <h3>A few details to polish across the app.</h3>
+            <p>The category emoji <i>feel</i> right but render inconsistently across devices — consider custom mono-line icons. The red accent on cards is great rhythm. Tighten the wordmark kerning. Italicize the ampersand always — it's already your strongest visual signature.</p>
+          </div>
+        </div>
+      </div>
+    );
+
+    const App = () => (
+      <DesignCanvas defaultZoom={0.65} title="Nearby & Now — home screen">
+        <DCSection id="critique" title="Critique">
+          <DCArtboard id="notes" label="Notes" width={920} height={500}>
+            <Critique/>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="current" title="Current direction">
+          <DCArtboard id="v0" label="Original (as-shipped)" width={390} height={800}>
+            <V0_Original/>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="refined" title="Refined — pushing C + D further" subtitle="Each direction in both dark and light. The starred hybrid combines the map context with the category-chip preview.">
+          <DCArtboard id="hybrid-d" label="★ Hybrid C+D · dark" width={390} height={800}>
+            <Hybrid mode="dark"/>
+          </DCArtboard>
+          <DCArtboard id="hybrid-l" label="★ Hybrid C+D · light" width={390} height={800}>
+            <Hybrid mode="light"/>
+          </DCArtboard>
+          <DCArtboard id="c-d" label="C · Chips — dark" width={390} height={800}>
+            <RefinedC mode="dark"/>
+          </DCArtboard>
+          <DCArtboard id="c-l" label="C · Chips — light" width={390} height={800}>
+            <RefinedC mode="light"/>
+          </DCArtboard>
+          <DCArtboard id="d-d" label="D · Map — dark" width={390} height={800}>
+            <RefinedD mode="dark"/>
+          </DCArtboard>
+          <DCArtboard id="d-l" label="D · Map — light" width={390} height={800}>
+            <RefinedD mode="light"/>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="alts" title="Earlier explorations (for reference)">
+          <DCArtboard id="v1" label="A · Cream — match the app's interior" width={390} height={800}>
+            <V1_Cream/>
+          </DCArtboard>
+          <DCArtboard id="v2" label="B · Editorial peek — show real content" width={390} height={800}>
+            <V2_Editorial/>
+          </DCArtboard>
+          <DCArtboard id="v3" label="C · Dark, refined — fix the CTA & add categories" width={390} height={800}>
+            <V3_DarkRefined/>
+          </DCArtboard>
+          <DCArtboard id="v4" label="D · Map context — the pin actually pins something" width={390} height={800}>
+            <V4_Map/>
+          </DCArtboard>
+        </DCSection>
+      </DesignCanvas>
+    );
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+  </script>
+</body>
+</html>

@@ -7,8 +7,9 @@
     "api/viator-products.js": { "memory": 128, "maxDuration": 15 }
   },
   "rewrites": [
-    { "source": "/privacy", "destination": "/privacy/index.html" },
-    { "source": "/terms",   "destination": "/terms/index.html" },
+    { "source": "/privacy",     "destination": "/privacy/index.html" },
+    { "source": "/terms",       "destination": "/terms/index.html" },
+    { "source": "/delete-data", "destination": "/delete-data/index.html" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }

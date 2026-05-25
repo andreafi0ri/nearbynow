@@ -280,6 +280,7 @@ export default function ProfileScreen() {
           {[
             { label: "Privacy Policy",   url: "https://www.nearbyandnow.com/privacy",          isDestructive: false },
             { label: "Terms of Service", url: "https://www.nearbyandnow.com/terms",            isDestructive: false },
+            { label: "Delete my data",   url: "https://www.nearbyandnow.com/delete-data",      isDestructive: false },
             { label: "Send feedback",    url: "mailto:hello@nearbyandnow.com",                 isDestructive: false },
           ].map((item, i) => (
             <TouchableOpacity

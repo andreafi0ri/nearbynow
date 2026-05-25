@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Delete My Data – Nearby &amp; Now</title>
+  <meta name="description" content="Request deletion of your personal data from Nearby &amp; Now." />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #FAF7F3;
+      --surface: #F0EBE3;
+      --border:  #E2D9CE;
+      --text:    #1A1A1A;
+      --sub:     #5C5752;
+      --muted:   #8C8880;
+      --gold:    #B8920A;
+      --gold-lt: #F5EDD0;
+      --red:     #C0392B;
+      --red-lt:  #FDECEA;
+    }
+
+    html { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.6; }
+    body { min-height: 100vh; }
+
+    /* ── Top bar ── */
+    header {
+      background: var(--bg);
+      border-bottom: 1.5px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    header a { text-decoration: none; display: flex; align-items: center; gap: 10px; }
+    .wordmark { font-size: 17px; font-weight: 800; letter-spacing: -0.3px; color: var(--text); font-family: Georgia, "Times New Roman", serif; }
+    .wordmark em { color: var(--gold); font-style: italic; }
+
+    /* ── Page shell ── */
+    main { max-width: 680px; margin: 0 auto; padding: 48px 24px 80px; }
+
+    .chip {
+      display: inline-block;
+      background: var(--red-lt);
+      color: var(--red);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--red);
+      margin-bottom: 16px;
+    }
+
+    h1 { font-family: Georgia, "Times New Roman", serif; font-size: clamp(24px, 5vw, 34px); font-weight: 800; letter-spacing: -0.5px; line-height: 1.15; margin-bottom: 12px; }
+
+    .lead { font-size: 15px; color: var(--sub); margin-bottom: 36px; line-height: 1.65; }
+
+    h2 { font-size: 16px; font-weight: 700; margin: 32px 0 10px; color: var(--text); }
+
+    p  { font-size: 15px; color: var(--sub); margin-bottom: 14px; }
+    ul { margin: 0 0 14px 20px; }
+    li { font-size: 15px; color: var(--sub); margin-bottom: 6px; }
+
+    a { color: var(--gold); text-decoration: underline; text-underline-offset: 3px; }
+    a:hover { opacity: 0.8; }
+
+    .divider { border: none; border-top: 1.5px solid var(--border); margin: 32px 0; }
+
+    /* ── Info box ── */
+    .info-box {
+      background: var(--gold-lt);
+      border: 1.5px solid var(--gold);
+      border-radius: 12px;
+      padding: 18px 20px;
+      margin-bottom: 28px;
+    }
+    .info-box p { margin: 0; color: var(--text); font-size: 14px; }
+
+    /* ── Warning box ── */
+    .warn-box {
+      background: var(--red-lt);
+      border: 1.5px solid var(--red);
+      border-radius: 12px;
+      padding: 18px 20px;
+      margin-bottom: 28px;
+    }
+    .warn-box p { margin: 0; color: var(--red); font-size: 14px; font-weight: 600; }
+
+    /* ── Steps ── */
+    .steps { list-style: none; margin: 0 0 24px; padding: 0; counter-reset: step; }
+    .steps li {
+      counter-increment: step;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      margin-bottom: 16px;
+      color: var(--sub);
+      font-size: 15px;
+    }
+    .steps li::before {
+      content: counter(step);
+      flex-shrink: 0;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--gold);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 2px;
+    }
+
+    /* ── Email CTA ── */
+    .email-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--text);
+      color: #F5EDD0;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      text-decoration: none;
+      padding: 14px 24px;
+      border-radius: 12px;
+      margin: 8px 0 28px;
+      transition: opacity 0.15s;
+    }
+    .email-cta:hover { opacity: 0.85; color: #F5EDD0; }
+
+    /* ── What gets deleted table ── */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 24px;
+      font-size: 14px;
+    }
+    .data-table th {
+      text-align: left;
+      padding: 10px 14px;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      font-weight: 700;
+      color: var(--text);
+    }
+    .data-table td {
+      padding: 10px 14px;
+      border: 1.5px solid var(--border);
+      color: var(--sub);
+      vertical-align: top;
+    }
+    .data-table tr:nth-child(even) td { background: var(--surface); }
+
+    .badge-yes  { color: #1a7a4a; font-weight: 700; }
+    .badge-keep { color: var(--muted); font-weight: 600; }
+
+    footer {
+      text-align: center;
+      padding: 32px 24px;
+      border-top: 1.5px solid var(--border);
+      font-size: 12px;
+      color: var(--muted);
+    }
+    footer a { color: var(--gold); }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="https://www.nearbyandnow.com">
+    <svg width="22" height="28" viewBox="0 0 22 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M11 1C6.03 1 2 5.03 2 10C2 17.5 11 27 11 27C11 27 20 17.5 20 10C20 5.03 15.97 1 11 1Z" fill="#1A1A1A" stroke="#1A1A1A" stroke-width="0.5"/>
+      <circle cx="11" cy="10" r="3.5" fill="#B8920A"/>
+      <circle cx="11" cy="10" r="1.2" fill="#1A1A1A"/>
+    </svg>
+    <span class="wordmark">Nearby <em>&amp;</em> Now</span>
+  </a>
+</header>
+
+<main>
+  <span class="chip">Your Rights</span>
+  <h1>Delete My Data</h1>
+  <p class="lead">
+    Under UK GDPR and EU GDPR you have the right to request erasure of your personal data — also known as the "right to be forgotten". This page explains what data we hold, what gets deleted, and how to submit a request.
+  </p>
+
+  <div class="info-box">
+    <p>📋 &nbsp;<strong>Most data is stored locally on your device</strong> — clearing app data or uninstalling the app removes it instantly without contacting us. Only account data (email address and saved events synced across devices) is held on our servers.</p>
+  </div>
+
+  <h2>What data we hold about you</h2>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Data</th>
+        <th>Where it lives</th>
+        <th>Deleted on request?</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Email address</td>
+        <td>Our database (Supabase)</td>
+        <td class="badge-yes">✓ Yes — within 30 days</td>
+      </tr>
+      <tr>
+        <td>Display name &amp; avatar</td>
+        <td>Our database (Supabase)</td>
+        <td class="badge-yes">✓ Yes — within 30 days</td>
+      </tr>
+      <tr>
+        <td>Saved events (synced)</td>
+        <td>Our database (Supabase)</td>
+        <td class="badge-yes">✓ Yes — within 30 days</td>
+      </tr>
+      <tr>
+        <td>Location preferences</td>
+        <td>Your device only (AsyncStorage)</td>
+        <td class="badge-yes">✓ Clear by uninstalling the app</td>
+      </tr>
+      <tr>
+        <td>Theme &amp; filter preferences</td>
+        <td>Your device only (AsyncStorage)</td>
+        <td class="badge-yes">✓ Clear by uninstalling the app</td>
+      </tr>
+      <tr>
+        <td>Anonymised analytics</td>
+        <td>Google Analytics (aggregated, not identifiable)</td>
+        <td class="badge-keep">— Cannot be linked back to you</td>
+      </tr>
+      <tr>
+        <td>Server access logs</td>
+        <td>Vercel (auto-deleted after 30 days)</td>
+        <td class="badge-keep">— Auto-deleted; not personally identifiable</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <hr class="divider" />
+
+  <h2>How to delete your data</h2>
+
+  <div class="warn-box">
+    <p>⚠️ &nbsp;Deletion is permanent and cannot be undone. Your saved events and account history will be lost.</p>
+  </div>
+
+  <ol class="steps">
+    <li>Send us an email using the button below. Include the email address associated with your Nearby &amp; Now account so we can locate your data.</li>
+    <li>We will verify your identity to ensure we are deleting the correct account (we may ask you to confirm access to the email address).</li>
+    <li>We will complete the deletion and confirm by email within <strong>30 days</strong>, in accordance with UK/EU GDPR requirements.</li>
+    <li>Once deleted, your account cannot be recovered. You are welcome to create a new account at any time.</li>
+  </ol>
+
+  <a class="email-cta" href="mailto:hello@nearbyandnow.com?subject=Data%20Deletion%20Request&body=Hi%2C%0A%0AI%20would%20like%20to%20request%20deletion%20of%20my%20personal%20data%20from%20Nearby%20%26%20Now.%0A%0AEmail%20address%20on%20my%20account%3A%20%5Byour%20email%5D%0A%0AThank%20you.">
+    ✉ &nbsp;Send deletion request
+  </a>
+
+  <hr class="divider" />
+
+  <h2>Prefer to do it yourself?</h2>
+  <p>If you only want to remove locally stored data (location, preferences, saved events) without contacting us, you can:</p>
+  <ul>
+    <li><strong>On iOS:</strong> Go to Settings → General → iPhone Storage → Nearby &amp; Now → Delete App.</li>
+    <li><strong>On Android:</strong> Go to Settings → Apps → Nearby &amp; Now → Storage → Clear Data.</li>
+    <li><strong>On web (PWA):</strong> Open your browser's developer tools, navigate to Application → Local Storage, and clear all entries for <code>nearbyandnow.com</code>. Or simply clear your browser's site data.</li>
+  </ul>
+
+  <hr class="divider" />
+
+  <h2>Unsubscribe from emails only</h2>
+  <p>If you only want to stop receiving emails (without deleting your account), click the <strong>Unsubscribe</strong> link at the bottom of any digest email we have sent you, or email us at <a href="mailto:hello@nearbyandnow.com">hello@nearbyandnow.com</a> with the subject "Unsubscribe".</p>
+
+  <hr class="divider" />
+
+  <h2>Questions?</h2>
+  <p>Contact us at <a href="mailto:hello@nearbyandnow.com">hello@nearbyandnow.com</a>. We aim to respond within 5 business days. For more information on how we handle your data, read our <a href="/privacy">Privacy Policy</a>.</p>
+</main>
+
+<footer>
+  &copy; 2026 Nearby &amp; Now &nbsp;·&nbsp;
+  <a href="https://www.nearbyandnow.com/privacy">Privacy Policy</a> &nbsp;·&nbsp;
+  <a href="https://www.nearbyandnow.com/terms">Terms &amp; Conditions</a> &nbsp;·&nbsp;
+  <a href="https://www.nearbyandnow.com/delete-data">Delete My Data</a> &nbsp;·&nbsp;
+  <a href="mailto:hello@nearbyandnow.com">hello@nearbyandnow.com</a>
+</footer>
+
+</body>
+</html>

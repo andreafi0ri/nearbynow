@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Nearby &amp; Now — interactive prototype</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    html, body { margin:0; padding:0; font-family: Inter, system-ui, sans-serif; background:#E9E4D8; }
+    *, *::before, *::after { box-sizing:border-box; }
+    button { font-family: inherit; }
+    /* hide scrollbars inside phone screens for a clean look */
+    [data-phone-scroll]::-webkit-scrollbar{ width: 0; display:none; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script src="nn/palette.js"></script>
+  <script src="nn/data.js"></script>
+
+  <script type="text/babel" src="nn/tweaks-panel.jsx"></script>
+  <script type="text/babel" src="nn/icons.jsx"></script>
+  <script type="text/babel" src="nn/components.jsx"></script>
+  <script type="text/babel" src="nn/bottom-sheet.jsx"></script>
+  <script type="text/babel" src="nn/filter-bar.jsx"></script>
+  <script type="text/babel" src="nn/screen-home.jsx"></script>
+  <script type="text/babel" src="nn/screen-email.jsx"></script>
+  <script type="text/babel" src="nn/screen-feed.jsx"></script>
+  <script type="text/babel" src="nn/screen-map.jsx"></script>
+  <script type="text/babel" src="nn/screen-saved.jsx"></script>
+  <script type="text/babel" src="nn/screen-profile.jsx"></script>
+  <script type="text/babel" src="nn/app.jsx"></script>
+</body>
+</html>

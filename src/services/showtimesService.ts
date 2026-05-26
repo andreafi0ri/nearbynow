@@ -204,6 +204,111 @@ function makeShowtimeId(theatreId: number, movieId: number): number {
   return 10_000_000 + theatreId * 10_000 + (movieId % 10_000);
 }
 
+// ─── Dev-mock fallback ────────────────────────────────────────────────────────
+// Returned by getShowtimes when EXPO_PUBLIC_AMC_API_KEY is not configured.
+// Ensures the Cinema filter and CinemaGroupedView always render in dev / Expo Go.
+// Showtimes are generated 1-7 hours from *now* so they always appear in the
+// future (the real groupShowtimesByMovie skips past showtimes).
+
+const DEV_THEATRE: AMCTheatre = {
+  id: 1457,
+  name: "AMC Classic Lancaster 13",
+  slug: "amc-classic-lancaster-13",
+  address: "1457 Lititz Pike",
+  city: "Lancaster",
+  state: "PA",
+  postalCode: "17601",
+  location: { lat: 40.0753, lon: -76.3408 },
+  attributes: [],
+};
+
+const DEV_MOVIE: AMCMovie = {
+  id: 9015,
+  name: "Mission: Impossible – The Final Reckoning",
+  sortableName: "Mission Impossible The Final Reckoning",
+  score: 89,
+  starRating: 4.2,
+  mpaaRating: "PG-13",
+  runTime: 163,
+  synopsis:
+    "The latest installment in the Mission: Impossible franchise. Ethan Hunt " +
+    "faces his most dangerous mission yet in a race to stop a rogue AI from " +
+    "reshaping the world.",
+  genres: [{ name: "Action" }, { name: "Thriller" }],
+  attributes: [],
+};
+
+function buildDevGroup(): ShowtimeGroup {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+
+  // 4 showtimes: +1h, +3h (Dolby, almost sold-out), +5h (IMAX), +7h
+  const rawShowtimes: AMCShowtime[] = ([1, 3, 5, 7] as const).map((offset, i) => {
+    const d = new Date(now.getTime() + offset * 3_600_000);
+    const local =
+      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
+      `T${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
+    const attrs: { id: number; name: string }[] =
+      i === 1 ? [{ id: 1, name: "Dolby" }] : i === 2 ? [{ id: 2, name: "IMAX" }] : [];
+    return {
+      id: 90_000 + i,
+      movieId: DEV_MOVIE.id,
+      movieName: DEV_MOVIE.name,
+      showDateTimeLocal: local,
+      showDateTimeUtc: d.toISOString(),
+      isSoldOut: false,
+      isAlmostSoldOut: i === 1, // Dolby almost sold out
+      isCanceled: false,
+      theatreId: DEV_THEATRE.id,
+      purchaseUrl: "",
+      attributes: attrs,
+    };
+  });
+
+  // Build showings display strings (used by EventCard showtime pills)
+  const showings = rawShowtimes.map(s => {
+    const d = new Date(s.showDateTimeLocal);
+    const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+    const fmt = s.attributes?.[0];
+    return fmt ? `${time} · ${fmt.name}` : time;
+  });
+
+  const fandangoUrl = buildFandangoDeepLink(
+    DEV_MOVIE.name,
+    DEV_THEATRE.name,
+    DEV_THEATRE.postalCode,
+  );
+
+  const today = new Date().toISOString().split("T")[0];
+
+  const feedItem: EventItem = {
+    id: makeShowtimeId(DEV_THEATRE.id, DEV_MOVIE.id),
+    type: "event",
+    title: DEV_MOVIE.name,
+    desc: `Action · ${DEV_MOVIE.mpaaRating} · 2h 43m · ${rawShowtimes.length} showings available today`,
+    longDesc: DEV_MOVIE.synopsis,
+    time: `Today · ${rawShowtimes.length} showings`,
+    date: today,
+    startIso: rawShowtimes[0].showDateTimeLocal,
+    location: `${DEV_THEATRE.name}, ${DEV_THEATRE.address}, ${DEV_THEATRE.city}, ${DEV_THEATRE.state}`,
+    lat: DEV_THEATRE.location.lat,
+    lng: DEV_THEATRE.location.lon,
+    source: "AMC Theatres",
+    category: "Cinema",
+    catColor: "#CC0000",
+    catDot: "#FF3333",
+    saves: 0,
+    img: "🎬",
+    booking: { label: "Get Tickets", url: fandangoUrl, affiliate: true },
+    rating: DEV_MOVIE.starRating,
+    showings,
+    tags: ["PG-13", "Action", "IMAX"],
+    isCanceled: false,
+  };
+
+  return { movie: DEV_MOVIE, theatre: DEV_THEATRE, showtimes: rawShowtimes, feedItem };
+}
+
 const TODAY_DATE = () => new Date().toISOString().split("T")[0];
 
 // ─── Function 5: groupShowtimesByMovie ───────────────────────────────────────
@@ -305,11 +410,15 @@ export async function getShowtimes(
   coords?: { lat: number; lng: number },
 ): Promise<ShowtimeGroup[]> {
   if (!process.env.EXPO_PUBLIC_AMC_API_KEY) {
-    console.warn(
-      "Showtimes: no AMC API key in .env — skipping. " +
+    // No API key — return dev-mock data so the Cinema filter and
+    // CinemaGroupedView always work during development / Expo Go.
+    // Showtimes are relative to now so they're always in the future.
+    // Apply for a free key at https://developers.amctheatres.com
+    console.info(
+      "[Showtimes] No AMC API key — returning dev mock. " +
         "Apply at https://developers.amctheatres.com",
     );
-    return [];
+    return [buildDevGroup()];
   }
 
   // Check cache

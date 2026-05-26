@@ -221,30 +221,6 @@ export const MOCK_EVENTS: EventItem[] = [
     tags: ["Arcade", "Bar", "Williamsburg"],
   },
 
-  // ── AMC mock — dev testing for showtime pill UI ───────────────────────────
-  {
-    id: 15, type: "event",
-    title: "Mission: Impossible – The Final Reckoning",
-    desc: "Action · PG-13 · 2h 43m · 4 showings available today",
-    longDesc: "The latest installment in the Mission: Impossible franchise. Ethan Hunt faces his most dangerous mission yet in a race to stop a rogue AI from reshaping the world.",
-    time: "Today · 4 showings",
-    location: "AMC Classic Lancaster 13, 1457 Lititz Pike, Lancaster",
-    lat: 40.0753, lng: -76.3408,
-    date: fmt(today),
-    startIso: fmt(today) + "T19:00:00",
-    source: "AMC Theatres", category: "Cinema",
-    catColor: "#CC0000", catDot: "#FF3333",
-    saves: 43, img: "🎬",
-    booking: {
-      label: "Get Tickets",
-      url: "https://www.amctheatres.com/movies/mission-impossible-the-final-reckoning",
-      affiliate: false,
-    },
-    rating: 4.2, reviews: 0,
-    showings: ["1:00 PM", "4:00 PM · Dolby", "7:00 PM · IMAX", "10:00 PM"],
-    tags: ["PG-13", "Action", "IMAX"],
-  },
-
   // ── Deduplication test data ────────────────────────────────────────────────
   // id:8 should merge with id:1 (hard merge — same event, two sources)
   // id:9 should NOT merge with id:2 (fuzzy match — different location string)

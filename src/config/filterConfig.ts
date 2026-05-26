@@ -176,12 +176,6 @@ export const SOURCE_FILTERS: FilterOption[] = [
     matchFn: item => item.source === "Google Places",
   },
   {
-    id: "src_facebook",
-    label: "Facebook",
-    icon: "👥",
-    matchFn: item => item.source === "Facebook Events",
-  },
-  {
     id: "src_viator",
     label: "Viator",
     icon: "🗺️",

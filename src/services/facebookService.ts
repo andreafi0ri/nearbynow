@@ -365,6 +365,13 @@ export async function searchFacebookEvents(
   area: string,
   _coords?: { lat: number; lng: number }   // reserved for future proximity filtering
 ): Promise<EventItem[]> {
+  console.info(
+    "Facebook Events: disabled — Meta requires Business app type " +
+    "and additional permissions not available to this app. " +
+    "Skipping. All other sources unaffected."
+  );
+  return [];
+
   // Client-side cache check (proxy has its own 30-min cache server-side)
   const cacheKey = `proxy-${area.toLowerCase()}`;
   const cached = responseCache.get(cacheKey);

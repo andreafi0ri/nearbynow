@@ -4,7 +4,6 @@ import { fetchRSSFeeds } from "./rssService";
 import { searchEventbrite } from "./eventbriteService";
 import { searchMeetup } from "./meetupService";
 import { searchTicketmaster } from "./ticketmasterService";
-import { searchFacebookEvents } from "./facebookService";
 import { fetchVisitLancasterEvents } from "./visitLancasterService";
 import { deduplicateFeed, MultiSourceEvent } from "./deduplicationService";
 import { getRecommendations, type FeedResult } from "./recommendationEngine";
@@ -90,7 +89,6 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
     eventbriteResult,
     meetupResult,
     ticketmasterResult,
-    facebookResult,
     visitLancasterResult,
     foodPlacesResult,
     cinemaResult,
@@ -101,7 +99,6 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
     searchEventbrite(area),
     searchMeetup(area),
     searchTicketmaster(area),
-    searchFacebookEvents(area, coords),
     isLancaster ? fetchVisitLancasterEvents() : Promise.resolve([]),
     // Food/drink venues are always fetched so the Food & Drink filter always works,
     // regardless of how many events the other sources return.
@@ -121,7 +118,6 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
     ...extract(eventbriteResult),
     ...extract(meetupResult),
     ...extract(ticketmasterResult),
-    ...extract(facebookResult),
     ...extract(visitLancasterResult),
     ...extract(foodPlacesResult),
     ...extract(cinemaResult),
@@ -161,7 +157,6 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
   console.log(`Area: ${area} | Coords: ${coords ? `${coords.lat}, ${coords.lng}` : "none"}`);
   console.log("Radii in use:");
   console.log(`  Google Places: ${SEARCH_CONFIG.GOOGLE_PLACES_RADIUS_METRES}m (${metresToMiles(SEARCH_CONFIG.GOOGLE_PLACES_RADIUS_METRES)} mi) — ${shouldFetch ? "ACTIVE" : "SKIPPED (≥5 events found)"}`);
-  console.log(`  Facebook:      ${SEARCH_CONFIG.FACEBOOK_EVENTS_RADIUS_METRES}m (${metresToMiles(SEARCH_CONFIG.FACEBOOK_EVENTS_RADIUS_METRES)} mi)`);
   console.log(`  Eventbrite:    ${SEARCH_CONFIG.EVENTBRITE_RADIUS_KM}km`);
   console.log(`  Meetup:        ${SEARCH_CONFIG.MEETUP_RADIUS_KM}km`);
   console.log(`  Ticketmaster:  ${SEARCH_CONFIG.TICKETMASTER_RADIUS_KM}km`);
@@ -171,7 +166,6 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
   console.log(`  Eventbrite:      ${extract(eventbriteResult).length}`);
   console.log(`  Meetup:          ${extract(meetupResult).length}`);
   console.log(`  Ticketmaster:    ${extract(ticketmasterResult).length}`);
-  console.log(`  Facebook:        ${extract(facebookResult).length}`);
   console.log(`  Visit Lancaster: ${extract(visitLancasterResult).length}`);
   console.log(`  Food Places:     ${extract(foodPlacesResult).length} (always-on)`);
   console.log(`  Cinemas:         ${extract(cinemaResult).length} (always-on)`);

@@ -211,7 +211,6 @@ export const DATE_PRESETS = [
 
 export const SOURCE_COLORS: Record<string, string> = {
   "Viator":             "#00A651",
-  "Facebook Events":    "#1877F2",
   "Instagram":          "#E1306C",
   "r/brixton":          "#FF4500",
   "Google Places":      "#4285F4",

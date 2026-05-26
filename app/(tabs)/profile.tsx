@@ -37,6 +37,8 @@ export default function ProfileScreen() {
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [email, setEmail] = useState("");
   const [notifs, setNotifs] = useState<NotificationPreferences>(DEFAULT_PREFS);
+  const [healthResults, setHealthResults] = useState("");
+  const [healthLoading, setHealthLoading] = useState(false);
 
   // Load all notification preferences from AsyncStorage on mount
   useEffect(() => {
@@ -64,6 +66,23 @@ export default function ProfileScreen() {
     setAvatar(opt);
     setShowAvatarPicker(false);
     await updateProfile({ avatar: opt });
+  };
+
+  const runHealthCheck = async () => {
+    setHealthLoading(true);
+    setHealthResults("");
+    const area = (await AsyncStorage.getItem("nearbynow_area")) ?? "Brooklyn, NY";
+    const lines: string[] = [];
+    // Temporarily capture console.log output so we can display it on screen
+    const origLog = console.log;
+    console.log = (...args: unknown[]) => {
+      lines.push(args.map(String).join(" "));
+      origLog(...args);
+    };
+    await checkFeedHealth(area);
+    console.log = origLog;
+    setHealthResults(lines.join("\n"));
+    setHealthLoading(false);
   };
 
   const toggleNotif = async (key: string) => {
@@ -316,17 +335,25 @@ export default function ProfileScreen() {
 
         {/* ── Dev: RSS feed health check ── */}
         {__DEV__ && (
-          <TouchableOpacity
-            onPress={async () => {
-              const area = (await AsyncStorage.getItem("nearbynow_area")) ?? "london";
-              checkFeedHealth(area);
-            }}
-            style={[styles.debugBtn, { borderColor: T.borderSub }]}
-          >
-            <Text style={[styles.debugBtnText, { color: T.muted }]}>
-              🔧 Run RSS feed health check (dev only)
-            </Text>
-          </TouchableOpacity>
+          <>
+            <TouchableOpacity
+              onPress={runHealthCheck}
+              disabled={healthLoading}
+              style={[styles.debugBtn, { borderColor: T.borderSub, opacity: healthLoading ? 0.5 : 1 }]}
+            >
+              <Text style={[styles.debugBtnText, { color: T.muted }]}>
+                {healthLoading ? "⏳ Running health check…" : "🔧 Run RSS feed health check (dev only)"}
+              </Text>
+            </TouchableOpacity>
+            {healthResults ? (
+              <ScrollView
+                style={[styles.healthBox, { backgroundColor: T.bgCardHi, borderColor: T.borderSub }]}
+                nestedScrollEnabled
+              >
+                <Text style={[styles.healthText, { color: T.text }]}>{healthResults}</Text>
+              </ScrollView>
+            ) : null}
+          </>
         )}
 
       </ScrollView>
@@ -378,8 +405,10 @@ const styles = StyleSheet.create({
   accountRow:    { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingVertical: 14 } as ViewStyle,
   accountLabel:  { fontSize: 13, fontFamily: "DMSans_400Regular" } as TextStyle,
   version:          { textAlign: "center", fontSize: 11, fontFamily: "DMSans_400Regular", marginTop: 24 } as TextStyle,
-  debugBtn:         { borderWidth: 1, borderRadius: 10, padding: 12, alignItems: "center", marginTop: 8, marginBottom: 16 } as ViewStyle,
+  debugBtn:         { borderWidth: 1, borderRadius: 10, padding: 12, alignItems: "center", marginTop: 8, marginBottom: 8 } as ViewStyle,
   debugBtnText:     { fontSize: 12, fontFamily: "DMSans_400Regular" } as TextStyle,
+  healthBox:        { borderWidth: 1.5, borderRadius: 10, padding: 10, marginTop: 8, marginBottom: 16, maxHeight: 200 } as ViewStyle,
+  healthText:       { fontSize: 11, fontFamily: "DMSans_400Regular", lineHeight: 16 } as TextStyle,
   themeRow:         { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1.5 } as ViewStyle,
   themeLabelGroup:  { flex: 1 } as ViewStyle,
   segmentedControl: { flexDirection: "row", borderWidth: 2, borderRadius: 14, padding: 4, gap: 4 } as ViewStyle,

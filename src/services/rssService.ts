@@ -15,16 +15,43 @@ import { parseRSSItem, scoreItem } from "./rssParser";
 import { RSSSource } from "../config/rssSources";
 import { SEARCH_CONFIG } from "../config/searchConfig";
 
-// ─── Age filter ───────────────────────────────────────────────────────────────
+// ─── Age / event-date filter ──────────────────────────────────────────────────
 
-/** Maximum age (in days) of an RSS item to include in the feed. */
-const RSS_MAX_AGE_DAYS = 14;
+/**
+ * Maximum age (in days) of an RSS article to include.
+ * 60 days covers advance previews and season announcements published well
+ * before the event itself.
+ */
+const ARTICLE_MAX_AGE_DAYS = 60;
 
-function isRecentRSSItem(dateStr: string): boolean {
+/**
+ * Passes items whose article date is within ARTICLE_MAX_AGE_DAYS AND whose
+ * extracted event date (item.date, set by rssParser) has not yet passed.
+ *
+ * - Article age check (item.date ≤ 60 days old) keeps the source set fresh.
+ * - Past-event check (item.date < yesterday) drops articles about events that
+ *   have already happened, even if the article was published recently.
+ *
+ * Note: after Fix 1 in rssParser, item.date is the extracted event date when
+ * one was found in the article body, or pubDate as a fallback. Items that had
+ * a real future event date extracted will carry that date here, so both checks
+ * serve their intended purpose.
+ */
+function shouldKeepRSSItem(dateStr: string): boolean {
   if (!dateStr) return true;
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return true;
-  return d.getTime() >= Date.now() - RSS_MAX_AGE_DAYS * 86_400_000;
+  const t = d.getTime();
+  const now = Date.now();
+
+  // Drop articles older than 60 days
+  if (t < now - ARTICLE_MAX_AGE_DAYS * 86_400_000) return false;
+
+  // Drop items whose event date has already passed (allow 1-day grace)
+  const yesterday = now - 86_400_000;
+  if (t < yesterday) return false;
+
+  return true;
 }
 
 // ─── CORS proxy chain ─────────────────────────────────────────────────────────
@@ -40,35 +67,77 @@ const CORS_PROXIES = [
   "https://api.codetabs.com/v1/proxy?quest=",
 ];
 
+// ─── Proxy health cache ───────────────────────────────────────────────────────
+
+interface ProxyHealth {
+  healthy:     boolean;
+  lastChecked: number;
+  failCount:   number;
+}
+
+/** In-memory health state for each proxy URL. Survives warm invocations. */
+const proxyHealth = new Map<string, ProxyHealth>();
+
+/** How long a proxy health verdict stays valid before we retry it. */
+const PROXY_HEALTH_TTL_MS = 5 * 60_000; // 5 minutes
+
+function isProxyAvailable(proxy: string): boolean {
+  const h = proxyHealth.get(proxy);
+  if (!h) return true;                                      // untested → assume healthy
+  if (Date.now() - h.lastChecked > PROXY_HEALTH_TTL_MS) return true; // stale → retry
+  return h.healthy;
+}
+
+function markProxy(proxy: string, healthy: boolean): void {
+  const existing = proxyHealth.get(proxy);
+  proxyHealth.set(proxy, {
+    healthy,
+    lastChecked: Date.now(),
+    failCount: healthy ? 0 : (existing?.failCount ?? 0) + 1,
+  });
+}
+
 /**
- * Fetches an RSS feed URL through a proxy chain.
- * Tries each proxy in order; moves to the next on failure or non-XML response.
+ * Fetches an RSS feed URL through a proxy chain with health tracking.
  *
- * @throws Error when all proxies fail or return invalid XML.
+ * - Skips proxies known to be unhealthy (within the last 5 minutes).
+ * - Falls back to trying ALL proxies if none are currently marked healthy.
+ * - Marks each proxy healthy or unhealthy based on the result.
+ *
+ * @throws Error when all available proxies fail or return invalid XML.
  */
 async function fetchWithProxy(url: string): Promise<string> {
-  for (const proxy of CORS_PROXIES) {
+  const available = CORS_PROXIES.filter(isProxyAvailable);
+  const toTry = available.length > 0 ? available : CORS_PROXIES;
+
+  for (const proxy of toTry) {
     try {
       const response = await fetch(proxy + encodeURIComponent(url), {
         headers: { Accept: "application/rss+xml, application/xml, text/xml, */*" },
         signal: AbortSignal.timeout(6_000),
       });
 
-      if (!response.ok) continue;
+      if (!response.ok) {
+        markProxy(proxy, false);
+        continue;
+      }
 
       const text = await response.text();
 
-      // Validate it looks like XML/RSS before accepting
       if (
         text.includes("<rss")    ||
         text.includes("<feed")   ||
         text.includes("<channel")
       ) {
+        markProxy(proxy, true);
         return text;
       }
-      // Got a response but it wasn't XML — try next proxy
+
+      // Got a response but not valid XML
+      markProxy(proxy, false);
     } catch {
-      // Network error or timeout — try next proxy
+      // Network error or timeout
+      markProxy(proxy, false);
     }
   }
   throw new Error(`All proxies failed for: ${url}`);
@@ -109,10 +178,10 @@ export async function fetchRSSFeeds(area: string): Promise<EventItem[]> {
     if (r.status === "fulfilled") all.push(...r.value);
   }
 
-  // Drop stale items, sort newest-first, deduplicate by URL / title
+  // Drop stale / past items, sort newest-first, deduplicate by URL / title
   const seen = new Set<string>();
   return all
-    .filter(item => isRecentRSSItem(item.date))
+    .filter(item => shouldKeepRSSItem(item.date))
     .sort((a, b) => b.date.localeCompare(a.date))
     .filter(item => {
       const key = item.sourceUrl ?? item.title;

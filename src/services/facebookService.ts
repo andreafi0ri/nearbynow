@@ -312,33 +312,13 @@ function mapFacebookEvent(
  * @param eventIds  Raw Facebook event IDs (without "fb-" prefix)
  * @param token     App access token from getAppAccessToken()
  */
+// checkStaleness is kept as a stub — Facebook Events are currently disabled.
+// Re-implement when Meta Business verification is complete.
 export async function checkStaleness(
-  eventIds: string[],
-  token: string
+  _eventIds: string[],
+  _token: string
 ): Promise<{ id: string; isCanceled: boolean; isDeleted: boolean }[]> {
-  if (eventIds.length === 0) return [];
-
-  const batch = eventIds.slice(0, 50).join(",");
-  const url =
-    `${GRAPH_BASE}?ids=${encodeURIComponent(batch)}` +
-    `&fields=id,is_canceled` +
-    `&access_token=${encodeURIComponent(token)}`;
-
-  try {
-    const res = await fetchWithTimeout(url);
-    if (!res.ok) return [];
-
-    const data: Record<string, { id: string; is_canceled?: boolean }> = await res.json();
-
-    return eventIds.map(id => ({
-      id,
-      isCanceled: data[id]?.is_canceled ?? false,
-      isDeleted:  !(id in data),
-    }));
-  } catch (err) {
-    console.warn("[Facebook] checkStaleness error:", err);
-    return [];
-  }
+  return [];
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────
@@ -371,71 +351,4 @@ export async function searchFacebookEvents(
     "Skipping. All other sources unaffected."
   );
   return [];
-
-  // Client-side cache check (proxy has its own 30-min cache server-side)
-  const cacheKey = `proxy-${area.toLowerCase()}`;
-  const cached = responseCache.get(cacheKey);
-  if (cached && Date.now() < cached.expiresAt) {
-    console.log("[Facebook] Client cache hit for", area);
-    return cached.data;
-  }
-
-  console.log("[Facebook] Fetching via proxy for", area);
-
-  let rawEvents: FacebookEvent[];
-  try {
-    const res = await fetchWithTimeout(
-      `/api/facebook-events?area=${encodeURIComponent(area)}`,
-      FETCH_TIMEOUT_MS
-    );
-    if (!res.ok) {
-      console.warn("[Facebook] Proxy returned HTTP", res.status);
-      return [];
-    }
-    const json: { events: FacebookEvent[] } = await res.json();
-    rawEvents = json.events ?? [];
-  } catch (err) {
-    console.warn("[Facebook] Proxy fetch error:", err);
-    return [];
-  }
-
-  if (rawEvents.length === 0) {
-    console.log("[Facebook] No events returned by proxy for", area);
-    return [];
-  }
-
-  const now = Date.now();
-
-  // Filter out events that have already started (proxy uses `since` but
-  // server clocks can differ slightly; belt-and-suspenders check)
-  const filtered = rawEvents.filter(ev => {
-    if (!ev.name || !ev.start_time) return false;
-    if (new Date(ev.start_time).getTime() < now) return false;
-    // Cancelled events kept — displayed with "CANCELLED" label
-    return true;
-  });
-
-  // Geo-match venues and map to EventItem
-  let geoMatchedCount = 0;
-  const items: EventItem[] = [];
-
-  for (const ev of filtered.slice(0, SEARCH_CONFIG.FACEBOOK_EVENTS_MAX_RESULTS)) {
-    const geoResult = ev.place
-      ? await geoMatchVenue(ev.place, area).catch(() => null)
-      : null;
-    if (geoResult) geoMatchedCount++;
-    items.push(mapFacebookEvent(ev, geoResult));
-  }
-
-  // Sort ascending by start_time (proxy also sorts, but keeps order stable after geo-match)
-  items.sort((a, b) => (a.startIso ?? "").localeCompare(b.startIso ?? ""));
-
-  console.log(
-    `[Facebook] area="${area}" proxy_raw=${rawEvents.length} | ` +
-    `filtered=${filtered.length} | mapped=${items.length} | ` +
-    `geo-matched=${geoMatchedCount}`
-  );
-
-  responseCache.set(cacheKey, { data: items, expiresAt: Date.now() + CACHE_RESULT_MS });
-  return items;
 }

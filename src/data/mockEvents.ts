@@ -132,7 +132,8 @@ export const MOCK_EVENTS: EventItem[] = [
     source: "Google Places", category: "Cinema",
     catColor: "#7B5CE0", catDot: "#C4A0FF", saves: 29, img: "🎬",
     booking: { label: "Get Tickets", url: "https://bfi.org.uk", affiliate: false },
-    showings: ["11:15", "14:00", "17:30", "20:45"],
+    showings: ["12:30", "3:00 · Dolby", "5:45", "8:15 · IMAX", "10:30"],
+    tags: ["PG-13", "Drama", "IMAX"],
     lat: 51.5054, lng: -0.1132,
   },
   {
@@ -168,6 +169,30 @@ export const MOCK_EVENTS: EventItem[] = [
     },
     rating: 4.9, reviews: 2341,
     tags: ["~2 hours", "Top rated", "Outdoors"],
+  },
+
+  // ── AMC mock — dev testing for showtime pill UI ───────────────────────────
+  {
+    id: 15, type: "event",
+    title: "Mission: Impossible – The Final Reckoning",
+    desc: "Action · PG-13 · 2h 43m · 4 showings available today",
+    longDesc: "The latest installment in the Mission: Impossible franchise. Ethan Hunt faces his most dangerous mission yet in a race to stop a rogue AI from reshaping the world.",
+    time: "Today · 4 showings",
+    location: "AMC Classic Lancaster 13, 1457 Lititz Pike, Lancaster",
+    lat: 40.0753, lng: -76.3408,
+    date: fmt(today),
+    startIso: fmt(today) + "T19:00:00",
+    source: "AMC Theatres", category: "Cinema",
+    catColor: "#CC0000", catDot: "#FF3333",
+    saves: 43, img: "🎬",
+    booking: {
+      label: "Get Tickets",
+      url: "https://www.amctheatres.com/movies/mission-impossible-the-final-reckoning",
+      affiliate: false,
+    },
+    rating: 4.2, reviews: 0,
+    showings: ["1:00 PM", "4:00 PM · Dolby", "7:00 PM · IMAX", "10:00 PM"],
+    tags: ["PG-13", "Action", "IMAX"],
   },
 
   // ── Deduplication test data ────────────────────────────────────────────────
@@ -232,4 +257,5 @@ export const SOURCE_COLORS: Record<string, string> = {
   "SF Standard":        "#2980B9",
   "Denverite":          "#8E44AD",
   "Nashville Post":     "#1ABC9C",
+  "AMC Theatres":       "#CC0000",
 };

@@ -15,6 +15,8 @@ import { EventItem } from "../../src/data/mockEvents";
 import { FILTERS, SOURCE_FILTERS, FilterOption } from "../../src/config/filterConfig";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getFeed } from "../../src/services/feedService";
+import { CinemaGroupedView } from "../../src/components/CinemaGroupedView";
+import type { ShowtimeGroup } from "../../src/services/showtimesService";
 import { Wordmark } from "../../src/components/Wordmark";
 import { SEARCH_CONFIG, getRadiusLabel } from "../../src/config/searchConfig";
 import { scheduleEventNotification } from "../../src/services/notificationService";
@@ -68,6 +70,7 @@ export default function FeedScreen() {
   const [feedItems, setFeedItems] = useState<EventItem[]>([]);
   const [remoteLoading, setRemoteLoading] = useState(false);
   const [showingRecommendations, setShowingRecommendations] = useState(false);
+  const [cinemaGroups, setCinemaGroups] = useState<ShowtimeGroup[]>([]);
 
   // Notification badge count
   useEffect(() => {
@@ -129,6 +132,7 @@ export default function FeedScreen() {
       .then(result => {
         setFeedItems(result.items);
         setShowingRecommendations(result.showingRecommendations);
+        setCinemaGroups(result.cinemaGroups ?? []);
       })
       .catch(() => setFeedItems([]))
       .finally(() => setRemoteLoading(false));
@@ -451,7 +455,12 @@ export default function FeedScreen() {
         </View>
       )}
 
-      {/* Feed */}
+      {/* Cinema filter — rich grouped view by theatre */}
+      {activeFilter === "Cinema" && cinemaGroups.length > 0 ? (
+        <CinemaGroupedView groups={cinemaGroups} T={T} />
+      ) : (
+
+      /* ── All other filters — standard EventCard FlatList ─────────── */
       <FlatList
         data={showAll ? events : filtered}
         keyExtractor={item => String(item.id)}
@@ -516,6 +525,7 @@ export default function FeedScreen() {
           </View>
         }
       />
+      )}
     </SafeAreaView>
   );
 }

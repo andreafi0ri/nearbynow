@@ -128,8 +128,9 @@ export const FILTERS: FilterOption[] = [
       if (item.category && NON_CINEMA.has(item.category)) return false;
 
       return (
-        item.category === "Cinema"    ||
-        item.source   === "Showtimes" ||
+        item.category === "Cinema"       ||
+        item.source   === "Showtimes"    ||
+        item.source   === "AMC Theatres" ||
         item.tags?.some(t => /cinema|movie|film/i.test(t)) === true
       );
     },
@@ -149,7 +150,7 @@ export const SOURCE_FILTERS: FilterOption[] = [
     icon: "📰",
     matchFn: item =>
       !item.source.startsWith("r/") &&
-      !["Eventbrite", "Meetup", "Ticketmaster", "Google Places", "Showtimes"].includes(item.source),
+      !["Eventbrite", "Meetup", "Ticketmaster", "Google Places", "Showtimes", "AMC Theatres", "Viator", "Food Places"].includes(item.source),
   },
   {
     id: "Eventbrite",
@@ -180,5 +181,11 @@ export const SOURCE_FILTERS: FilterOption[] = [
     label: "Viator",
     icon: "🗺️",
     matchFn: item => item.source === "Viator",
+  },
+  {
+    id: "src_amc",
+    label: "AMC",
+    icon: "🎬",
+    matchFn: item => item.source === "AMC Theatres",
   },
 ];

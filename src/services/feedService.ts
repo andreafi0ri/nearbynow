@@ -9,6 +9,7 @@ import { deduplicateFeed, MultiSourceEvent } from "./deduplicationService";
 import { getRecommendations, type FeedResult } from "./recommendationEngine";
 import { searchViatorExperiences } from "./viatorService";
 import { searchNearbyPlaces, searchPlacesByText, fetchCinemas } from "./googlePlacesService";
+import { getShowtimes } from "./showtimesService";
 import { SEARCH_CONFIG, shouldFetchGooglePlaces, metresToMiles } from "../config/searchConfig";
 import type { Coords } from "./recommendationsService";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -93,6 +94,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
     foodPlacesResult,
     cinemaResult,
     viatorAlwaysResult,
+    showtimesResult,
   ] = await Promise.allSettled([
     Promise.all(subreddits.map(sub => fetchRedditPosts(sub, SEARCH_CONFIG.REDDIT_MAX_RESULTS))).then(r => r.flat()),
     fetchRSSFeeds(area),
@@ -108,9 +110,16 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
     // Viator is always fetched so results are ready for the Nearby filter without
     // waiting for a re-fetch. Shown in All only when threshold is triggered.
     searchViatorExperiences(area, coords),
+    // AMC showtimes — always fetched for the All feed (today only) and Cinema filter.
+    // 1-hour cache ensures no double-fetching when Cinema filter is activated.
+    getShowtimes(area, coords),
   ]);
 
   const seed = mockEventsForArea(area);
+
+  // Extract showtime groups for the Cinema grouped view; map to feed items for All
+  const showtimeGroups = showtimesResult.status === "fulfilled" ? showtimesResult.value : [];
+  const showtimeItems  = showtimeGroups.map(g => g.feedItem);
 
   const live: EventItem[] = [
     ...extract(redditResult),
@@ -121,6 +130,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
     ...extract(visitLancasterResult),
     ...extract(foodPlacesResult),
     ...extract(cinemaResult),
+    ...showtimeItems,            // AMC showtimes appear in the All feed
     ...extract(viatorAlwaysResult),
   ];
 
@@ -169,6 +179,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
   console.log(`  Visit Lancaster: ${extract(visitLancasterResult).length}`);
   console.log(`  Food Places:     ${extract(foodPlacesResult).length} (always-on)`);
   console.log(`  Cinemas:         ${extract(cinemaResult).length} (always-on)`);
+  console.log(`  AMC Showtimes:   ${showtimeItems.length} showtime cards (${new Set(showtimeItems.map(s => s.location.split(",")[0])).size} theatres)`);
   console.log(`  Viator:          ${extract(viatorAlwaysResult).length} (always-on — hidden from All until threshold)`);
   console.log(`  Google Places:   ${googlePlacesItems.length} (threshold-gated recommendations)`);
   console.log(`Google Places threshold: ${SEARCH_CONFIG.GOOGLE_PLACES_THRESHOLD} — ${shouldFetch ? "SHOWN (too few events)" : "NOT shown (enough events)"}`);
@@ -193,5 +204,6 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
     eventCount:             eventItems.length,
     recommendationCount:    googlePlacesItems.length,
     thresholdUsed:          SEARCH_CONFIG.GOOGLE_PLACES_THRESHOLD,
+    cinemaGroups:           showtimeGroups,
   };
 }

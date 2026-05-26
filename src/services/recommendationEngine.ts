@@ -8,6 +8,7 @@ import type { MultiSourceEvent } from "../types/deduplication";
 import { getGooglePlacesRecommendations, searchNearbyPlaces } from "./googlePlacesService";
 import { SEARCH_CONFIG } from "../config/searchConfig";
 import type { Coords } from "./recommendationsService";
+import type { ShowtimeGroup } from "./showtimesService";
 
 /** Category identifiers used to identify recommendation cards in filters. */
 export const RECOMMENDATION_CATEGORIES = [
@@ -27,6 +28,8 @@ export type FeedResult = {
   recommendationCount: number;
   /** The GOOGLE_PLACES_THRESHOLD value used for this feed load. */
   thresholdUsed: number;
+  /** AMC showtime groups for the Cinema filter's rich grouped view. */
+  cinemaGroups: ShowtimeGroup[];
 };
 
 /**

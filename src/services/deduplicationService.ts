@@ -98,19 +98,20 @@ function normaliseItem(item: EventItem): NormalisedItem {
  * Builds a string key that groups identical events.
  * Two events sharing the same key → hard merge candidates.
  *
- * titleKey = first 30 chars of normalised title
- * dateKey  = YYYY-MM-DD
- * timeKey  = Math.floor(startMinutes / 30) — 30-minute bucket
- *            e.g. 19:00–19:29 → bucket 38, 19:30–19:59 → bucket 39
- *            Two events within the same 30-min window share a bucket and merge.
+ * titleKey    = first 30 chars of normalised title
+ * dateKey     = YYYY-MM-DD
+ * locationKey = first 20 chars of normalised location (venue guard)
+ *
+ * Time is intentionally NOT part of the key: the same event at different
+ * start times (e.g. matinee + evening) should collapse into ONE card with
+ * showTimes listing all slots.  Different venues on the same date are kept
+ * separate via the locationKey guard.
  */
 function mergeKey(item: NormalisedItem): string {
-  const titleKey = item.normalisedTitle.slice(0, 30);
-  const dateKey  = item.date ?? "";
-  const timeKey  = item.startMinutes !== null
-    ? String(Math.floor(item.startMinutes / 30))
-    : "notime";
-  return `${titleKey}|${dateKey}|${timeKey}`;
+  const titleKey    = item.normalisedTitle.slice(0, 30);
+  const dateKey     = item.date ?? "";
+  const locationKey = item.normalisedLocation.slice(0, 20);
+  return `${titleKey}|${dateKey}|${locationKey}`;
 }
 
 // ─── Levenshtein similarity ────────────────────────────────────────────────────
@@ -341,13 +342,6 @@ function wrapAsMultiSourceEvent(item: EventItem): MultiSourceEvent {
 function getFuzzySkipReason(a: NormalisedItem, b: NormalisedItem): string {
   if (a.normalisedLocation !== b.normalisedLocation) {
     return `Different locations: "${a.location}" vs "${b.location}"`;
-  }
-  if (a.startMinutes !== null && b.startMinutes !== null) {
-    const diff = Math.abs(a.startMinutes - b.startMinutes);
-    if (diff > 30) return `Start times differ by ${diff} minutes`;
-    if (Math.floor(a.startMinutes / 30) !== Math.floor(b.startMinutes / 30)) {
-      return "Start times in different 30-min buckets";
-    }
   }
   return "Title similarity below hard merge threshold";
 }

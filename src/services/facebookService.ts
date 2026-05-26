@@ -1,52 +1,30 @@
 // src/services/facebookService.ts
-// Facebook Graph API — Public Events only
-// Scope: name, description, start_time, end_time,
-//        place, cover (NO attendees, NO RSVPs, NO personal data)
+// Facebook Events — client-side service.
 //
-// Meta requires app review before this API can be used with real users.
-// During development it works with test users only.
-// Submit for review at: https://developers.facebook.com/docs/app-review
-// Required permissions: pages_read_engagement, public_profile
+// Architecture: all Graph API calls go through the Vercel serverless proxy
+// at /api/facebook-events rather than hitting graph.facebook.com directly.
 //
-// WARNING: In production, the App Secret token exchange should happen
-// on your backend server, not in the client app, to protect your App Secret.
-// For MVP this is acceptable but MUST be moved server-side before public launch.
+// WHY a proxy:
+//   1. CORS — graph.facebook.com blocks XHR/fetch from browsers.
+//   2. Security — App Secret must never appear in the client JS bundle.
+//   3. Endpoint — /search?type=event is deprecated for all third-party
+//      apps since ~2020. The proxy uses /{page-id}/events instead.
 //
-// Rate limits: 200 calls/hour per app token — responses are cached 30 minutes.
-// Monitor: https://developers.facebook.com/docs/graph-api/changelog
-//   for policy changes — Meta has historically tightened access without warning.
-// IMPORTANT: Monitor that URL regularly; the Events API surface has changed
-//   multiple times. Adapt quickly if endpoints are deprecated.
+// Required Facebook feature: "Page Public Content Access"
+//   Applied for via Meta Developer Console → App Review → Request a Feature.
+//   Until it is approved the proxy returns [] and logs a clear message.
+//
+// Rate limits are managed server-side. Proxy caches responses for 30 minutes.
 
 import { EventItem } from "../data/mockEvents";
 import { SEARCH_CONFIG } from "../config/searchConfig";
 
-// ─── API status ───────────────────────────────────────────────────────────────
-//
-// ✅  FACEBOOK APP REVIEW APPROVED — service is live.
-//
-// Approved permission: pages_read_engagement
-// Enabled endpoint:    /search?type=event
-//
-// Note: /search?type=place remains permanently deprecated in Graph API v8.0+
-// (Error code 12) — place-based discovery is handled via the Mapbox geocoder
-// fallback already built into this service.
-//
-// Rate limits: 200 calls/hour per app token — responses are cached 30 min.
-// Monitor: https://developers.facebook.com/docs/graph-api/changelog
-//
-const APP_REVIEW_APPROVED = true;
-
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const GRAPH_BASE = "https://graph.facebook.com/v19.0";
 const MAPBOX_KEY = process.env.EXPO_PUBLIC_MAPBOX_KEY ?? "";
-const APP_ID     = process.env.EXPO_PUBLIC_FACEBOOK_APP_ID     ?? "";
-const APP_SECRET = process.env.EXPO_PUBLIC_FACEBOOK_APP_SECRET ?? "";
 
-const FETCH_TIMEOUT_MS  = 5_000;
-const CACHE_RESULT_MS   = 30 * 60 * 1_000;  // 30 minutes
-const CACHE_TOKEN_MS    = 23 * 60 * 60 * 1_000; // 23 hours (token valid 60 days)
+const FETCH_TIMEOUT_MS = 10_000;              // 10 s — proxy may do multiple FB calls
+const CACHE_RESULT_MS  = 30 * 60 * 1_000;   // 30 minutes (matches proxy cache)
 
 // ─── Graph API types ──────────────────────────────────────────────────────────
 
@@ -76,54 +54,6 @@ interface FacebookEvent {
   ticket_uri?: string;
   // GDPR scope: attending_count is fetched but NEVER stored or displayed
   // attending_count?: number;   ← intentionally omitted per GDPR spec
-}
-
-interface GraphEventSearchResponse {
-  data: FacebookEvent[];
-  paging?: { next?: string };
-}
-
-interface GraphPlaceResult {
-  id: string;
-  events?: { data: FacebookEvent[] };
-}
-
-interface GraphPlaceSearchResponse {
-  data: GraphPlaceResult[];
-}
-
-// ─── App access token cache ───────────────────────────────────────────────────
-
-const tokenCache: { token: string | null; expiresAt: number } = {
-  token: null,
-  expiresAt: 0,
-};
-
-/**
- * Obtain (or return cached) a Facebook app access token.
- * Token is valid for 60 days; we refresh after 23 hours to be conservative.
- *
- * WARNING: In production, move this exchange to your backend server
- * to avoid exposing APP_SECRET in the client bundle.
- */
-async function getAppAccessToken(): Promise<string> {
-  if (tokenCache.token && Date.now() < tokenCache.expiresAt) {
-    return tokenCache.token;
-  }
-
-  const url =
-    `${GRAPH_BASE}/oauth/access_token` +
-    `?client_id=${encodeURIComponent(APP_ID)}` +
-    `&client_secret=${encodeURIComponent(APP_SECRET)}` +
-    `&grant_type=client_credentials`;
-
-  const res = await fetchWithTimeout(url);
-  if (!res.ok) throw new Error(`[Facebook] Token fetch failed: ${res.status}`);
-
-  const data: { access_token: string } = await res.json();
-  tokenCache.token     = data.access_token;
-  tokenCache.expiresAt = Date.now() + CACHE_TOKEN_MS;
-  return data.access_token;
 }
 
 // ─── Response cache ───────────────────────────────────────────────────────────
@@ -414,133 +344,71 @@ export async function checkStaleness(
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 /**
- * Fetch public Facebook events for an area.
+ * Fetch public Facebook events for an area via the Vercel serverless proxy.
  *
- * Two search strategies run in parallel:
- *   1. Text search — `?type=event&q={area}`
- *   2. Location search — `?type=place&center={lat},{lng}` (when coords supplied)
+ * The proxy at /api/facebook-events handles:
+ *   • App access token exchange (server-side, secret never in client bundle)
+ *   • /{page-id}/events calls for all registered pages matching the area
+ *   • 30-minute server-side response caching
  *
- * Results are geo-matched via Mapbox, filtered, and returned as EventItems.
+ * This client layer adds:
+ *   • Local response cache (avoids redundant proxy calls within the same session)
+ *   • Mapbox geo-matching for venue coordinates (when FB place lacks lat/lng)
+ *   • Mapping raw FB events to EventItem shape
  *
- * GDPR scope: only name, description, start_time, end_time, place, cover.
- * No attendee data, no RSVP counts, no personal information.
+ * GDPR scope: public event data only — no attendees, no personal information.
  *
- * @param area    Human-readable area name, e.g. "Lancaster, Pennsylvania"
- * @param coords  Optional coordinates for location-based search
+ * @param area   Human-readable area name, e.g. "Lancaster, Pennsylvania"
+ * @param coords Optional — not used by the proxy but kept for API compatibility
  */
 export async function searchFacebookEvents(
   area: string,
-  coords?: { lat: number; lng: number }
+  _coords?: { lat: number; lng: number }   // reserved for future proximity filtering
 ): Promise<EventItem[]> {
-  // Guard: both /search?type=event and /search?type=place are blocked until
-  // Facebook App Review approves pages_read_engagement. Flip APP_REVIEW_APPROVED
-  // to true once approval is granted.
-  if (!APP_REVIEW_APPROVED) {
-    console.warn(
-      "[Facebook] Skipped — App Review required.\n" +
-      "  • /search?type=event → HTTP 400, code 3 (capability blocked)\n" +
-      "  • /search?type=place → deprecated in Graph API v8.0 (code 12)\n" +
-      "  Submit at: https://developers.facebook.com/docs/app-review\n" +
-      "  Then set APP_REVIEW_APPROVED = true in facebookService.ts"
-    );
-    return [];
-  }
-
-  // Cache check
-  const cacheKey = `${area}-${coords?.lat ?? ""}-${coords?.lng ?? ""}`;
+  // Client-side cache check (proxy has its own 30-min cache server-side)
+  const cacheKey = `proxy-${area.toLowerCase()}`;
   const cached = responseCache.get(cacheKey);
   if (cached && Date.now() < cached.expiresAt) {
-    console.log("[Facebook] Cache hit for", cacheKey);
+    console.log("[Facebook] Client cache hit for", area);
     return cached.data;
   }
 
-  console.log("[Facebook] Cache miss for", cacheKey, "— fetching…");
+  console.log("[Facebook] Fetching via proxy for", area);
 
-  let token: string;
+  let rawEvents: FacebookEvent[];
   try {
-    token = await getAppAccessToken();
+    const res = await fetchWithTimeout(
+      `/api/facebook-events?area=${encodeURIComponent(area)}`,
+      FETCH_TIMEOUT_MS
+    );
+    if (!res.ok) {
+      console.warn("[Facebook] Proxy returned HTTP", res.status);
+      return [];
+    }
+    const json: { events: FacebookEvent[] } = await res.json();
+    rawEvents = json.events ?? [];
   } catch (err) {
-    console.warn("[Facebook] Could not obtain app token:", err);
+    console.warn("[Facebook] Proxy fetch error:", err);
     return [];
   }
 
-  // ── Parallel search requests ──────────────────────────────────────────────
-
-  // GDPR scope: public event data only — fields chosen explicitly, no personal data
-  const eventFields =
-    "id,name,description,start_time,end_time,place,cover,is_canceled,ticket_uri";
-
-  const textSearchUrl =
-    `${GRAPH_BASE}/search` +
-    `?type=event` +
-    `&q=${encodeURIComponent(area)}` +
-    `&fields=${eventFields}` +
-    `&access_token=${encodeURIComponent(token)}` +
-    `&limit=${SEARCH_CONFIG.FACEBOOK_EVENTS_MAX_RESULTS}`;
-
-  const promises: Promise<FacebookEvent[]>[] = [
-    fetchWithTimeout(textSearchUrl)
-      .then(async r => {
-        if (r.ok) return r.json();
-        const err = await r.json().catch(() => ({})) as { error?: { message?: string; code?: number } };
-        console.warn(`[Facebook] Event search failed (HTTP ${r.status}):`, err.error?.message ?? err);
-        return { data: [] };
-      })
-      .then((data: GraphEventSearchResponse) => data.data ?? [])
-      .catch(err => { console.warn("[Facebook] Event search error:", err); return []; }),
-  ];
-
-  if (coords) {
-    const placeFields = `id,events{${eventFields}}`;
-    const locationSearchUrl =
-      `${GRAPH_BASE}/search` +
-      `?type=place` +
-      `&center=${coords.lat},${coords.lng}` +
-      `&distance=${SEARCH_CONFIG.FACEBOOK_EVENTS_RADIUS_METRES}` +
-      `&fields=${placeFields}` +
-      `&access_token=${encodeURIComponent(token)}` +
-      `&limit=10`;
-
-    promises.push(
-      fetchWithTimeout(locationSearchUrl)
-        .then(async r => {
-          if (r.ok) return r.json();
-          const err = await r.json().catch(() => ({})) as { error?: { message?: string; code?: number } };
-          console.warn(`[Facebook] Place search failed (HTTP ${r.status}):`, err.error?.message ?? err);
-          return { data: [] };
-        })
-        .then((data: GraphPlaceSearchResponse) =>
-          (data.data ?? []).flatMap(p => p.events?.data ?? [])
-        )
-        .catch(err => { console.warn("[Facebook] Place search error:", err); return []; })
-    );
-  }
-
-  const [textEvents, locationEvents = []] = await Promise.all(promises);
-
-  // ── Deduplicate by event ID ───────────────────────────────────────────────
-  const seenIds = new Set<string>();
-  const allRaw: FacebookEvent[] = [];
-  for (const ev of [...textEvents, ...locationEvents]) {
-    if (!seenIds.has(ev.id)) {
-      seenIds.add(ev.id);
-      allRaw.push(ev);
-    }
+  if (rawEvents.length === 0) {
+    console.log("[Facebook] No events returned by proxy for", area);
+    return [];
   }
 
   const now = Date.now();
 
-  // ── Filter ────────────────────────────────────────────────────────────────
-  const filtered = allRaw.filter(ev => {
+  // Filter out events that have already started (proxy uses `since` but
+  // server clocks can differ slightly; belt-and-suspenders check)
+  const filtered = rawEvents.filter(ev => {
     if (!ev.name || !ev.start_time) return false;
-    if (!ev.place?.name)             return false; // no useful location data
-    if (new Date(ev.start_time).getTime() < now) return false; // already past
-    // Cancelled events are kept — they're mapped with isCanceled: true and
-    // displayed with a "CANCELLED" label so saved users are informed.
+    if (new Date(ev.start_time).getTime() < now) return false;
+    // Cancelled events kept — displayed with "CANCELLED" label
     return true;
   });
 
-  // ── Geo-match and map ─────────────────────────────────────────────────────
+  // Geo-match venues and map to EventItem
   let geoMatchedCount = 0;
   const items: EventItem[] = [];
 
@@ -552,20 +420,15 @@ export async function searchFacebookEvents(
     items.push(mapFacebookEvent(ev, geoResult));
   }
 
-  // Sort by start_time ascending
+  // Sort ascending by start_time (proxy also sorts, but keeps order stable after geo-match)
   items.sort((a, b) => (a.startIso ?? "").localeCompare(b.startIso ?? ""));
 
-  const filteredOutCount = allRaw.length - filtered.length;
   console.log(
-    `[Facebook] Found ${allRaw.length} raw | ` +
-    `${filteredOutCount} filtered out | ` +
-    `${items.length} mapped | ` +
-    `${geoMatchedCount} geo-matched | ` +
-    `cache: miss`
+    `[Facebook] area="${area}" proxy_raw=${rawEvents.length} | ` +
+    `filtered=${filtered.length} | mapped=${items.length} | ` +
+    `geo-matched=${geoMatchedCount}`
   );
 
-  // Cache result
   responseCache.set(cacheKey, { data: items, expiresAt: Date.now() + CACHE_RESULT_MS });
-
   return items;
 }

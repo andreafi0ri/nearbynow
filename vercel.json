@@ -3,8 +3,9 @@
   "buildCommand": "npx expo export -p web && node scripts/inject-html-tags.mjs",
   "outputDirectory": "dist",
   "functions": {
-    "api/viator-search.js":   { "memory": 128, "maxDuration": 15 },
-    "api/viator-products.js": { "memory": 128, "maxDuration": 15 }
+    "api/viator-search.js":      { "memory": 128, "maxDuration": 15 },
+    "api/viator-products.js":    { "memory": 128, "maxDuration": 15 },
+    "api/facebook-events.js":    { "memory": 128, "maxDuration": 20 }
   },
   "rewrites": [
     { "source": "/privacy",     "destination": "/privacy/index.html" },

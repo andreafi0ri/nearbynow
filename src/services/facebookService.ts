@@ -23,23 +23,19 @@ import { SEARCH_CONFIG } from "../config/searchConfig";
 
 // ─── API status ───────────────────────────────────────────────────────────────
 //
-// ⚠️  FACEBOOK EVENTS API — ACTION REQUIRED TO ENABLE
+// ✅  FACEBOOK APP REVIEW APPROVED — service is live.
 //
-// Both discovery endpoints this service uses are currently blocked:
+// Approved permission: pages_read_engagement
+// Enabled endpoint:    /search?type=event
 //
-//   /search?type=event  — Error code 3: "Application does not have the
-//     capability to make this API call." Requires Facebook App Review with
-//     the `pages_read_engagement` permission approved.
-//     Submit at: https://developers.facebook.com/docs/app-review
+// Note: /search?type=place remains permanently deprecated in Graph API v8.0+
+// (Error code 12) — place-based discovery is handled via the Mapbox geocoder
+// fallback already built into this service.
 //
-//   /search?type=place  — Permanently deprecated for third parties in
-//     Graph API v8.0+ (Error code 12).
+// Rate limits: 200 calls/hour per app token — responses are cached 30 min.
+// Monitor: https://developers.facebook.com/docs/graph-api/changelog
 //
-// Until App Review is approved, this service will always return [].
-// Set APP_REVIEW_APPROVED = true after approval to re-enable the service.
-// All other code is correct and ready — only this flag needs changing.
-//
-const APP_REVIEW_APPROVED = false;
+const APP_REVIEW_APPROVED = true;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 

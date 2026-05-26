@@ -40,7 +40,15 @@ const MAX_RESULTS = 20;
 const cache = new Map();
 const CACHE_MS = 30 * 60 * 1_000; // 30 min
 
-// ─── App access token (cached) ────────────────────────────────────────────────
+// ─── App access token ─────────────────────────────────────────────────────────
+// Strategy 1 (preferred): use a pre-generated app token set as
+//   EXPO_PUBLIC_FACEBOOK_APP_TOKEN in Vercel environment variables.
+//   Generate one at: https://developers.facebook.com/tools/explorer/
+//   or via: GET /oauth/access_token?client_id=...&client_secret=...&grant_type=client_credentials
+//
+// Strategy 2 (fallback): generate an app token on the fly using
+//   EXPO_PUBLIC_FACEBOOK_APP_ID + EXPO_PUBLIC_FACEBOOK_APP_SECRET.
+
 let cachedToken = null;
 let tokenExpiry = 0;
 
@@ -64,20 +72,25 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const appId     = process.env.EXPO_PUBLIC_FACEBOOK_APP_ID;
-  const appSecret = process.env.EXPO_PUBLIC_FACEBOOK_APP_SECRET;
+  const directToken = process.env.EXPO_PUBLIC_FACEBOOK_APP_TOKEN;
+  const appId       = process.env.EXPO_PUBLIC_FACEBOOK_APP_ID;
+  const appSecret   = process.env.EXPO_PUBLIC_FACEBOOK_APP_SECRET;
 
-  if (!appId || !appSecret) {
-    return res.status(500).json({ error: "Facebook credentials not configured", events: [] });
+  if (!directToken && (!appId || !appSecret)) {
+    return res.status(500).json({
+      error: "Facebook credentials not configured — set EXPO_PUBLIC_FACEBOOK_APP_TOKEN or both EXPO_PUBLIC_FACEBOOK_APP_ID + EXPO_PUBLIC_FACEBOOK_APP_SECRET",
+      events: [],
+    });
   }
 
-  const { area = "" } = req.query;
+  const { area = "", debug = "" } = req.query;
+  const isDebug = debug === "1";
   if (!area) return res.status(400).json({ error: "area param required", events: [] });
 
-  // Cache check
+  // Cache check (skip when debug=1 so we always get a fresh response)
   const cacheKey = area.toLowerCase();
   const hit = cache.get(cacheKey);
-  if (hit && Date.now() < hit.expiresAt) {
+  if (!isDebug && hit && Date.now() < hit.expiresAt) {
     res.setHeader("X-Cache", "HIT");
     return res.status(200).json({ events: hit.events });
   }
@@ -90,16 +103,24 @@ module.exports = async function handler(req, res) {
   }
 
   let token;
-  try {
-    token = await getToken(appId, appSecret);
-  } catch (err) {
-    console.error("[facebook-events] Token error:", err.message);
-    return res.status(502).json({ error: "Could not obtain Facebook token", events: [] });
+  if (directToken) {
+    // Use pre-generated token directly — no exchange needed
+    token = directToken;
+    console.log("[facebook-events] Using pre-generated EXPO_PUBLIC_FACEBOOK_APP_TOKEN");
+  } else {
+    try {
+      token = await getToken(appId, appSecret);
+      console.log("[facebook-events] Generated app token via client_credentials");
+    } catch (err) {
+      console.error("[facebook-events] Token error:", err.message);
+      return res.status(502).json({ error: "Could not obtain Facebook token", events: [] });
+    }
   }
 
   const eventFields = "id,name,description,start_time,end_time,place,cover,is_canceled,ticket_uri";
   const now = Date.now();
   const allEvents = [];
+  const pageErrors = []; // collected for debug output
 
   // Fetch events from each matched page in parallel
   await Promise.all(
@@ -119,6 +140,8 @@ module.exports = async function handler(req, res) {
           const code = data.error?.code;
           const msg  = data.error?.message ?? "unknown";
 
+          pageErrors.push({ page: page.pageId, code, msg });
+
           // Code 100 / 200 with "Page Public Content Access" message = feature not yet approved
           if (code === 100 || code === 200) {
             console.warn(
@@ -135,6 +158,7 @@ module.exports = async function handler(req, res) {
         const events = (data.data ?? []).map(ev => ({ ...ev, _pageCategory: page.category }));
         allEvents.push(...events);
       } catch (err) {
+        pageErrors.push({ page: page.pageId, code: null, msg: err.message });
         console.warn(`[facebook-events] ${page.pageId} fetch error:`, err.message);
       }
     })
@@ -152,9 +176,21 @@ module.exports = async function handler(req, res) {
   unique.sort((a, b) => (a.start_time ?? "").localeCompare(b.start_time ?? ""));
 
   const result = unique.slice(0, MAX_RESULTS);
-  console.log(`[facebook-events] area="${area}" pages=${matchedPages.length} raw=${allEvents.length} deduped=${result.length}`);
+  console.log(`[facebook-events] area="${area}" pages=${matchedPages.length} raw=${allEvents.length} deduped=${result.length} errors=${pageErrors.length}`);
 
-  cache.set(cacheKey, { events: result, expiresAt: Date.now() + CACHE_MS });
-  res.setHeader("X-Cache", "MISS");
-  res.status(200).json({ events: result });
+  if (!isDebug) {
+    cache.set(cacheKey, { events: result, expiresAt: Date.now() + CACHE_MS });
+  }
+  res.setHeader("X-Cache", isDebug ? "BYPASS" : "MISS");
+
+  const payload = { events: result };
+  if (isDebug) {
+    payload._debug = {
+      tokenSource: directToken ? "EXPO_PUBLIC_FACEBOOK_APP_TOKEN" : "client_credentials",
+      matchedPages: matchedPages.map(p => p.pageId),
+      rawCount: allEvents.length,
+      errors: pageErrors,
+    };
+  }
+  res.status(200).json(payload);
 };

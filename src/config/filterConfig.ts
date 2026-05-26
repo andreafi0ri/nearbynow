@@ -101,6 +101,12 @@ export const FILTERS: FilterOption[] = [
     matchFn: item => item.category === "Sport",
   },
   {
+    id: "activities",
+    label: "Activities",
+    icon: "🎯",
+    matchFn: item => item.category === "Activities",
+  },
+  {
     id: "Community",
     label: "Community",
     icon: "🤝",

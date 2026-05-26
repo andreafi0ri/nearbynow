@@ -13,6 +13,7 @@ import { EventItem } from "../../src/data/mockEvents";
 import { EventCard } from "../../src/components/EventCard";
 import { BottomSheet } from "../../src/components/BottomSheet";
 import { getFeed } from "../../src/services/feedService";
+import { getNearbyActivities } from "../../src/services/activitiesService";
 import { fetchNearbyPlaces } from "../../src/services/recommendationsService";
 import { FILTERS, SOURCE_FILTERS, FilterOption } from "../../src/config/filterConfig";
 import { LocationInput } from "../../src/components/LocationInput";
@@ -91,10 +92,16 @@ export default function MapScreen() {
   const drawModeRef     = useRef(false);
 
   const [mapboxLoaded, setMapboxLoaded] = useState(!!(window as any).mapboxgl);
-  const [feedPosts, setFeedPosts]       = useState<EventItem[]>([]);
-  const [recItems, setRecItems]         = useState<EventItem[]>([]);
-  // feedItems drives map markers (incl. dynamic recs as map pans)
-  const feedItems = useMemo(() => [...feedPosts, ...recItems], [feedPosts, recItems]);
+  const [feedPosts, setFeedPosts]         = useState<EventItem[]>([]);
+  const [recItems, setRecItems]           = useState<EventItem[]>([]);
+  const [activityItems, setActivityItems] = useState<EventItem[]>([]);
+  // feedItems drives map markers (incl. dynamic recs as map pans + on-demand activities)
+  const feedItems = useMemo(() => {
+    const base = [...feedPosts, ...recItems];
+    if (activityItems.length === 0) return base;
+    const baseIds = new Set(base.map(e => e.id));
+    return [...base, ...activityItems.filter(e => !baseIds.has(e.id))];
+  }, [feedPosts, recItems, activityItems]);
   // listFeedItems is frozen to the getFeed result so the list matches the feed screen
   const [listFeedItems, setListFeedItems] = useState<EventItem[]>([]);
   const [loading, setLoading]           = useState(false);
@@ -166,21 +173,29 @@ export default function MapScreen() {
     return true;
   }), [feedItems, catFilter, srcFilters, range, freeOnly]);
 
-  const listItems = useMemo(() => listFeedItems.filter(e => {
-    if (freeOnly && freeFn && !freeFn(e)) return false;
-    // Match feed's FILTER_ONLY_SOURCE_MAP: hide food/showtime recs outside their category
-    const requiredCat = FILTER_ONLY_SOURCE_MAP[e.source];
-    if (requiredCat && activeFilter !== requiredCat) return false;
-    if (!catFilter.matchFn(e)) return false;
-    if (srcFilters.length > 0 && !srcFilters.some(f => f.matchFn(e))) return false;
-    // Recommendations pass date filter regardless (same as feed screen)
-    if (range) {
-      if (e.type === "recommendation") return true;
-      if (!e.date) return false;
-      return e.date >= range[0] && e.date <= range[1];
+  const listItems = useMemo(() => {
+    // Merge on-demand activity items into the list pool when the filter is active
+    let pool = listFeedItems;
+    if (activeFilter === "activities" && activityItems.length > 0) {
+      const poolIds = new Set(listFeedItems.map(e => e.id));
+      pool = [...listFeedItems, ...activityItems.filter(e => !poolIds.has(e.id))];
     }
-    return true;
-  }), [listFeedItems, catFilter, srcFilters, range, freeOnly, activeFilter]);
+    return pool.filter(e => {
+      if (freeOnly && freeFn && !freeFn(e)) return false;
+      // Match feed's FILTER_ONLY_SOURCE_MAP: hide food/showtime recs outside their category
+      const requiredCat = FILTER_ONLY_SOURCE_MAP[e.source];
+      if (requiredCat && activeFilter !== requiredCat) return false;
+      if (!catFilter.matchFn(e)) return false;
+      if (srcFilters.length > 0 && !srcFilters.some(f => f.matchFn(e))) return false;
+      // Recommendations pass date filter regardless (same as feed screen)
+      if (range) {
+        if (e.type === "recommendation") return true;
+        if (!e.date) return false;
+        return e.date >= range[0] && e.date <= range[1];
+      }
+      return true;
+    });
+  }, [listFeedItems, activityItems, catFilter, srcFilters, range, freeOnly, activeFilter]);
 
   // ── Load Mapbox GL JS from CDN ───────────────────────────────────────────────
   useEffect(() => {
@@ -318,6 +333,25 @@ export default function MapScreen() {
       .catch(() => { setFeedPosts([]); setRecItems([]); })
       .finally(() => setLoading(false));
   }, [activeArea]);
+
+  // ── On-demand Activities fetch — fires when Activities filter is selected ──
+  useEffect(() => {
+    if (activeFilter !== "activities") { setActivityItems([]); return; }
+    const area = activeArea || searchVal;
+    if (!area) return;
+
+    Promise.all([
+      AsyncStorage.getItem("hearby_lat"),
+      AsyncStorage.getItem("hearby_lng"),
+      AsyncStorage.getItem("hearby_coords_area"),
+    ]).then(([latStr, lngStr, coordsArea]) => {
+      const coords = latStr && lngStr && coordsArea === area
+        ? { lat: parseFloat(latStr), lng: parseFloat(lngStr) }
+        : undefined;
+      return getNearbyActivities(area, coords);
+    }).then(results => setActivityItems(results.filter(e => e.lat != null && e.lng != null)))
+      .catch(() => setActivityItems([]));
+  }, [activeFilter, activeArea]);
 
   // ── Draw overlay ─────────────────────────────────────────────────────────────
   useEffect(() => {

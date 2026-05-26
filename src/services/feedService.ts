@@ -10,6 +10,7 @@ import { getRecommendations, type FeedResult } from "./recommendationEngine";
 import { searchViatorExperiences } from "./viatorService";
 import { searchNearbyPlaces, searchPlacesByText, fetchCinemas } from "./googlePlacesService";
 import { getShowtimes } from "./showtimesService";
+import { getNearbyActivities } from "./activitiesService";
 import { SEARCH_CONFIG, shouldFetchGooglePlaces, metresToMiles } from "../config/searchConfig";
 import type { Coords } from "./recommendationsService";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -142,23 +143,37 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
   const shouldFetch = shouldFetchGooglePlaces(eventItems.length);
 
   let googlePlacesItems: EventItem[] = [];
+  let activityItems:    EventItem[] = [];
 
   if (shouldFetch) {
-    // Google Places only — Viator is now always-on (fetched above with other sources)
-    googlePlacesItems = await getRecommendations(area, coords).catch(err => {
-      console.warn("[Feed] Google Places fetch failed:", err);
-      return [];
-    });
-    console.log(`[Feed] Google Places returned ${googlePlacesItems.length} recommendations`);
+    // Fetch Google Places recommendations and Activities in parallel.
+    // Viator is already always-on (fetched in Step 1 above).
+    const [googleResult, activitiesResult] = await Promise.allSettled([
+      getRecommendations(area, coords),
+      getNearbyActivities(area, coords),
+    ]);
+
+    googlePlacesItems = googleResult.status === "fulfilled"
+      ? googleResult.value
+      : (console.warn("[Feed] Google Places fetch failed:", (googleResult as PromiseRejectedResult).reason), []);
+
+    activityItems = activitiesResult.status === "fulfilled"
+      ? activitiesResult.value
+      : [];
+
+    console.log(
+      `[Feed] Threshold triggered — Google Places: ${googlePlacesItems.length}, ` +
+      `Activities: ${activityItems.length}`,
+    );
   } else {
     console.log(
       `[Feed] Google Places skipped — ${eventItems.length} events found ` +
-      `(threshold: ${SEARCH_CONFIG.GOOGLE_PLACES_THRESHOLD})`
+        `(threshold: ${SEARCH_CONFIG.GOOGLE_PLACES_THRESHOLD})`,
     );
   }
 
   // ── Step 3: Merge, deduplicate, sort ─────────────────────────────────────
-  const allItems                        = [...allRaw, ...googlePlacesItems];
+  const allItems = [...allRaw, ...googlePlacesItems, ...activityItems];
   const { events: deduplicated, stats } = deduplicateFeed(allItems);
   const items = sortByDate(deduplicated);
 
@@ -182,6 +197,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
   console.log(`  AMC Showtimes:   ${showtimeItems.length} showtime cards (${new Set(showtimeItems.map(s => s.location.split(",")[0])).size} theatres)`);
   console.log(`  Viator:          ${extract(viatorAlwaysResult).length} (always-on — hidden from All until threshold)`);
   console.log(`  Google Places:   ${googlePlacesItems.length} (threshold-gated recommendations)`);
+  console.log(`  Activities:      ${activityItems.length} (Google Places, threshold-gated)`);
   console.log(`Google Places threshold: ${SEARCH_CONFIG.GOOGLE_PLACES_THRESHOLD} — ${shouldFetch ? "SHOWN (too few events)" : "NOT shown (enough events)"}`);
   console.log("Deduplication stats:");
   console.log(`  Input:                 ${stats.inputCount} items`);

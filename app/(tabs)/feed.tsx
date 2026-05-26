@@ -15,6 +15,7 @@ import { EventItem } from "../../src/data/mockEvents";
 import { FILTERS, SOURCE_FILTERS, FilterOption } from "../../src/config/filterConfig";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getFeed } from "../../src/services/feedService";
+import { getNearbyActivities } from "../../src/services/activitiesService";
 import { CinemaGroupedView } from "../../src/components/CinemaGroupedView";
 import type { ShowtimeGroup } from "../../src/services/showtimesService";
 import { Wordmark } from "../../src/components/Wordmark";
@@ -71,6 +72,7 @@ export default function FeedScreen() {
   const [remoteLoading, setRemoteLoading] = useState(false);
   const [showingRecommendations, setShowingRecommendations] = useState(false);
   const [cinemaGroups, setCinemaGroups] = useState<ShowtimeGroup[]>([]);
+  const [activityItems, setActivityItems] = useState<EventItem[]>([]);
 
   // Notification badge count
   useEffect(() => {
@@ -138,6 +140,23 @@ export default function FeedScreen() {
       .finally(() => setRemoteLoading(false));
   }, [area]);
 
+  // On-demand Activities fetch — fires when the Activities filter is selected.
+  // The 30-min cache in searchNearbyActivities means this never double-fetches
+  // if the threshold block in feedService already ran for this area.
+  useEffect(() => {
+    if (activeFilter !== "activities") { setActivityItems([]); return; }
+    Promise.all([
+      AsyncStorage.getItem("hearby_lat"),
+      AsyncStorage.getItem("hearby_lng"),
+      AsyncStorage.getItem("hearby_coords_area"),
+    ]).then(([latStr, lngStr, coordsArea]) => {
+      const coords = latStr && lngStr && coordsArea === area
+        ? { lat: parseFloat(latStr), lng: parseFloat(lngStr) }
+        : undefined;
+      return getNearbyActivities(area ?? "", coords);
+    }).then(setActivityItems).catch(() => setActivityItems([]));
+  }, [activeFilter, area]);
+
   const dateRange = (): [string, string] | null => {
     const t = fmt(TODAY), tom = fmt(addDays(TODAY, 1));
     const day = TODAY.getDay();
@@ -173,36 +192,52 @@ export default function FeedScreen() {
 
   const freeFn = useMemo(() => FILTERS.find(f => f.id === "Free")?.matchFn, []);
 
-  const filtered = useMemo(() => feedItems.filter(item => {
-    if (showSaved) return saved.has(item.id);
+  const filtered = useMemo(() => {
+    const base = feedItems.filter(item => {
+      if (showSaved) return saved.has(item.id);
 
-    // Free-only overlay (applies on top of category filter)
-    if (freeOnly && freeFn && !freeFn(item)) return false;
+      // Free-only overlay (applies on top of category filter)
+      if (freeOnly && freeFn && !freeFn(item)) return false;
 
-    // Guard: filter-only sources must only appear for their designated filter.
-    const requiredFilter = FILTER_ONLY_SOURCE_MAP[item.source];
-    if (requiredFilter && activeFilter !== requiredFilter) return false;
+      // Guard: filter-only sources must only appear for their designated filter.
+      const requiredFilter = FILTER_ONLY_SOURCE_MAP[item.source];
+      if (requiredFilter && activeFilter !== requiredFilter) return false;
 
-    if (!catFilter.matchFn(item)) return false;
-    if (srcFilters.length > 0 && !srcFilters.some(f => f.matchFn(item))) return false;
-    if (range) {
-      if (item.type === "recommendation") return true;
-      if (!item.date) return false;
-      return item.date >= range[0] && item.date <= range[1];
+      if (!catFilter.matchFn(item)) return false;
+      if (srcFilters.length > 0 && !srcFilters.some(f => f.matchFn(item))) return false;
+      if (range) {
+        if (item.type === "recommendation") return true;
+        if (!item.date) return false;
+        return item.date >= range[0] && item.date <= range[1];
+      }
+      return true;
+    });
+
+    // When the Activities filter is active, merge in on-demand fetched activity
+    // items that aren't already present in feedItems (deduped by id).
+    if (activeFilter === "activities" && activityItems.length > 0) {
+      const existingIds = new Set(base.map(i => i.id));
+      const extra = activityItems.filter(i => !existingIds.has(i.id));
+      return [...base, ...extra];
     }
-    return true;
-  }), [feedItems, showSaved, saved, freeOnly, catFilter, srcFilters, range, activeFilter, activeSources]);
+
+    return base;
+  }, [feedItems, activityItems, showSaved, saved, freeOnly, catFilter, srcFilters, range, activeFilter, activeSources]);
 
   // In the "All" view filter-only items are already excluded above.
   // This set is kept as a belt-and-suspenders guard on the recs footer.
   const FILTER_ONLY_SOURCES = new Set(Object.keys(FILTER_ONLY_SOURCE_MAP));
 
   const showAll = activeFilter === "All" && activeSources.size === 0 && !showSaved;
-  // Viator items (type: "recommendation") are shown inline with events, not in the
-  // "You might also like" footer. All other recommendations stay in the footer.
-  const events  = filtered.filter(i => i.type === "event" || i.source === "Viator");
+  // Viator and Activities items (type: "recommendation") are shown inline with
+  // events, not in the "You might also like" footer. All other recommendations
+  // stay in the footer.
+  const events  = filtered.filter(
+    i => i.type === "event" || i.source === "Viator" || i.category === "Activities"
+  );
   const recs    = filtered.filter(
     i => i.type === "recommendation" && i.source !== "Viator" &&
+         i.category !== "Activities" &&
          (!showAll || !FILTER_ONLY_SOURCES.has(i.source))
   );
 

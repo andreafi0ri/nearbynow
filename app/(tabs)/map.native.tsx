@@ -23,6 +23,7 @@ import { EventItem } from "../../src/data/mockEvents";
 import { EventCard } from "../../src/components/EventCard";
 import { BottomSheet } from "../../src/components/BottomSheet";
 import { getFeed } from "../../src/services/feedService";
+import { getNearbyActivities } from "../../src/services/activitiesService";
 import { searchViatorExperiences } from "../../src/services/viatorService";
 import { FILTERS, SOURCE_FILTERS, FilterOption } from "../../src/config/filterConfig";
 import { SEARCH_CONFIG } from "../../src/config/searchConfig";
@@ -89,9 +90,10 @@ export default function MapScreen() {
 
   const cameraRef = useRef<MapboxGL.Camera>(null);
 
-  const [feedItems, setFeedItems]       = useState<EventItem[]>([]);
-  const [viatorItems, setViatorItems]   = useState<EventItem[]>([]);
-  const [loading, setLoading]           = useState(false);
+  const [feedItems, setFeedItems]         = useState<EventItem[]>([]);
+  const [viatorItems, setViatorItems]     = useState<EventItem[]>([]);
+  const [activityItems, setActivityItems] = useState<EventItem[]>([]);
+  const [loading, setLoading]             = useState(false);
   const [selected, setSelected]         = useState<EventItem | null>(null);
   const [activeFilter, setActiveFilter] = useState("All");
   const [freeOnly, setFreeOnly]         = useState(false);
@@ -170,6 +172,22 @@ export default function MapScreen() {
       .catch(() => setViatorItems([]));
   }, [activeArea, centre]);
 
+  // ── On-demand Activities fetch — fires when Activities filter is selected ──
+  useEffect(() => {
+    if (activeFilter !== "activities") { setActivityItems([]); return; }
+    const area = activeArea || searchVal;
+    if (!area) return;
+
+    const [centerLng, centerLat] = centre;
+    const coords = (centerLat !== SEARCH_CONFIG.DEFAULT_LAT || centerLng !== SEARCH_CONFIG.DEFAULT_LNG)
+      ? { lat: centerLat, lng: centerLng }
+      : undefined;
+
+    getNearbyActivities(area, coords)
+      .then(results => setActivityItems(results.filter(e => e.lat != null && e.lng != null)))
+      .catch(() => setActivityItems([]));
+  }, [activeFilter, activeArea, centre]);
+
   const handleAreaSelect = async (s: LocationSuggestion) => {
     setSearchVal(s.shortName);
     await AsyncStorage.setItem("hearby_lat", String(s.lat));
@@ -226,15 +244,15 @@ export default function MapScreen() {
     return next;
   });
 
-  // All items available for the map (feed + Viator pins with coords)
+  // All items available for the map (feed + Viator pins + on-demand activities)
   const allItems = useMemo(() => {
-    const feedWithCoords = feedItems.filter(e => e.lat != null && e.lng != null);
     // Viator items are already in feedItems via getFeed; viatorItems adds extras
     // that have coords but might not have appeared in the feed threshold check.
-    const viatorIds = new Set(feedItems.map(e => e.id));
-    const extraViator = viatorItems.filter(e => !viatorIds.has(e.id));
-    return [...feedItems, ...extraViator];
-  }, [feedItems, viatorItems]);
+    const feedIds = new Set(feedItems.map(e => e.id));
+    const extraViator     = viatorItems.filter(e => !feedIds.has(e.id));
+    const extraActivities = activityItems.filter(e => !feedIds.has(e.id));
+    return [...feedItems, ...extraViator, ...extraActivities];
+  }, [feedItems, viatorItems, activityItems]);
 
   const visible = useMemo(() => allItems.filter(e => {
     if (freeOnly && freeFn && !freeFn(e)) return false;
@@ -245,7 +263,7 @@ export default function MapScreen() {
     return true;
   }), [allItems, catFilter, srcFilters, range, freeOnly]);
 
-  const listItems = useMemo(() => feedItems.filter(e => {
+  const listItems = useMemo(() => allItems.filter(e => {
     if (freeOnly && freeFn && !freeFn(e)) return false;
     // Match feed's FILTER_ONLY_SOURCE_MAP: hide food/showtime recs outside their category
     const requiredCat = FILTER_ONLY_SOURCE_MAP[e.source];
@@ -259,7 +277,7 @@ export default function MapScreen() {
       return e.date >= range[0] && e.date <= range[1];
     }
     return true;
-  }), [feedItems, catFilter, srcFilters, range, freeOnly, activeFilter]);
+  }), [allItems, catFilter, srcFilters, range, freeOnly, activeFilter]);
 
   // GeoJSON for draw polygon overlay
   const drawGeoJSON = useMemo((): GeoJSON.Feature | null => {

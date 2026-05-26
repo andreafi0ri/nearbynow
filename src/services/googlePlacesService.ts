@@ -12,6 +12,10 @@
 import { EventItem } from "../data/mockEvents";
 import { SEARCH_CONFIG } from "../config/searchConfig";
 import type { Coords } from "./recommendationsService";
+import {
+  ALL_ACTIVITY_GOOGLE_TYPES,
+  getActivityTypeForGoogleType,
+} from "../config/activityTypes";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -479,6 +483,113 @@ export async function fetchCinemas(area: string, coords?: Coords): Promise<Event
   );
 
   return places.map(toCinemaItem);
+}
+
+// ─── Activities search ────────────────────────────────────────────────────────
+
+/** Maps a PriceLevel to a short $ indicator tag. */
+function buildPriceTag(priceLevel: PriceLevel): string | null {
+  const map: Record<PriceLevel, string> = {
+    PRICE_LEVEL_FREE:           "Free",
+    PRICE_LEVEL_INEXPENSIVE:    "$",
+    PRICE_LEVEL_MODERATE:       "$$",
+    PRICE_LEVEL_EXPENSIVE:      "$$$",
+    PRICE_LEVEL_VERY_EXPENSIVE: "$$$$",
+  };
+  return map[priceLevel] ?? null;
+}
+
+/** In-memory cache for activity search results. TTL 30 minutes. */
+const activitiesCache = new Map<string, { data: EventItem[]; expiresAt: number }>();
+const ACTIVITIES_CACHE_TTL = 30 * 60_000;
+
+/**
+ * Nearby Search restricted to activity venue types (bowling, escape rooms,
+ * arcades, comedy clubs, karaoke, go-karts, climbing, etc.).
+ *
+ * Results are mapped to EventItem with category "Activities" and the
+ * appropriate per-type emoji.  Cached for 30 minutes per lat/lng/radius combo.
+ *
+ * @param lat    Latitude of the search centre
+ * @param lng    Longitude of the search centre
+ * @param radius Search radius in metres (default: GOOGLE_PLACES_RADIUS_METRES)
+ */
+export async function searchNearbyActivities(
+  lat: number,
+  lng: number,
+  radius: number = SEARCH_CONFIG.GOOGLE_PLACES_RADIUS_METRES,
+): Promise<EventItem[]> {
+  const cacheKey = `activities-${lat.toFixed(2)}-${lng.toFixed(2)}-${radius}`;
+  const cached = activitiesCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    console.log(`[Activities] Cache hit — ${cached.data.length} results`);
+    return cached.data;
+  }
+
+  const places = await gpFetch(":searchNearby", {
+    includedTypes:  ALL_ACTIVITY_GOOGLE_TYPES,
+    maxResultCount: 20,
+    locationRestriction: {
+      circle: {
+        center: { latitude: lat, longitude: lng },
+        radius,
+      },
+    },
+    rankPreference: "POPULARITY",
+  });
+
+  const today = new Date().toISOString().split("T")[0];
+
+  const items: EventItem[] = places
+    .map((place): EventItem => {
+      // Detect which activity type this place is (try first two Google types)
+      const primaryType   = place.types?.[0] ?? "";
+      const secondaryType = place.types?.[1] ?? "";
+      const activityType =
+        getActivityTypeForGoogleType(primaryType) ||
+        getActivityTypeForGoogleType(secondaryType);
+
+      // Build tags from the activity type + optional price + rating bonus
+      const activityTags = activityType?.tags ?? [];
+      const priceTag     = place.priceLevel ? buildPriceTag(place.priceLevel) : null;
+      const ratingTag    = (place.rating ?? 0) >= 4.5 ? "Highly rated" : null;
+      const tags = [...activityTags, priceTag, ratingTag]
+        .filter((t): t is string => t !== null)
+        .slice(0, 3);
+
+      return {
+        id:        stableId("gp-act-" + place.id),
+        type:      "recommendation",
+        title:     place.displayName?.text ?? "Activity venue",
+        desc:      (place.editorialSummary?.text ?? buildAutoDesc(place)).slice(0, 200),
+        time:      buildOpeningTime(place.currentOpeningHours),
+        date:      today,
+        startIso:  `${today}T09:00`,
+        endIso:    `${today}T23:00`,
+        location:  place.formattedAddress ?? "",
+        lat:       place.location?.latitude,
+        lng:       place.location?.longitude,
+        source:    "Google Places",
+        sourceUrl: place.websiteUri,
+        category:  "Activities",
+        catColor:  "#1A9E98",
+        catDot:    "#3ABFB8",
+        saves:     0,
+        img:       activityType?.emoji ?? "🎯",
+        booking:   place.websiteUri
+          ? { label: "Visit website", url: place.websiteUri, affiliate: false }
+          : null,
+        rating:    place.rating,
+        reviews:   place.userRatingCount,
+        tags,
+      };
+    })
+    // Sort by rating descending, cap at 15
+    .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
+    .slice(0, 15);
+
+  activitiesCache.set(cacheKey, { data: items, expiresAt: Date.now() + ACTIVITIES_CACHE_TTL });
+  return items;
 }
 
 /**

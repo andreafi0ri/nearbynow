@@ -9,6 +9,7 @@
 //   Affiliate via Commission Junction
 // Appears in: Cinema filter + All feed (today only)
 
+import { Platform } from "react-native";
 import { EventItem } from "../data/mockEvents";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -85,20 +86,38 @@ function getCacheKey(area: string, coords?: { lat: number; lng: number }): strin
 
 // ─── AMC API helpers ──────────────────────────────────────────────────────────
 
-const AMC_BASE = "https://api.amctheatres.com/v2";
+const AMC_DIRECT = "https://api.amctheatres.com/v2";
 
-function amcHeaders(): Record<string, string> {
-  return {
-    "X-AMC-Vendor-Key": process.env.EXPO_PUBLIC_AMC_API_KEY ?? "",
-    Accept: "application/json",
-  };
+/**
+ * Build the fetch URL for an AMC API path.
+ *
+ * - Native (iOS/Android): call AMC directly — no CORS restriction.
+ * - Web: route through the /api/amc Vercel proxy which adds the vendor key
+ *   server-side, working around AMC's missing CORS headers.
+ *
+ * Path format: "/theatres?page-size=100&page-number=1"
+ *   → native:  https://api.amctheatres.com/v2/theatres?page-size=100&page-number=1
+ *   → web:     /api/amc?path=%2Ftheatres&page-size=100&page-number=1
+ */
+function amcUrl(pathWithQuery: string): string {
+  if (Platform.OS !== "web") {
+    return `${AMC_DIRECT}${pathWithQuery}`;
+  }
+  // Split path from query string so proxy can forward both separately
+  const qIdx = pathWithQuery.indexOf("?");
+  const path  = qIdx >= 0 ? pathWithQuery.slice(0, qIdx) : pathWithQuery;
+  const query = qIdx >= 0 ? pathWithQuery.slice(qIdx + 1) : "";
+  return `/api/amc?path=${encodeURIComponent(path)}${query ? "&" + query : ""}`;
 }
 
 async function amcFetch<T>(path: string): Promise<T> {
-  const res = await fetch(`${AMC_BASE}${path}`, {
-    headers: amcHeaders(),
-    signal: AbortSignal.timeout(8_000),
-  });
+  const url = amcUrl(path);
+  const headers: Record<string, string> = { Accept: "application/json" };
+  // Vendor key is sent directly on native; on web the proxy adds it server-side
+  if (Platform.OS !== "web") {
+    headers["X-AMC-Vendor-Key"] = process.env.EXPO_PUBLIC_AMC_API_KEY ?? "";
+  }
+  const res = await fetch(url, { headers, signal: AbortSignal.timeout(8_000) });
   if (!res.ok) throw new Error(`AMC ${path} → HTTP ${res.status}`);
   return res.json() as Promise<T>;
 }

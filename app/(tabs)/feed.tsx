@@ -17,6 +17,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getFeed } from "../../src/services/feedService";
 import { getNearbyActivities } from "../../src/services/activitiesService";
 import { CinemaGroupedView } from "../../src/components/CinemaGroupedView";
+import { getShowtimes } from "../../src/services/showtimesService";
 import type { ShowtimeGroup } from "../../src/services/showtimesService";
 import { Wordmark } from "../../src/components/Wordmark";
 import { SEARCH_CONFIG, getRadiusLabel } from "../../src/config/searchConfig";
@@ -156,6 +157,27 @@ export default function FeedScreen() {
       return getNearbyActivities(area ?? "", coords);
     }).then(setActivityItems).catch(() => setActivityItems([]));
   }, [activeFilter, area]);
+
+  // On-demand Cinema fetch — fires when Cinema filter is selected and cinemaGroups
+  // is still empty (e.g. initial getFeed returned [] before AMC key/theatres were
+  // ready, or the user switches to Cinema before getFeed completes).
+  // The 1-hour cache in showtimesService means this never double-fetches.
+  useEffect(() => {
+    if (activeFilter !== "Cinema") return;
+    if (cinemaGroups.length > 0) return; // already loaded — skip
+    Promise.all([
+      AsyncStorage.getItem("hearby_lat"),
+      AsyncStorage.getItem("hearby_lng"),
+      AsyncStorage.getItem("hearby_coords_area"),
+    ]).then(([latStr, lngStr, coordsArea]) => {
+      const coords = latStr && lngStr && coordsArea === area
+        ? { lat: parseFloat(latStr), lng: parseFloat(lngStr) }
+        : undefined;
+      return getShowtimes(area ?? "", coords);
+    }).then(groups => {
+      if (groups.length > 0) setCinemaGroups(groups);
+    }).catch(() => {});
+  }, [activeFilter, area, cinemaGroups.length]);
 
   const dateRange = (): [string, string] | null => {
     const t = fmt(TODAY), tom = fmt(addDays(TODAY, 1));

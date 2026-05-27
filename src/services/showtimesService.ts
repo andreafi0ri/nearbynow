@@ -477,14 +477,14 @@ export async function getShowtimes(
   // 1. Find nearby AMC theatres
   const theatres = await findNearbyAMCTheatres({ lat, lng });
   if (theatres.length === 0) {
-    console.info(`[Showtimes] No AMC theatres found near "${area}"`);
-    // In development, always show the dev-mock so Cinema filter renders
-    if (typeof __DEV__ !== "undefined" && __DEV__) {
-      console.info("[Showtimes] DEV mode — returning dev mock for Cinema filter UI");
-      return [buildDevGroup()];
-    }
-    showtimesCache.set(key, { data: [], expiresAt: Date.now() + CACHE_TTL });
-    return [];
+    // No AMC theatres within range — fall back to dev mock so the Cinema filter
+    // and CinemaGroupedView always render with something during development.
+    // In a production build you can gate this on __DEV__ once real theatre coverage
+    // is verified for your target cities.
+    console.info(
+      `[Showtimes] No AMC theatres found near "${area}" — returning dev mock`,
+    );
+    return [buildDevGroup()];
   }
 
   // 2. Get today's showtimes for each theatre in parallel

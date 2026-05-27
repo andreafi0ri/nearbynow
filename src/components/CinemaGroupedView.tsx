@@ -64,7 +64,7 @@ export function CinemaGroupedView({ groups, T }: Props) {
                 {theatre.name}
               </Text>
               <Text style={[styles.theatreAddress, { color: T.muted }]}>
-                {theatre.address}, {theatre.city}
+                {theatre.location.addressLine1}, {theatre.location.city}
               </Text>
             </View>
             <TouchableOpacity

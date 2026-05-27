@@ -13,16 +13,21 @@ import { EventItem } from "../data/mockEvents";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+// Matches the actual AMC API response shape.
+// location fields are nested; latitude/longitude (not lat/lon).
 type AMCTheatre = {
   id: number;
   name: string;
   slug: string;
-  address: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  location: { lat: number; lon: number };
-  attributes: { id: number; name: string }[];
+  location: {
+    addressLine1: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    latitude: number;
+    longitude: number;
+  };
+  attributes: { code: string; name: string; description?: string }[];
 };
 
 type AMCShowtime = {
@@ -127,14 +132,18 @@ async function findNearbyAMCTheatres(
   if (!process.env.EXPO_PUBLIC_AMC_API_KEY) return [];
   try {
     const nearby: AMCTheatre[] = [];
-    const MAX_PAGES = 3;
-
-    for (let page = 1; page <= MAX_PAGES; page++) {
+    // Paginate through all AMC theatres (526 total ÷ 100 per page = 6 pages max).
+    // Correct param is page-number (not page). Fetch all pages sequentially to
+    // keep API calls predictable; each page is ~1 KB JSON.
+    const PAGE_SIZE = 100;
+    let pageNumber = 1;
+    while (true) {
       const data = await amcFetch<{
         _embedded: { theatres: AMCTheatre[] };
         count: number;
         pageSize: number;
-      }>(`/theatres?page-size=100&page=${page}`);
+        pageNumber: number;
+      }>(`/theatres?page-size=${PAGE_SIZE}&page-number=${pageNumber}`);
 
       const theatres = data._embedded?.theatres ?? [];
       if (theatres.length === 0) break;
@@ -142,13 +151,14 @@ async function findNearbyAMCTheatres(
       for (const t of theatres) {
         const dist = haversineMiles(
           coords.lat, coords.lng,
-          t.location.lat, t.location.lon,
+          t.location.latitude, t.location.longitude,
         );
         if (dist <= radiusMiles) nearby.push(t);
       }
 
-      // If this page was partial, no more pages to fetch
-      if (theatres.length < 100) break;
+      // Stop when last page received
+      if (theatres.length < PAGE_SIZE) break;
+      pageNumber++;
     }
 
     console.log(
@@ -255,11 +265,14 @@ const DEV_THEATRE: AMCTheatre = {
   id: 1457,
   name: "AMC Classic Lancaster 13",
   slug: "amc-classic-lancaster-13",
-  address: "1457 Lititz Pike",
-  city: "Lancaster",
-  state: "PA",
-  postalCode: "17601",
-  location: { lat: 40.0753, lon: -76.3408 },
+  location: {
+    addressLine1: "1457 Lititz Pike",
+    city: "Lancaster",
+    state: "PA",
+    postalCode: "17601",
+    latitude: 40.0753,
+    longitude: -76.3408,
+  },
   attributes: [],
 };
 
@@ -317,7 +330,7 @@ function buildDevGroup(): ShowtimeGroup {
   const fandangoUrl = buildFandangoDeepLink(
     DEV_MOVIE.name,
     DEV_THEATRE.name,
-    DEV_THEATRE.postalCode,
+    DEV_THEATRE.location.postalCode,
   );
 
   const today = new Date().toISOString().split("T")[0];
@@ -331,9 +344,9 @@ function buildDevGroup(): ShowtimeGroup {
     time: `Today · ${rawShowtimes.length} showings`,
     date: today,
     startIso: rawShowtimes[0].showDateTimeLocal,
-    location: `${DEV_THEATRE.name}, ${DEV_THEATRE.address}, ${DEV_THEATRE.city}, ${DEV_THEATRE.state}`,
-    lat: DEV_THEATRE.location.lat,
-    lng: DEV_THEATRE.location.lon,
+    location: `${DEV_THEATRE.name}, ${DEV_THEATRE.location.addressLine1}, ${DEV_THEATRE.location.city}, ${DEV_THEATRE.location.state}`,
+    lat: DEV_THEATRE.location.latitude,
+    lng: DEV_THEATRE.location.longitude,
     source: "AMC Theatres",
     category: "Cinema",
     catColor: "#CC0000",
@@ -400,7 +413,7 @@ function groupShowtimesByMovie(
       .slice(0, 8);
 
     const purchaseUrl = upcoming[0].purchaseUrl;
-    const fandangoUrl = buildFandangoDeepLink(movie.name, theatre.name, theatre.postalCode);
+    const fandangoUrl = buildFandangoDeepLink(movie.name, theatre.name, theatre.location.postalCode);
 
     const feedItem: EventItem = {
       id: makeShowtimeId(theatre.id, movie.id),
@@ -417,9 +430,9 @@ function groupShowtimesByMovie(
         d.setMinutes(d.getMinutes() + movie.runTime);
         return d.toISOString();
       })(),
-      location: `${theatre.name}, ${theatre.address}, ${theatre.city}, ${theatre.state}`,
-      lat: theatre.location.lat,
-      lng: theatre.location.lon,
+      location: `${theatre.name}, ${theatre.location.addressLine1}, ${theatre.location.city}, ${theatre.location.state}`,
+      lat: theatre.location.latitude,
+      lng: theatre.location.longitude,
       source: "AMC Theatres",
       category: "Cinema",
       catColor: "#CC0000",

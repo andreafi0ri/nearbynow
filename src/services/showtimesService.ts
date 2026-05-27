@@ -144,50 +144,42 @@ function haversineMiles(
 // the current vendor key.  We fall back to paginating /theatres?page-size=100
 // (up to 3 pages) and filtering client-side via Haversine distance.
 
+// Errors propagate to the caller — getShowtimes distinguishes
+// "API unavailable" (throw) from "no theatres in range" (returns []).
 async function findNearbyAMCTheatres(
   coords: { lat: number; lng: number },
   radiusMiles = 20,
 ): Promise<AMCTheatre[]> {
-  if (!process.env.EXPO_PUBLIC_AMC_API_KEY) return [];
-  try {
-    const nearby: AMCTheatre[] = [];
-    // Paginate through all AMC theatres (526 total ÷ 100 per page = 6 pages max).
-    // Correct param is page-number (not page). Fetch all pages sequentially to
-    // keep API calls predictable; each page is ~1 KB JSON.
-    const PAGE_SIZE = 100;
-    let pageNumber = 1;
-    while (true) {
-      const data = await amcFetch<{
-        _embedded: { theatres: AMCTheatre[] };
-        count: number;
-        pageSize: number;
-        pageNumber: number;
-      }>(`/theatres?page-size=${PAGE_SIZE}&page-number=${pageNumber}`);
+  const nearby: AMCTheatre[] = [];
+  const PAGE_SIZE = 100;
+  let pageNumber = 1;
+  while (true) {
+    const data = await amcFetch<{
+      _embedded: { theatres: AMCTheatre[] };
+      count: number;
+      pageSize: number;
+      pageNumber: number;
+    }>(`/theatres?page-size=${PAGE_SIZE}&page-number=${pageNumber}`);
 
-      const theatres = data._embedded?.theatres ?? [];
-      if (theatres.length === 0) break;
+    const theatres = data._embedded?.theatres ?? [];
+    if (theatres.length === 0) break;
 
-      for (const t of theatres) {
-        const dist = haversineMiles(
-          coords.lat, coords.lng,
-          t.location.latitude, t.location.longitude,
-        );
-        if (dist <= radiusMiles) nearby.push(t);
-      }
-
-      // Stop when last page received
-      if (theatres.length < PAGE_SIZE) break;
-      pageNumber++;
+    for (const t of theatres) {
+      const dist = haversineMiles(
+        coords.lat, coords.lng,
+        t.location.latitude, t.location.longitude,
+      );
+      if (dist <= radiusMiles) nearby.push(t);
     }
 
-    console.log(
-      `[Showtimes] findNearbyAMCTheatres: ${nearby.length} theatres within ${radiusMiles} miles`,
-    );
-    return nearby;
-  } catch (err) {
-    console.warn("[Showtimes] findNearbyAMCTheatres failed:", err);
-    return [];
+    if (theatres.length < PAGE_SIZE) break;
+    pageNumber++;
   }
+
+  console.log(
+    `[Showtimes] findNearbyAMCTheatres: ${nearby.length} theatres within ${radiusMiles} miles`,
+  );
+  return nearby;
 }
 
 // ─── Function 2: getShowtimesForTheatre ──────────────────────────────────────
@@ -502,11 +494,26 @@ export async function getShowtimes(
   const lng = coords?.lng ?? -73.9442;
 
   // 1. Find nearby AMC theatres
-  const theatres = await findNearbyAMCTheatres({ lat, lng });
+  // Two failure modes are handled differently:
+  //   - API error (throw)   → proxy unavailable in local dev / network issue
+  //                           → fall back to dev mock so Cinema UI is always testable
+  //   - Empty result ([])   → API succeeded; area genuinely has no nearby AMC theatres
+  //                           → return [] and cache so we don't re-fetch every tap
+  let theatres: AMCTheatre[];
+  try {
+    theatres = await findNearbyAMCTheatres({ lat, lng });
+  } catch (err) {
+    console.warn(
+      "[Showtimes] Theatre fetch failed (proxy unavailable in local dev?) — " +
+        "returning dev mock so Cinema filter remains testable.",
+      err,
+    );
+    return [buildDevGroup()];
+  }
+
   if (theatres.length === 0) {
     console.info(`[Showtimes] No AMC theatres within range of "${area}"`);
-    // Cache the empty result for 30 min so repeated Cinema-filter taps don't
-    // re-fetch all 526 theatres from the AMC API every time.
+    // Cache 30 min so repeated Cinema-filter taps don't re-poll 526 theatres.
     showtimesCache.set(key, { data: [], expiresAt: Date.now() + 30 * 60 * 1_000 });
     return [];
   }

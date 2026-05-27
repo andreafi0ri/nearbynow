@@ -676,7 +676,7 @@ export default function MapScreen() {
                   style={[styles.calloutCTA, { backgroundColor: T.text, borderColor: T.text }]}
                 >
                   <Text style={[styles.calloutCTAText, { color: T.goldBri }]}>
-                    {selected.booking.label} ↗
+                    {selected.booking.label}
                   </Text>
                 </TouchableOpacity>
               ) : (

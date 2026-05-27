@@ -251,7 +251,7 @@ export function EventCard({
                   onPress={() => Linking.openURL(link.url)}
                   style={[styles.sourceLink, { borderColor: T.border, backgroundColor: T.bgCardHi, shadowColor: T.border }]}
                 >
-                  <Text style={[styles.sourceLinkText, { color: T.text }]}>{link.label} ↗</Text>
+                  <Text style={[styles.sourceLinkText, { color: T.text }]}>{link.label}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -292,7 +292,7 @@ export function EventCard({
                 style={[styles.bookBtn, { backgroundColor: isAff ? T.text : "transparent", borderColor: T.text, shadowColor: isAff ? T.goldDim : "transparent" }]}
               >
                 <Text style={[styles.bookBtnText, { color: isAff ? T.goldBri : T.text }]}>
-                  {item.booking.label}{isAff ? " ↗" : ""}
+                  {item.booking.label}
                 </Text>
               </TouchableOpacity>
             ) : (

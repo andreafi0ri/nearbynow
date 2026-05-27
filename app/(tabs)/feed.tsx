@@ -1,13 +1,14 @@
 // app/(tabs)/feed.tsx
 import React, { useState, useEffect, useMemo } from "react";
 import {
-  View, Text, TouchableOpacity, FlatList, Platform,
+  View, Text, TouchableOpacity, FlatList, ScrollView, Platform,
   StyleSheet, ViewStyle, TextStyle, TextInput, ActivityIndicator, Switch,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useTheme } from "../../src/hooks/useTheme";
 import { EventCard } from "../../src/components/EventCard";
+import { TicketCard, ListRow, SectionHeader } from "../../src/components/FeedCards";
 import { BottomSheet } from "../../src/components/BottomSheet";
 import { useSavedEvents } from "../../src/hooks/useSavedEvents";
 import { useSavedAreas } from "../../src/context/SavedAreasContext";
@@ -317,6 +318,33 @@ export default function FeedScreen() {
          (!showAll || !FILTER_ONLY_SOURCES.has(i.source))
   );
 
+  // ── Mix layout partition (All view only) ────────────────────────────────
+  // Community sources: Reddit posts, local news, community categories
+  const COMMUNITY_SOURCES = new Set(["Nashville Scene", "The Tennessean", "Local News"]);
+  const isCommunityItem = (item: EventItem) =>
+    item.category === "Community" ||
+    item.category === "Local Gov"  ||
+    item.source?.startsWith("r/")  ||
+    COMMUNITY_SOURCES.has(item.source ?? "");
+
+  const mixTicketItems    = filtered.filter(i => i.type === "event" && !isCommunityItem(i));
+  const mixCommunityItems = filtered.filter(isCommunityItem);
+  const mixRecItems       = filtered.filter(
+    i => i.type === "recommendation" && !isCommunityItem(i) && !FILTER_ONLY_SOURCES.has(i.source ?? "")
+  );
+
+  // Time-aware section label: "Tonight" after 5 pm, otherwise "This weekend"
+  const eventSectionLabel = (() => {
+    const h = new Date().getHours();
+    if (h >= 17) return "Tonight";
+    const day = new Date().getDay();
+    if (day === 0 || day === 6) return "This weekend";
+    return "This weekend";
+  })();
+
+  // True when we should render the sectioned Mix layout
+  const isMixLayout = activeFilter === "All" && !showSaved;
+
   const dateLabel  = datePreset === "Custom" && customFrom && customTo
     ? `${customFrom.slice(5)} – ${customTo.slice(5)}` : datePreset ?? "Anytime";
   const dateActive = !!datePreset;
@@ -569,6 +597,117 @@ export default function FeedScreen() {
       {/* AMC filter — rich grouped view by theatre */}
       {activeFilter === "AMC" && cinemaGroups.length > 0 ? (
         <CinemaGroupedView groups={cinemaGroups} T={T} />
+      ) : isMixLayout ? (
+
+      /* ── "All" view — sectioned Mix layout ──────────────────────── */
+      <ScrollView
+        contentContainerStyle={[styles.feed, { paddingHorizontal: 0, paddingBottom: 60 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Result count */}
+        {!remoteLoading && filtered.length > 0 && (
+          <Text style={[styles.resultCount, { color: T.muted, paddingHorizontal: 16 }]}>
+            {filtered.length} result{filtered.length !== 1 ? "s" : ""}
+          </Text>
+        )}
+
+        {/* Events section — TicketCards */}
+        {mixTicketItems.length > 0 && (
+          <>
+            <SectionHeader
+              label={eventSectionLabel}
+              count={`${mixTicketItems.length} event${mixTicketItems.length !== 1 ? "s" : ""}`}
+              T={T}
+            />
+            <View style={{ paddingHorizontal: 16 }}>
+              {mixTicketItems.map(item => (
+                <TicketCard
+                  key={item.id} item={item} T={T}
+                  saved={saved.has(item.id)}
+                  onSave={() => handleToggle(item.id)}
+                />
+              ))}
+            </View>
+          </>
+        )}
+
+        {/* Cinema section — embedded CinemaGroupedView */}
+        {cinemaGroups.length > 0 && (
+          <>
+            <SectionHeader
+              label="At the cinema"
+              count={`${cinemaGroups.length} film${cinemaGroups.length !== 1 ? "s" : ""}`}
+              T={T}
+            />
+            <View style={{ paddingHorizontal: 16 }}>
+              <CinemaGroupedView groups={cinemaGroups} T={T} contained />
+            </View>
+          </>
+        )}
+
+        {/* Community section — ListRows */}
+        {mixCommunityItems.length > 0 && (
+          <>
+            <SectionHeader
+              label="From the community"
+              count={`${mixCommunityItems.length}`}
+              T={T}
+            />
+            <View style={{ paddingHorizontal: 22 }}>
+              {mixCommunityItems.map((item, i) => (
+                <ListRow
+                  key={item.id} item={item} T={T}
+                  saved={saved.has(item.id)}
+                  onSave={() => handleToggle(item.id)}
+                  isLast={i === mixCommunityItems.length - 1}
+                />
+              ))}
+            </View>
+          </>
+        )}
+
+        {/* Recommendations footer */}
+        {mixRecItems.length > 0 && (
+          <>
+            <View style={[styles.recDivider, { marginHorizontal: 16 }]}>
+              <View style={[styles.dividerLine, { backgroundColor: T.gold }]} />
+              <Text style={[styles.dividerText, { color: T.goldDim }]}>
+                {showingRecommendations ? "✦ More recommendations for you in the area" : "✦ You might also like"}
+              </Text>
+              <View style={[styles.dividerLine, { backgroundColor: T.gold }]} />
+            </View>
+            <View style={{ paddingHorizontal: 16 }}>
+              {mixRecItems.map(item => (
+                <EventCard key={item.id} item={item} saved={saved.has(item.id)} onSave={handleToggle} T={T} />
+              ))}
+            </View>
+          </>
+        )}
+
+        {/* Loading indicator */}
+        {remoteLoading && (
+          <View style={styles.remoteLoader}>
+            <ActivityIndicator size="small" color={T.muted} />
+            <Text style={[styles.remoteLoaderText, { color: T.muted }]}>Loading community posts…</Text>
+          </View>
+        )}
+
+        {/* Empty state */}
+        {!remoteLoading && mixTicketItems.length === 0 && mixCommunityItems.length === 0 && cinemaGroups.length === 0 && (
+          <View style={styles.empty}>
+            <Text style={styles.emptyIcon}>{noAreaData ? "🗺️" : "📅"}</Text>
+            <Text style={[styles.emptyTitle, { color: T.text }]}>
+              {noAreaData ? "Nothing here yet" : dateActive ? "No results for this date" : "Nothing found nearby"}
+            </Text>
+            <Text style={[styles.emptySub, { color: T.muted }]}>
+              {noAreaData ? "Try a different location or extend your time range"
+                : dateActive ? "Try a different date or tap × to clear"
+                : "Try a different category or source filter"}
+            </Text>
+          </View>
+        )}
+      </ScrollView>
+
       ) : (
 
       /* ── All other filters — standard EventCard FlatList ─────────── */

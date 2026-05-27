@@ -44,7 +44,7 @@ export const FILTERS: FilterOption[] = [
   {
     id: "Events",
     label: "Events",
-    icon: "🎟️",
+    icon: "💌",
     matchFn: item => item.type === "event",
   },
   {
@@ -115,7 +115,7 @@ export const FILTERS: FilterOption[] = [
   {
     id: "Community",
     label: "Community",
-    icon: "🤝",
+    icon: "💛",
     matchFn: item => item.category === "Community" || item.category === "Local Gov",
   },
   {

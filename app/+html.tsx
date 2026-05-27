@@ -14,6 +14,10 @@ export default function Root({ children }: { children: React.ReactNode }) {
         {/* PWA */}
         <link rel="manifest" href="/manifest.json" />
         <link rel="apple-touch-icon" href="/nearbynow-apple-icon.png" />
+        {/* JetBrains Mono — used by source badge pills */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet" />
         {/* Google Analytics */}
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-6ENK256D12" />
         <script dangerouslySetInnerHTML={{ __html: `

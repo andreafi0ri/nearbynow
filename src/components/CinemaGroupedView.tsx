@@ -13,9 +13,11 @@ import type { ShowtimeGroup } from "../services/showtimesService";
 type Props = {
   groups: ShowtimeGroup[];
   T: Theme;
+  /** When true, renders as a plain View instead of a ScrollView (for embedding in a parent scroll). */
+  contained?: boolean;
 };
 
-export function CinemaGroupedView({ groups, T }: Props) {
+export function CinemaGroupedView({ groups, T, contained = false }: Props) {
   // Group by theatre
   type TheatreSection = {
     theatre: ShowtimeGroup["theatre"];
@@ -43,11 +45,13 @@ export function CinemaGroupedView({ groups, T }: Props) {
     );
   }
 
+  const Wrapper = contained ? View : ScrollView;
+  const wrapperProps = contained
+    ? { style: styles.container }
+    : { contentContainerStyle: [styles.container, { paddingBottom: 100 }], showsVerticalScrollIndicator: false };
+
   return (
-    <ScrollView
-      contentContainerStyle={[styles.container, { paddingBottom: 100 }]}
-      showsVerticalScrollIndicator={false}
-    >
+    <Wrapper {...(wrapperProps as any)}>
       {sections.map(({ theatre, movies }) => (
         <View key={theatre.id} style={styles.theatreSection}>
 
@@ -192,7 +196,7 @@ export function CinemaGroupedView({ groups, T }: Props) {
                   ]}
                 >
                   <Text style={[styles.ticketBtnText, { color: T.goldBri }]}>
-                    Get Tickets ↗
+                    Get Tickets
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -200,7 +204,7 @@ export function CinemaGroupedView({ groups, T }: Props) {
           })}
         </View>
       ))}
-    </ScrollView>
+    </Wrapper>
   );
 }
 

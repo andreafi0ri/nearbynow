@@ -146,11 +146,13 @@ export default function FeedScreen() {
       .finally(() => setRemoteLoading(false));
   }, [area]);
 
-  // On-demand Activities fetch — fires when the Activities filter is selected.
-  // The 30-min cache in searchNearbyActivities means this never double-fetches
-  // if the threshold block in feedService already ran for this area.
+  // Activities fetch — fires for both the Activities filter AND the All view.
+  // The 30-min cache in searchNearbyActivities means this never double-fetches.
+  // Activities replace the cinema section in the All view Mix layout.
   useEffect(() => {
-    if (activeFilter !== "activities") { setActivityItems([]); return; }
+    if (activeFilter !== "activities" && activeFilter !== "All") {
+      setActivityItems([]); return;
+    }
     Promise.all([
       AsyncStorage.getItem("hearby_lat"),
       AsyncStorage.getItem("hearby_lng"),
@@ -275,9 +277,10 @@ export default function FeedScreen() {
       return true;
     });
 
-    // When the Activities filter is active, merge in on-demand fetched activity
-    // items that aren't already present in feedItems (deduped by id).
-    if (activeFilter === "activities" && activityItems.length > 0) {
+    // When the Activities filter OR the All view is active, merge in on-demand
+    // fetched activity items that aren't already present in feedItems (deduped).
+    // In the All view they appear in the TicketCard section of the Mix layout.
+    if ((activeFilter === "activities" || activeFilter === "All") && activityItems.length > 0) {
       const existingIds = new Set(base.map(i => i.id));
       const extra = activityItems.filter(i => !existingIds.has(i.id));
       return [...base, ...extra];
@@ -327,10 +330,20 @@ export default function FeedScreen() {
     item.source?.startsWith("r/")  ||
     COMMUNITY_SOURCES.has(item.source ?? "");
 
-  const mixTicketItems    = filtered.filter(i => i.type === "event" && !isCommunityItem(i));
+  // Events + Activities + Viator recs → TicketCard section
+  // (Activities are type:"recommendation" but shown as ticket-style cards)
+  const mixTicketItems    = filtered.filter(i =>
+    (i.type === "event" || i.category === "Activities" || i.source === "Viator")
+    && !isCommunityItem(i)
+  );
   const mixCommunityItems = filtered.filter(isCommunityItem);
+  // Remaining recs (not activities, not Viator, not community) → "You might also like" footer
   const mixRecItems       = filtered.filter(
-    i => i.type === "recommendation" && !isCommunityItem(i) && !FILTER_ONLY_SOURCES.has(i.source ?? "")
+    i => i.type === "recommendation"
+      && i.category !== "Activities"
+      && i.source !== "Viator"
+      && !isCommunityItem(i)
+      && !FILTER_ONLY_SOURCES.has(i.source ?? "")
   );
 
   // Time-aware section label: "Tonight" after 5 pm, otherwise "This weekend"
@@ -604,19 +617,12 @@ export default function FeedScreen() {
         contentContainerStyle={[styles.feed, { paddingHorizontal: 0, paddingBottom: 60 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Result count */}
-        {!remoteLoading && filtered.length > 0 && (
-          <Text style={[styles.resultCount, { color: T.muted, paddingHorizontal: 16 }]}>
-            {filtered.length} result{filtered.length !== 1 ? "s" : ""}
-          </Text>
-        )}
-
-        {/* Events section — TicketCards */}
+        {/* Events + Activities section — TicketCards */}
         {mixTicketItems.length > 0 && (
           <>
             <SectionHeader
               label={eventSectionLabel}
-              count={`${mixTicketItems.length} event${mixTicketItems.length !== 1 ? "s" : ""}`}
+              count={`${mixTicketItems.length} result${mixTicketItems.length !== 1 ? "s" : ""}`}
               T={T}
             />
             <View style={{ paddingHorizontal: 16 }}>
@@ -627,20 +633,6 @@ export default function FeedScreen() {
                   onSave={() => handleToggle(item.id)}
                 />
               ))}
-            </View>
-          </>
-        )}
-
-        {/* Cinema section — embedded CinemaGroupedView */}
-        {cinemaGroups.length > 0 && (
-          <>
-            <SectionHeader
-              label="At the cinema"
-              count={`${cinemaGroups.length} film${cinemaGroups.length !== 1 ? "s" : ""}`}
-              T={T}
-            />
-            <View style={{ paddingHorizontal: 16 }}>
-              <CinemaGroupedView groups={cinemaGroups} T={T} contained />
             </View>
           </>
         )}
@@ -693,7 +685,7 @@ export default function FeedScreen() {
         )}
 
         {/* Empty state */}
-        {!remoteLoading && mixTicketItems.length === 0 && mixCommunityItems.length === 0 && cinemaGroups.length === 0 && (
+        {!remoteLoading && mixTicketItems.length === 0 && mixCommunityItems.length === 0 && mixRecItems.length === 0 && (
           <View style={styles.empty}>
             <Text style={styles.emptyIcon}>{noAreaData ? "🗺️" : "📅"}</Text>
             <Text style={[styles.emptyTitle, { color: T.text }]}>

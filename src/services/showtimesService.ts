@@ -71,6 +71,12 @@ export type ShowtimeGroup = {
 const showtimesCache = new Map<string, { data: ShowtimeGroup[]; expiresAt: number }>();
 const CACHE_TTL = 60 * 60 * 1_000; // 1 hour
 
+/** Wipe all cached showtime data — called by the on-demand Cinema effect
+ *  so a stale empty result never blocks a fresh retry. */
+export function clearShowtimesCache(): void {
+  showtimesCache.clear();
+}
+
 // Separate per-movie cache so the same movie isn't fetched multiple times
 const movieCache = new Map<number, AMCMovie>();
 
@@ -146,11 +152,15 @@ function haversineMiles(
 
 // Errors propagate to the caller — getShowtimes distinguishes
 // "API unavailable" (throw) from "no theatres in range" (returns []).
+// Returns the MAX_THEATRES closest theatres within radiusMiles, sorted ascending.
+const MAX_THEATRES = 5; // cap so we don't fire 30+ showtime fetches for dense cities
+
 async function findNearbyAMCTheatres(
   coords: { lat: number; lng: number },
-  radiusMiles = 20,
+  radiusMiles = 30, // 30 mi covers most metro areas incl. Lancaster PA (nearest AMC = 27.4 mi)
 ): Promise<AMCTheatre[]> {
-  const nearby: AMCTheatre[] = [];
+  type WithDist = { theatre: AMCTheatre; dist: number };
+  const nearby: WithDist[] = [];
   const PAGE_SIZE = 100;
   let pageNumber = 1;
   while (true) {
@@ -169,17 +179,24 @@ async function findNearbyAMCTheatres(
         coords.lat, coords.lng,
         t.location.latitude, t.location.longitude,
       );
-      if (dist <= radiusMiles) nearby.push(t);
+      if (dist <= radiusMiles) nearby.push({ theatre: t, dist });
     }
 
     if (theatres.length < PAGE_SIZE) break;
     pageNumber++;
   }
 
+  // Sort closest-first, cap to avoid excessive showtime fetches in dense cities
+  const sorted = nearby
+    .sort((a, b) => a.dist - b.dist)
+    .slice(0, MAX_THEATRES)
+    .map(x => x.theatre);
+
   console.log(
-    `[Showtimes] findNearbyAMCTheatres: ${nearby.length} theatres within ${radiusMiles} miles`,
+    `[Showtimes] findNearbyAMCTheatres: ${nearby.length} within ${radiusMiles} mi, ` +
+      `returning ${sorted.length} closest`,
   );
-  return nearby;
+  return sorted;
 }
 
 // ─── Function 2: getShowtimesForTheatre ──────────────────────────────────────
@@ -513,8 +530,8 @@ export async function getShowtimes(
 
   if (theatres.length === 0) {
     console.info(`[Showtimes] No AMC theatres within range of "${area}"`);
-    // Cache 30 min so repeated Cinema-filter taps don't re-poll 526 theatres.
-    showtimesCache.set(key, { data: [], expiresAt: Date.now() + 30 * 60 * 1_000 });
+    // Do NOT cache empty results — if the area ever gets AMC coverage, or if
+    // wrong coords were used this time, we want the next tap to retry.
     return [];
   }
 

@@ -17,7 +17,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getFeed } from "../../src/services/feedService";
 import { getNearbyActivities } from "../../src/services/activitiesService";
 import { CinemaGroupedView } from "../../src/components/CinemaGroupedView";
-import { getShowtimes } from "../../src/services/showtimesService";
+import { getShowtimes, clearShowtimesCache } from "../../src/services/showtimesService";
 import type { ShowtimeGroup } from "../../src/services/showtimesService";
 import { Wordmark } from "../../src/components/Wordmark";
 import { SEARCH_CONFIG, getRadiusLabel } from "../../src/config/searchConfig";
@@ -159,12 +159,13 @@ export default function FeedScreen() {
   }, [activeFilter, area]);
 
   // On-demand Cinema fetch — fires when Cinema filter is selected and cinemaGroups
-  // is still empty (e.g. initial getFeed returned [] before AMC key/theatres were
-  // ready, or the user switches to Cinema before getFeed completes).
-  // The 1-hour cache in showtimesService means this never double-fetches.
+  // is still empty. Always clears the in-memory cache first so a stale []
+  // from a previous failed attempt (wrong coords, old code) never blocks a retry.
   useEffect(() => {
     if (activeFilter !== "Cinema") return;
     if (cinemaGroups.length > 0) return; // already loaded — skip
+    // Wipe any stale empty-result cache before retrying
+    clearShowtimesCache();
     Promise.all([
       AsyncStorage.getItem("hearby_lat"),
       AsyncStorage.getItem("hearby_lng"),

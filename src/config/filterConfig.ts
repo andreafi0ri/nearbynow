@@ -77,6 +77,12 @@ export const FILTERS: FilterOption[] = [
     },
   },
   {
+    id: "Nightlife",
+    label: "Nightlife",
+    icon: "🌙",
+    matchFn: item => item.category === "Nightlife",
+  },
+  {
     id: "Music",
     label: "Music",
     icon: "🎸",
@@ -115,10 +121,12 @@ export const FILTERS: FilterOption[] = [
   {
     id: "Outdoors",
     label: "Outdoors",
-    icon: "🌳",
+    icon: "🌿",
     matchFn: item =>
       item.category === "Outdoors" ||
-      item.tags?.some(t => ["park", "outdoor", "walk", "nature", "garden"].includes(t.toLowerCase())) === true,
+      item.tags?.some(t =>
+        ["outdoor", "park", "nature", "garden", "trail", "hike", "walk"].includes(t.toLowerCase())
+      ) === true,
   },
   {
     id: "Cinema",

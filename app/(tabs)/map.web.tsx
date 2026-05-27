@@ -14,6 +14,8 @@ import { EventCard } from "../../src/components/EventCard";
 import { BottomSheet } from "../../src/components/BottomSheet";
 import { getFeed } from "../../src/services/feedService";
 import { getNearbyActivities } from "../../src/services/activitiesService";
+import { getNightlife } from "../../src/services/nightlifeService";
+import { getParksAndOutdoors } from "../../src/services/parksService";
 import { fetchNearbyPlaces } from "../../src/services/recommendationsService";
 import { FILTERS, SOURCE_FILTERS, FilterOption } from "../../src/config/filterConfig";
 import { LocationInput } from "../../src/components/LocationInput";
@@ -92,16 +94,22 @@ export default function MapScreen() {
   const drawModeRef     = useRef(false);
 
   const [mapboxLoaded, setMapboxLoaded] = useState(!!(window as any).mapboxgl);
-  const [feedPosts, setFeedPosts]         = useState<EventItem[]>([]);
-  const [recItems, setRecItems]           = useState<EventItem[]>([]);
-  const [activityItems, setActivityItems] = useState<EventItem[]>([]);
-  // feedItems drives map markers (incl. dynamic recs as map pans + on-demand activities)
+  const [feedPosts, setFeedPosts]           = useState<EventItem[]>([]);
+  const [recItems, setRecItems]             = useState<EventItem[]>([]);
+  const [activityItems, setActivityItems]   = useState<EventItem[]>([]);
+  const [nightlifeItems, setNightlifeItems] = useState<EventItem[]>([]);
+  const [parksItems, setParksItems]         = useState<EventItem[]>([]);
+  // feedItems drives map markers (incl. dynamic recs as map pans + on-demand filters)
   const feedItems = useMemo(() => {
     const base = [...feedPosts, ...recItems];
-    if (activityItems.length === 0) return base;
     const baseIds = new Set(base.map(e => e.id));
-    return [...base, ...activityItems.filter(e => !baseIds.has(e.id))];
-  }, [feedPosts, recItems, activityItems]);
+    const extras = [
+      ...activityItems,
+      ...nightlifeItems,
+      ...parksItems,
+    ].filter(e => !baseIds.has(e.id));
+    return [...base, ...extras];
+  }, [feedPosts, recItems, activityItems, nightlifeItems, parksItems]);
   // listFeedItems is frozen to the getFeed result so the list matches the feed screen
   const [listFeedItems, setListFeedItems] = useState<EventItem[]>([]);
   const [loading, setLoading]           = useState(false);
@@ -148,8 +156,9 @@ export default function MapScreen() {
 
   // Mirror feed's guard: some recommendation sources only appear under their own category filter
   const FILTER_ONLY_SOURCE_MAP: Record<string, string> = {
-    "Food Places": "Food & Drink",
-    "Showtimes":   "Cinema",
+    "Food Places":  "Food & Drink",
+    "Showtimes":    "Cinema",
+    "AMC Theatres": "AMC",
   };
 
   // ── Filtered views ──────────────────────────────────────────────────────────
@@ -174,11 +183,18 @@ export default function MapScreen() {
   }), [feedItems, catFilter, srcFilters, range, freeOnly]);
 
   const listItems = useMemo(() => {
-    // Merge on-demand activity items into the list pool when the filter is active
+    // Merge on-demand items into the list pool when their filter is active
     let pool = listFeedItems;
+    const poolIds = () => new Set(pool.map(e => e.id));
     if (activeFilter === "activities" && activityItems.length > 0) {
-      const poolIds = new Set(listFeedItems.map(e => e.id));
-      pool = [...listFeedItems, ...activityItems.filter(e => !poolIds.has(e.id))];
+      const ids = poolIds();
+      pool = [...pool, ...activityItems.filter(e => !ids.has(e.id))];
+    } else if (activeFilter === "Nightlife" && nightlifeItems.length > 0) {
+      const ids = poolIds();
+      pool = [...pool, ...nightlifeItems.filter(e => !ids.has(e.id))];
+    } else if (activeFilter === "Outdoors" && parksItems.length > 0) {
+      const ids = poolIds();
+      pool = [...pool, ...parksItems.filter(e => !ids.has(e.id))];
     }
     return pool.filter(e => {
       if (freeOnly && freeFn && !freeFn(e)) return false;
@@ -195,7 +211,7 @@ export default function MapScreen() {
       }
       return true;
     });
-  }, [listFeedItems, activityItems, catFilter, srcFilters, range, freeOnly, activeFilter]);
+  }, [listFeedItems, activityItems, nightlifeItems, parksItems, catFilter, srcFilters, range, freeOnly, activeFilter]);
 
   // ── Load Mapbox GL JS from CDN ───────────────────────────────────────────────
   useEffect(() => {
@@ -351,6 +367,44 @@ export default function MapScreen() {
       return getNearbyActivities(area, coords);
     }).then(results => setActivityItems(results.filter(e => e.lat != null && e.lng != null)))
       .catch(() => setActivityItems([]));
+  }, [activeFilter, activeArea]);
+
+  // ── On-demand Nightlife fetch — fires when Nightlife filter is selected ───
+  useEffect(() => {
+    if (activeFilter !== "Nightlife") { setNightlifeItems([]); return; }
+    const area = activeArea || searchVal;
+    if (!area) return;
+
+    Promise.all([
+      AsyncStorage.getItem("hearby_lat"),
+      AsyncStorage.getItem("hearby_lng"),
+      AsyncStorage.getItem("hearby_coords_area"),
+    ]).then(([latStr, lngStr, coordsArea]) => {
+      const coords = latStr && lngStr && coordsArea === area
+        ? { lat: parseFloat(latStr), lng: parseFloat(lngStr) }
+        : undefined;
+      return getNightlife(area, coords);
+    }).then(results => setNightlifeItems(results.filter(e => e.lat != null && e.lng != null)))
+      .catch(() => setNightlifeItems([]));
+  }, [activeFilter, activeArea]);
+
+  // ── On-demand Parks & Outdoors fetch — fires when Outdoors filter is selected
+  useEffect(() => {
+    if (activeFilter !== "Outdoors") { setParksItems([]); return; }
+    const area = activeArea || searchVal;
+    if (!area) return;
+
+    Promise.all([
+      AsyncStorage.getItem("hearby_lat"),
+      AsyncStorage.getItem("hearby_lng"),
+      AsyncStorage.getItem("hearby_coords_area"),
+    ]).then(([latStr, lngStr, coordsArea]) => {
+      const coords = latStr && lngStr && coordsArea === area
+        ? { lat: parseFloat(latStr), lng: parseFloat(lngStr) }
+        : undefined;
+      return getParksAndOutdoors(area, coords);
+    }).then(results => setParksItems(results.filter(e => e.lat != null && e.lng != null)))
+      .catch(() => setParksItems([]));
   }, [activeFilter, activeArea]);
 
   // ── Draw overlay ─────────────────────────────────────────────────────────────

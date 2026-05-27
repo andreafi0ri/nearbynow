@@ -103,6 +103,36 @@ export const ACTIVITY_TYPES: ActivityType[] = [
     googleTypes: ["sports_complex"],
     tags: ["Climbing", "Active", "Sport"],
   },
+  {
+    id: "nightlife",
+    label: "Nightlife",
+    emoji: "🌙",
+    googleTypes: [
+      "night_club",
+      "bar",
+      "cocktail_bar",
+      "wine_bar",
+      "brewery",
+      "pub",
+      "jazz_club",
+      "dance_hall",
+    ],
+    tags: ["Nightlife", "Bar", "Drinks"],
+  },
+  {
+    id: "rooftop_bar",
+    label: "Rooftop Bars",
+    emoji: "🥂",
+    googleTypes: ["bar", "cocktail_bar"],
+    tags: ["Rooftop", "Cocktails", "Views"],
+  },
+  {
+    id: "jazz_club",
+    label: "Jazz & Blues",
+    emoji: "🎷",
+    googleTypes: ["jazz_club"],
+    tags: ["Jazz", "Live Music", "Nightlife"],
+  },
 ];
 
 /** All unique Google Places types across every activity — used for a single broad search. */

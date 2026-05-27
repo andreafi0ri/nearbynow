@@ -19,6 +19,8 @@ import { getNearbyActivities } from "../../src/services/activitiesService";
 import { CinemaGroupedView } from "../../src/components/CinemaGroupedView";
 import { getShowtimes, clearShowtimesCache } from "../../src/services/showtimesService";
 import type { ShowtimeGroup } from "../../src/services/showtimesService";
+import { getNightlife } from "../../src/services/nightlifeService";
+import { getParksAndOutdoors } from "../../src/services/parksService";
 import { Wordmark } from "../../src/components/Wordmark";
 import { SEARCH_CONFIG, getRadiusLabel } from "../../src/config/searchConfig";
 import { scheduleEventNotification } from "../../src/services/notificationService";
@@ -74,6 +76,8 @@ export default function FeedScreen() {
   const [showingRecommendations, setShowingRecommendations] = useState(false);
   const [cinemaGroups, setCinemaGroups] = useState<ShowtimeGroup[]>([]);
   const [activityItems, setActivityItems] = useState<EventItem[]>([]);
+  const [nightlifeItems, setNightlifeItems] = useState<EventItem[]>([]);
+  const [parksItems, setParksItems]         = useState<EventItem[]>([]);
 
   // Notification badge count
   useEffect(() => {
@@ -156,6 +160,39 @@ export default function FeedScreen() {
         : undefined;
       return getNearbyActivities(area ?? "", coords);
     }).then(setActivityItems).catch(() => setActivityItems([]));
+  }, [activeFilter, area]);
+
+  // On-demand Nightlife fetch — fires when Nightlife filter is selected.
+  // Clears when a different filter is chosen so stale results don't bleed through.
+  useEffect(() => {
+    if (activeFilter !== "Nightlife") { setNightlifeItems([]); return; }
+    Promise.all([
+      AsyncStorage.getItem("hearby_lat"),
+      AsyncStorage.getItem("hearby_lng"),
+      AsyncStorage.getItem("hearby_coords_area"),
+    ]).then(([latStr, lngStr, coordsArea]) => {
+      const coords = latStr && lngStr && coordsArea === area
+        ? { lat: parseFloat(latStr), lng: parseFloat(lngStr) }
+        : undefined;
+      return getNightlife(area ?? "", coords);
+    }).then(setNightlifeItems).catch(() => setNightlifeItems([]));
+  }, [activeFilter, area]);
+
+  // On-demand Parks & Outdoors fetch — fires when Outdoors filter is selected.
+  // RSS outdoor events already in feedItems are surfaced by the Outdoors matchFn;
+  // this adds Google Places park/outdoor venue recommendations on top.
+  useEffect(() => {
+    if (activeFilter !== "Outdoors") { setParksItems([]); return; }
+    Promise.all([
+      AsyncStorage.getItem("hearby_lat"),
+      AsyncStorage.getItem("hearby_lng"),
+      AsyncStorage.getItem("hearby_coords_area"),
+    ]).then(([latStr, lngStr, coordsArea]) => {
+      const coords = latStr && lngStr && coordsArea === area
+        ? { lat: parseFloat(latStr), lng: parseFloat(lngStr) }
+        : undefined;
+      return getParksAndOutdoors(area ?? "", coords);
+    }).then(setParksItems).catch(() => setParksItems([]));
   }, [activeFilter, area]);
 
   // On-demand AMC fetch — fires when AMC filter is selected and cinemaGroups
@@ -245,8 +282,23 @@ export default function FeedScreen() {
       return [...base, ...extra];
     }
 
+    // Nightlife filter — merge in on-demand Google Places nightlife venues.
+    if (activeFilter === "Nightlife" && nightlifeItems.length > 0) {
+      const existingIds = new Set(base.map(i => i.id));
+      const extra = nightlifeItems.filter(i => !existingIds.has(i.id));
+      return [...base, ...extra];
+    }
+
+    // Outdoors filter — RSS outdoor events are already in base via feedItems;
+    // merge in the on-demand Google Places parks/outdoor venues.
+    if (activeFilter === "Outdoors" && parksItems.length > 0) {
+      const existingIds = new Set(base.map(i => i.id));
+      const extra = parksItems.filter(i => !existingIds.has(i.id));
+      return [...base, ...extra];
+    }
+
     return base;
-  }, [feedItems, activityItems, showSaved, saved, freeOnly, catFilter, srcFilters, range, activeFilter, activeSources]);
+  }, [feedItems, activityItems, nightlifeItems, parksItems, showSaved, saved, freeOnly, catFilter, srcFilters, range, activeFilter, activeSources]);
 
   // In the "All" view filter-only items are already excluded above.
   // This set is kept as a belt-and-suspenders guard on the recs footer.

@@ -221,6 +221,42 @@ export const MOCK_EVENTS: EventItem[] = [
     tags: ["Arcade", "Bar", "Williamsburg"],
   },
 
+  // ── Nightlife mock — dev testing for Nightlife filter ────────────────────
+  {
+    id: 19, type: "recommendation",
+    title: "Slowly Shirley",
+    desc: "Cocktail Bar · West Village · $$$ · Highly rated",
+    longDesc: "A beloved basement cocktail den in the West Village known for inventive, seasonal cocktails and an intimate atmosphere. One of NYC's most celebrated hidden bars.",
+    time: "Open until 2:00 AM",
+    location: "121 W 10th St, West Village, New York",
+    lat: 40.7335, lng: -74.0024,
+    date: fmt(today),
+    source: "Google Places", category: "Nightlife",
+    catColor: "#4A1570", catDot: "#9B59B6",
+    saves: 203, img: "🍸",
+    booking: { label: "View on Google Maps", url: "https://maps.google.com/?q=Slowly+Shirley+NYC", affiliate: false },
+    rating: 4.7, reviews: 1243,
+    tags: ["Cocktails", "$$$", "Hidden bar"],
+  },
+
+  // ── Outdoors mock — dev testing for Parks & Outdoors filter ───────────────
+  {
+    id: 20, type: "recommendation",
+    title: "Prospect Park",
+    desc: "Brooklyn's beloved 526-acre park. Running trails, a boathouse, lake, and free events year-round.",
+    longDesc: "Designed by Frederick Law Olmsted and Calvert Vaux, Prospect Park is Brooklyn's green heart. Features a 3.35-mile loop road, the Prospect Park Lake, Audubon Center, Long Meadow, and regular free community events.",
+    time: "Open 5:00 AM – 1:00 AM",
+    location: "Prospect Park, Brooklyn, NY",
+    lat: 40.6579, lng: -73.9689,
+    date: fmt(today),
+    source: "Google Places", category: "Outdoors",
+    catColor: "#2D7A3A", catDot: "#4AAD5C",
+    saves: 891, img: "🌿",
+    booking: { label: "View on Google Maps", url: "https://maps.google.com/?q=Prospect+Park+Brooklyn", affiliate: false },
+    rating: 4.9, reviews: 12453,
+    tags: ["Free", "Outdoors", "Brooklyn"],
+  },
+
   // ── Deduplication test data ────────────────────────────────────────────────
   // id:8 should merge with id:1 (hard merge — same event, two sources)
   // id:9 should NOT merge with id:2 (fuzzy match — different location string)
@@ -253,7 +289,7 @@ export const MOCK_EVENTS: EventItem[] = [
 ];
 
 export const CATEGORY_FILTERS = [
-  "All", "Events", "Food & Drink", "Music", "Community", "Sport", "Nearby",
+  "All", "Events", "Food & Drink", "Nightlife", "Music", "Community", "Sport", "Activities", "Outdoors", "Nearby",
 ];
 
 export const DATE_PRESETS = [
@@ -285,4 +321,6 @@ export const SOURCE_COLORS: Record<string, string> = {
   "Nashville Post":     "#1ABC9C",
   "AMC Theatres":       "#CC0000",
   "Activities":         "#1A9E98",
+  "Nightlife":          "#4A1570",
+  "Outdoors":           "#2D7A3A",
 };

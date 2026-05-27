@@ -98,22 +98,63 @@ async function amcFetch<T>(path: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+// ─── Haversine distance helper ────────────────────────────────────────────────
+
+function haversineMiles(
+  lat1: number, lon1: number,
+  lat2: number, lon2: number,
+): number {
+  const R = 3_958.8; // Earth radius in miles
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 // ─── Function 1: findNearbyAMCTheatres ───────────────────────────────────────
+// The /theatres/views/now-playing-theatres view endpoint returns 404 with
+// the current vendor key.  We fall back to paginating /theatres?page-size=100
+// (up to 3 pages) and filtering client-side via Haversine distance.
 
 async function findNearbyAMCTheatres(
   coords: { lat: number; lng: number },
-  radiusMiles = 10,
+  radiusMiles = 20,
 ): Promise<AMCTheatre[]> {
   if (!process.env.EXPO_PUBLIC_AMC_API_KEY) return [];
   try {
-    const data = await amcFetch<{ _embedded: { theatres: AMCTheatre[] } }>(
-      `/theatres/views/now-playing-theatres` +
-        `?latitude=${coords.lat}` +
-        `&longitude=${coords.lng}` +
-        `&radius=${radiusMiles}` +
-        `&page-size=10`,
+    const nearby: AMCTheatre[] = [];
+    const MAX_PAGES = 3;
+
+    for (let page = 1; page <= MAX_PAGES; page++) {
+      const data = await amcFetch<{
+        _embedded: { theatres: AMCTheatre[] };
+        count: number;
+        pageSize: number;
+      }>(`/theatres?page-size=100&page=${page}`);
+
+      const theatres = data._embedded?.theatres ?? [];
+      if (theatres.length === 0) break;
+
+      for (const t of theatres) {
+        const dist = haversineMiles(
+          coords.lat, coords.lng,
+          t.location.lat, t.location.lon,
+        );
+        if (dist <= radiusMiles) nearby.push(t);
+      }
+
+      // If this page was partial, no more pages to fetch
+      if (theatres.length < 100) break;
+    }
+
+    console.log(
+      `[Showtimes] findNearbyAMCTheatres: ${nearby.length} theatres within ${radiusMiles} miles`,
     );
-    return data._embedded?.theatres ?? [];
+    return nearby;
   } catch (err) {
     console.warn("[Showtimes] findNearbyAMCTheatres failed:", err);
     return [];
@@ -437,6 +478,11 @@ export async function getShowtimes(
   const theatres = await findNearbyAMCTheatres({ lat, lng });
   if (theatres.length === 0) {
     console.info(`[Showtimes] No AMC theatres found near "${area}"`);
+    // In development, always show the dev-mock so Cinema filter renders
+    if (typeof __DEV__ !== "undefined" && __DEV__) {
+      console.info("[Showtimes] DEV mode — returning dev mock for Cinema filter UI");
+      return [buildDevGroup()];
+    }
     showtimesCache.set(key, { data: [], expiresAt: Date.now() + CACHE_TTL });
     return [];
   }

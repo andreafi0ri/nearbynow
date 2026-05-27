@@ -37,7 +37,7 @@ export const ACTIVITY_TYPES: ActivityType[] = [
     id: "mini_golf",
     label: "Mini Golf",
     emoji: "⛳",
-    googleTypes: ["miniature_golf"],
+    googleTypes: ["miniature_golf_course"],
     tags: ["Mini Golf", "Outdoors", "Family"],
   },
   {
@@ -93,14 +93,14 @@ export const ACTIVITY_TYPES: ActivityType[] = [
     id: "pool_billiards",
     label: "Pool & Billiards",
     emoji: "🎱",
-    googleTypes: ["billiard_room"],
+    googleTypes: ["sports_activity_location"],
     tags: ["Pool", "Billiards", "Nightlife"],
   },
   {
     id: "climbing",
     label: "Rock Climbing",
     emoji: "🧗",
-    googleTypes: ["climbing_gym"],
+    googleTypes: ["sports_complex"],
     tags: ["Climbing", "Active", "Sport"],
   },
 ];

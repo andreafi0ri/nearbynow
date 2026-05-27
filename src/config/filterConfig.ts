@@ -127,19 +127,26 @@ export const FILTERS: FilterOption[] = [
     matchFn: item => {
       // Hard-exclude items that belong to a clearly non-cinema category so that
       // "theatre" / "theater" in the tag regex doesn't pull in Culture/Arts events.
+      // AMC Theatres items have their own dedicated "AMC" filter — exclude them here.
       const NON_CINEMA = new Set([
         "Music", "Arts", "Sport", "Community",
         "Food & Drink", "Restaurant", "Outdoors", "Local Gov",
       ]);
       if (item.category && NON_CINEMA.has(item.category)) return false;
+      if (item.source === "AMC Theatres") return false;
 
       return (
-        item.category === "Cinema"       ||
-        item.source   === "Showtimes"    ||
-        item.source   === "AMC Theatres" ||
+        item.category === "Cinema"    ||
+        item.source   === "Showtimes" ||
         item.tags?.some(t => /cinema|movie|film/i.test(t)) === true
       );
     },
+  },
+  {
+    id: "AMC",
+    label: "AMC",
+    icon: "🎬",
+    matchFn: item => item.source === "AMC Theatres",
   },
 ];
 

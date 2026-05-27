@@ -158,11 +158,11 @@ export default function FeedScreen() {
     }).then(setActivityItems).catch(() => setActivityItems([]));
   }, [activeFilter, area]);
 
-  // On-demand Cinema fetch — fires when Cinema filter is selected and cinemaGroups
+  // On-demand AMC fetch — fires when AMC filter is selected and cinemaGroups
   // is still empty. Always clears the in-memory cache first so a stale []
   // from a previous failed attempt (wrong coords, old code) never blocks a retry.
   useEffect(() => {
-    if (activeFilter !== "Cinema") return;
+    if (activeFilter !== "AMC") return;
     if (cinemaGroups.length > 0) return; // already loaded — skip
     // Wipe any stale empty-result cache before retrying
     clearShowtimesCache();
@@ -211,7 +211,7 @@ export default function FeedScreen() {
   const FILTER_ONLY_SOURCE_MAP: Record<string, string> = {
     "Food Places":  "Food & Drink",
     "Showtimes":    "Cinema",
-    "AMC Theatres": "Cinema",   // showtime cards only appear under Cinema filter
+    "AMC Theatres": "AMC",   // showtime cards only appear under AMC filter
   };
 
   const freeFn = useMemo(() => FILTERS.find(f => f.id === "Free")?.matchFn, []);
@@ -514,8 +514,8 @@ export default function FeedScreen() {
         </View>
       )}
 
-      {/* Cinema filter — rich grouped view by theatre */}
-      {activeFilter === "Cinema" && cinemaGroups.length > 0 ? (
+      {/* AMC filter — rich grouped view by theatre */}
+      {activeFilter === "AMC" && cinemaGroups.length > 0 ? (
         <CinemaGroupedView groups={cinemaGroups} T={T} />
       ) : (
 

@@ -483,15 +483,10 @@ export async function getShowtimes(
   coords?: { lat: number; lng: number },
 ): Promise<ShowtimeGroup[]> {
   if (!process.env.EXPO_PUBLIC_AMC_API_KEY) {
-    // No API key — return dev-mock data so the Cinema filter and
-    // CinemaGroupedView always work during development / Expo Go.
-    // Showtimes are relative to now so they're always in the future.
+    // No API key configured — Cinema filter will show its empty state.
     // Apply for a free key at https://developers.amctheatres.com
-    console.info(
-      "[Showtimes] No AMC API key — returning dev mock. " +
-        "Apply at https://developers.amctheatres.com",
-    );
-    return [buildDevGroup()];
+    console.warn("[Showtimes] No AMC API key — Cinema filter will be empty.");
+    return [];
   }
 
   // Check cache
@@ -509,14 +504,11 @@ export async function getShowtimes(
   // 1. Find nearby AMC theatres
   const theatres = await findNearbyAMCTheatres({ lat, lng });
   if (theatres.length === 0) {
-    // No AMC theatres within range — fall back to dev mock so the Cinema filter
-    // and CinemaGroupedView always render with something during development.
-    // In a production build you can gate this on __DEV__ once real theatre coverage
-    // is verified for your target cities.
-    console.info(
-      `[Showtimes] No AMC theatres found near "${area}" — returning dev mock`,
-    );
-    return [buildDevGroup()];
+    console.info(`[Showtimes] No AMC theatres within range of "${area}"`);
+    // Cache the empty result for 30 min so repeated Cinema-filter taps don't
+    // re-fetch all 526 theatres from the AMC API every time.
+    showtimesCache.set(key, { data: [], expiresAt: Date.now() + 30 * 60 * 1_000 });
+    return [];
   }
 
   // 2. Get today's showtimes for each theatre in parallel

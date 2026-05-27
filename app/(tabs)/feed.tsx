@@ -208,8 +208,9 @@ export default function FeedScreen() {
   // Items from these sources are hidden everywhere EXCEPT when their
   // designated filter (or the saved view) is active.
   const FILTER_ONLY_SOURCE_MAP: Record<string, string> = {
-    "Food Places": "Food & Drink",
-    "Showtimes":   "Cinema",
+    "Food Places":  "Food & Drink",
+    "Showtimes":    "Cinema",
+    "AMC Theatres": "Cinema",   // showtime cards only appear under Cinema filter
   };
 
   const freeFn = useMemo(() => FILTERS.find(f => f.id === "Free")?.matchFn, []);

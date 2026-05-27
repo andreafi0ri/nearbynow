@@ -144,7 +144,7 @@ export const FILTERS: FilterOption[] = [
   },
   {
     id: "AMC",
-    label: "AMC",
+    label: "AMC Showtimes",
     icon: "🎬",
     matchFn: item => item.source === "AMC Theatres",
   },
@@ -163,7 +163,7 @@ export const SOURCE_FILTERS: FilterOption[] = [
     icon: "📰",
     matchFn: item =>
       !item.source.startsWith("r/") &&
-      !["Eventbrite", "Meetup", "Ticketmaster", "Google Places", "Showtimes", "AMC Theatres", "Viator", "Food Places"].includes(item.source),
+      !["Eventbrite", "Meetup", "Ticketmaster", "Google Places", "Showtimes", "Viator", "Food Places"].includes(item.source),
   },
   {
     id: "Eventbrite",
@@ -194,11 +194,5 @@ export const SOURCE_FILTERS: FilterOption[] = [
     label: "Viator",
     icon: "🗺️",
     matchFn: item => item.source === "Viator",
-  },
-  {
-    id: "src_amc",
-    label: "AMC",
-    icon: "🎬",
-    matchFn: item => item.source === "AMC Theatres",
   },
 ];

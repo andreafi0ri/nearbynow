@@ -491,10 +491,10 @@ export async function getShowtimes(
   area: string,
   coords?: { lat: number; lng: number },
 ): Promise<ShowtimeGroup[]> {
-  if (!process.env.EXPO_PUBLIC_AMC_API_KEY) {
-    // No API key configured — Cinema filter will show its empty state.
-    // Apply for a free key at https://developers.amctheatres.com
-    console.warn("[Showtimes] No AMC API key — Cinema filter will be empty.");
+  // On native the vendor key is required for direct AMC API calls.
+  // On web, the /api/amc proxy adds the key server-side — no client key needed.
+  if (Platform.OS !== "web" && !process.env.EXPO_PUBLIC_AMC_API_KEY) {
+    console.warn("[Showtimes] No AMC API key — Cinema filter will be empty on native.");
     return [];
   }
 

@@ -246,7 +246,7 @@ export default function FeedScreen() {
   const recs    = filtered.filter(
     i => i.type === "recommendation" && i.source !== "Viator" &&
          i.category !== "Activities" &&
-         (!showAll || !FILTER_ONLY_SOURCES.has(i.source))
+         !FILTER_ONLY_SOURCES.has(i.source ?? "")
   );
 
   // ── Mix layout partition (All view only) ────────────────────────────────

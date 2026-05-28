@@ -349,13 +349,6 @@ export default function FeedScreen() {
           </View>
         </View>
 
-        {/* Sparse area hint */}
-        {showingRecommendations && !remoteLoading && (
-          <Text style={[styles.sparseHint, { color: T.goldDim }]}>
-            Fewer than {SEARCH_CONFIG.GOOGLE_PLACES_THRESHOLD} events found · Showing nearby recommendations
-          </Text>
-        )}
-
         {/* ── 3-pill filter bar ──────────────────────────────────────────── */}
         <View style={styles.pillBar}>
           <PillButton T={T} label="DATE"    value={dateLabel}   active={dateActive}          onPress={() => setDateSheetOpen(true)} />
@@ -706,7 +699,6 @@ const styles = StyleSheet.create({
   notifBadge:     { position: "absolute", top: -4, right: -4, width: 16, height: 16, borderRadius: 8, alignItems: "center", justifyContent: "center" } as ViewStyle,
   notifBadgeText: { fontSize: 9, fontWeight: "700", color: "#FFFFFF", fontFamily: "DMSans_700Bold" } as TextStyle,
   radiusLabel:    { fontSize: 10, fontFamily: "DMSans_400Regular", marginTop: 2, letterSpacing: 0.2 } as TextStyle,
-  sparseHint:     { fontSize: 11, fontFamily: "DMSans_400Regular", paddingBottom: 8, paddingHorizontal: 2 } as TextStyle,
   // ── 3-pill bar ──────────────────────────────────────────────────────────
   pillBar:        { flexDirection: "row", gap: 8, paddingBottom: 12 } as ViewStyle,
   pill:           { flex: 1, borderWidth: 1.5, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, flexDirection: "row", alignItems: "center", gap: 4 } as ViewStyle,

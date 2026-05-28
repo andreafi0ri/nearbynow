@@ -43,6 +43,7 @@ export default function ProfileScreen() {
   const [showRecs, setShowRecs] = useState(false);
   const [healthResults, setHealthResults] = useState("");
   const [healthLoading, setHealthLoading] = useState(false);
+  const [isSignedIn, setIsSignedIn] = useState(false);
 
   // Load persisted profile values on mount (survives app restarts)
   useEffect(() => {
@@ -53,6 +54,8 @@ export default function ProfileScreen() {
       ]);
       if (savedName)   setUsername(savedName);
       if (savedAvatar) setAvatar(savedAvatar);
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsSignedIn(!!session?.user);
     };
     load().catch(() => {});
   }, []);
@@ -74,6 +77,15 @@ export default function ProfileScreen() {
       AsyncStorage.getItem("nearbynow_email").then(v => { if (v) setEmail(v); });
     }
   }, [profile]);
+
+  // Keep isSignedIn in sync if the user signs in/out in another tab or screen
+  useEffect(() => {
+    const { data: { subscription } } =
+      supabase.auth.onAuthStateChange((event, session) => {
+        setIsSignedIn(!!session?.user);
+      });
+    return () => subscription.unsubscribe();
+  }, []);
 
   const saveName = async () => {
     const trimmed = nameInput.trim();
@@ -139,6 +151,68 @@ export default function ProfileScreen() {
     setShowRecs(next);
     await AsyncStorage.setItem("hearby_show_recs", String(next));
   };
+
+  const handleSignOut = async () => {
+    Alert.alert(
+      "Log out",
+      "Are you sure you want to log out?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Log out",
+          style: "destructive",
+          onPress: async () => {
+            await supabase.auth.signOut();
+            await AsyncStorage.multiRemove([
+              "nearbynow_email",
+              "nearbynow_username",
+              "nearbynow_avatar",
+            ]);
+            setIsSignedIn(false);
+            setEmail("");
+            setUsername("nearbynow user");
+            setAvatar("👤");
+            // Keep area — no need to re-enter location
+            router.replace("/email");
+          },
+        },
+      ]
+    );
+  };
+
+  const handleSignIn = () => {
+    // Area is already set so after sign-in user goes straight to feed
+    router.push("/email");
+  };
+
+  const accountRows = [
+    {
+      label: "Privacy Policy",
+      isDestructive: false,
+      onPress: () => Linking.openURL("https://www.nearbyandnow.com/privacy"),
+    },
+    {
+      label: "Terms of Service",
+      isDestructive: false,
+      onPress: () => Linking.openURL("https://www.nearbyandnow.com/terms"),
+    },
+    {
+      label: "Send feedback",
+      isDestructive: false,
+      onPress: () => Linking.openURL("mailto:hello@nearbyandnow.com"),
+    },
+    isSignedIn
+      ? {
+          label: "Log out",
+          isDestructive: true,
+          onPress: handleSignOut,
+        }
+      : {
+          label: "Log in",
+          isDestructive: false,
+          onPress: handleSignIn,
+        },
+  ];
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: T.bgSub }]} edges={["top"]}>
@@ -348,65 +422,32 @@ export default function ProfileScreen() {
         {/* ── Account ── */}
         <Text style={[styles.sectionLabel, { color: T.muted, marginTop: 8 }]}>ACCOUNT</Text>
         <View style={[styles.card, { backgroundColor: T.bgCard, borderColor: T.border, shadowColor: T.border, padding: 0, overflow: "hidden" }]}>
-          {[
-            { label: "Privacy Policy",   url: "https://www.nearbyandnow.com/privacy",          isDestructive: false },
-            { label: "Terms of Service", url: "https://www.nearbyandnow.com/terms",            isDestructive: false },
-            { label: "Delete my data",   url: "https://www.nearbyandnow.com/delete-data",      isDestructive: false },
-            { label: "Send feedback",    url: "mailto:hello@nearbyandnow.com",                 isDestructive: false },
-          ].map((item, i) => (
+          {accountRows.map((row, i) => (
             <TouchableOpacity
-              key={item.label}
-              onPress={() => {
-                if (Platform.OS === "web") {
-                  window.open(item.url, item.url.startsWith("mailto") ? "_self" : "_blank", "noopener,noreferrer");
-                } else {
-                  Linking.openURL(item.url);
-                }
-              }}
-              style={[styles.accountRow, { borderBottomColor: T.borderSub, borderBottomWidth: 1.5 }]}
+              key={row.label}
+              onPress={row.onPress}
+              style={[
+                styles.accountRow,
+                {
+                  borderBottomColor: T.borderSub,
+                  borderBottomWidth: i < accountRows.length - 1 ? 1.5 : 0,
+                },
+              ]}
             >
-              <Text style={[styles.accountLabel, { color: T.text }]}>{item.label}</Text>
-              <Text style={{ color: T.muted }}>→</Text>
+              <Text style={[
+                styles.accountLabel,
+                {
+                  color: row.isDestructive ? T.red : T.text,
+                  fontWeight: row.isDestructive ? "700" : "500",
+                },
+              ]}>
+                {row.label}
+              </Text>
+              {!row.isDestructive && (
+                <Text style={{ color: T.muted }}>→</Text>
+              )}
             </TouchableOpacity>
           ))}
-          {session ? (
-            <TouchableOpacity
-              onPress={() => {
-                Alert.alert(
-                  "Sign out",
-                  "Are you sure you want to sign out?",
-                  [
-                    { text: "Cancel", style: "cancel" },
-                    {
-                      text: "Sign out",
-                      style: "destructive",
-                      onPress: async () => {
-                        await AsyncStorage.multiRemove([
-                          "nearbynow_email",
-                          "hearby_area",
-                          "hearby_show_recs",
-                          "nearbynow_username",
-                          "nearbynow_avatar",
-                          "hearby_lat",
-                          "hearby_lng",
-                          "hearby_coords_area",
-                        ]);
-                        await supabase.auth.signOut();
-                        // The SIGNED_OUT event in _layout.tsx will route to /location.
-                      },
-                    },
-                  ]
-                );
-              }}
-              style={[styles.accountRow, { borderBottomWidth: 0 }]}>
-              <Text style={[styles.accountLabel, { color: T.red, fontWeight: "700" }]}>Sign out</Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity onPress={() => router.push("/email")}
-              style={[styles.accountRow, { borderBottomWidth: 0 }]}>
-              <Text style={[styles.accountLabel, { color: T.gold, fontWeight: "700" }]}>Sign in with magic link</Text>
-            </TouchableOpacity>
-          )}
         </View>
 
         <Text style={[styles.version, { color: T.mutedL }]}>hearby · MVP v1.0</Text>

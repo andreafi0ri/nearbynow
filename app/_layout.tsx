@@ -122,15 +122,14 @@ export default function RootLayout() {
     return () => sub.remove();
   }, []);
 
-  // Global SIGNED_OUT listener — wipe session data and route to sign-in.
+  // Global SIGNED_OUT listener — wipe local state and return to home.
   // Handles both explicit sign-outs (profile screen) and expired sessions.
-  // hearby_area is intentionally kept so the user doesn't have to re-enter
-  // their location — after signing back in they land directly on /feed.
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_OUT") {
         AsyncStorage.multiRemove([
           "nearbynow_email",
+          "hearby_area",
           "hearby_show_recs",
           "nearbynow_username",
           "nearbynow_avatar",
@@ -138,10 +137,7 @@ export default function RootLayout() {
           "hearby_lng",
           "hearby_coords_area",
         ]).catch(() => {});
-        // If area is saved go to /email (re-auth), otherwise full onboarding.
-        AsyncStorage.getItem("hearby_area")
-          .then(area => router.replace(area ? "/email" : "/location"))
-          .catch(() => router.replace("/location"));
+        router.replace("/location");
       }
     });
     return () => subscription.unsubscribe();

@@ -144,20 +144,22 @@ export default function ProfileScreen() {
   };
 
   const handleSignOut = () => {
-    Alert.alert(
-      "Log out",
-      "Are you sure you want to log out?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Log out",
-          style: "destructive",
-          // Just trigger signOut — the global SIGNED_OUT listener in
-          // _layout.tsx handles storage cleanup and routing to /email.
-          onPress: () => { supabase.auth.signOut(); },
-        },
-      ]
-    );
+    const doSignOut = () => supabase.auth.signOut();
+
+    if (Platform.OS === "web") {
+      // Alert.alert maps to window.confirm on web, which many browsers
+      // block or surface unreliably. Call it directly instead.
+      if (window.confirm("Are you sure you want to log out?")) doSignOut();
+    } else {
+      Alert.alert(
+        "Log out",
+        "Are you sure you want to log out?",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Log out", style: "destructive", onPress: doSignOut },
+        ]
+      );
+    }
   };
 
   const handleSignIn = () => {

@@ -72,6 +72,7 @@ export default function FeedScreen() {
   const [feedItems, setFeedItems] = useState<EventItem[]>([]);
   const [remoteLoading, setRemoteLoading] = useState(false);
   const [showingRecommendations, setShowingRecommendations] = useState(false);
+  const [showRecsEnabled, setShowRecsEnabled] = useState(false);
   const [cinemaGroups, setCinemaGroups] = useState<ShowtimeGroup[]>([]);
 
   // Notification badge count
@@ -114,6 +115,13 @@ export default function FeedScreen() {
   const [datePreset, setDatePreset] = useState<string | null>(null);
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
+
+  // Load "show recommendations" preference from profile settings
+  useEffect(() => {
+    AsyncStorage.getItem("hearby_show_recs")
+      .then(v => setShowRecsEnabled(v === "true"))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!area) return;
@@ -571,8 +579,9 @@ export default function FeedScreen() {
           </>
         )}
 
-        {/* Recommendations footer */}
-        {mixRecItems.length > 0 && (
+        {/* Recommendations footer — only shown when the "Show recommendations"
+            toggle is ON in Profile → Feed settings */}
+        {showRecsEnabled && mixRecItems.length > 0 && (
           <>
             <View style={[styles.recDivider, { marginHorizontal: 16 }]}>
               <View style={[styles.dividerLine, { backgroundColor: T.gold }]} />
@@ -636,7 +645,8 @@ export default function FeedScreen() {
         })()}
         ListFooterComponent={(
           <>
-            {showAll && recs.length > 0 && (
+            {/* In filtered views recs always show; in the All view respect the toggle */}
+            {!showSaved && recs.length > 0 && (showRecsEnabled || !showAll) && (
               <>
                 <View style={styles.recDivider}>
                   <View style={[styles.dividerLine, { backgroundColor: T.gold }]} />

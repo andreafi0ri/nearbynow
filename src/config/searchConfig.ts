@@ -27,14 +27,14 @@ export const SEARCH_CONFIG = {
   TICKETMASTER_RADIUS_KM: 16,           // ~10 miles
 
   // ── Google Places threshold ──────────────────────────
-  // Google Places results are fetched when the total number
-  // of live events from ALL other sources combined is LESS
-  // THAN this number.  Set to 9999 so GP recommendations are
-  // always included regardless of how many events exist — this
-  // ensures the "Google Places" source filter always has results
-  // and the Mix layout's recommendations footer is populated
-  // even in event-rich cities like NYC.
-  GOOGLE_PLACES_THRESHOLD: 9999,
+  // Google Places recommendations are fetched when the total
+  // number of live events from ALL other sources is LESS THAN
+  // this number.  In practice the user controls visibility via
+  // the "Show recommendations" toggle in Profile → Feed, so
+  // 20 is a reasonable ceiling that avoids unnecessary API
+  // calls in event-rich cities while still populating the
+  // footer in sparse areas.
+  GOOGLE_PLACES_THRESHOLD: 20,
 
   // ── Sparse area radius expansion ────────────────────
   // When Google Places IS triggered (events < 5),

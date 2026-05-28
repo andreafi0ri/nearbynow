@@ -37,12 +37,16 @@ export default function ProfileScreen() {
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [email, setEmail] = useState("");
   const [notifs, setNotifs] = useState<NotificationPreferences>(DEFAULT_PREFS);
+  const [showRecs, setShowRecs] = useState(false);
   const [healthResults, setHealthResults] = useState("");
   const [healthLoading, setHealthLoading] = useState(false);
 
   // Load all notification preferences from AsyncStorage on mount
   useEffect(() => {
     loadNotificationPreferences().then(setNotifs);
+    AsyncStorage.getItem("hearby_show_recs")
+      .then(v => setShowRecs(v === "true"))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -105,6 +109,12 @@ export default function ProfileScreen() {
                 : key === "recs"     ? "Recommendations"
                 : "Weekly digest";
     console.log(`${label} notifications: ${isOn ? "ON" : "OFF"}`);
+  };
+
+  const toggleShowRecs = async () => {
+    const next = !showRecs;
+    setShowRecs(next);
+    await AsyncStorage.setItem("hearby_show_recs", String(next));
   };
 
   return (
@@ -266,6 +276,25 @@ export default function ProfileScreen() {
                 </TouchableOpacity>
               );
             })}
+          </View>
+        </View>
+
+        {/* ── Feed ── */}
+        <Text style={[styles.sectionLabel, { color: T.muted, marginTop: 8 }]}>FEED</Text>
+        <View style={[styles.card, { backgroundColor: T.bgCard, borderColor: T.border, shadowColor: T.border, padding: 0, overflow: "hidden" }]}>
+          <View style={[styles.notifRow, { borderBottomWidth: 0 }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.notifLabel, { color: T.text }]}>Show recommendations</Text>
+              <Text style={[styles.notifSub, { color: T.muted }]}>
+                Nearby places in the "You might also like" section
+              </Text>
+            </View>
+            <Switch
+              value={showRecs}
+              onValueChange={toggleShowRecs}
+              trackColor={{ false: T.borderSub, true: T.text }}
+              thumbColor={showRecs ? T.goldBri : T.bg}
+            />
           </View>
         </View>
 

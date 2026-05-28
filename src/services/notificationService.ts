@@ -45,8 +45,6 @@ export type NotificationPreferences = {
   breaking: boolean;
   /** New events nearby: when new events appear in the user's area. */
   events: boolean;
-  /** Recommendations: new restaurants and places to try. */
-  recs: boolean;
   /** Weekly digest: Monday morning summary. */
   weekly: boolean;
 };
@@ -54,7 +52,6 @@ export type NotificationPreferences = {
 export const DEFAULT_PREFS: NotificationPreferences = {
   breaking: true,
   events:   true,
-  recs:     false,
   weekly:   true,
 };
 
@@ -162,7 +159,6 @@ export async function saveNotificationPreferences(
     // Cancel scheduled notifications for types that are now off
     if (!prefs.breaking) await cancelNotificationsByType("breaking");
     if (!prefs.events)   await cancelNotificationsByType("events");
-    if (!prefs.recs)     await cancelNotificationsByType("recs");
     if (!prefs.weekly)   await cancelScheduledWeeklyDigest();
 
     console.log("Notification prefs saved:", prefs);

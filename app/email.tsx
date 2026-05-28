@@ -77,9 +77,9 @@ export default function EmailScreen() {
 
   const valid = EMAIL_RE.test(email);
 
-  // Pre-fill from AsyncStorage if browser / app remembers the address
+  // Pre-fill from AsyncStorage if the app remembers the address
   useEffect(() => {
-    AsyncStorage.getItem("hearby_email").then(saved => {
+    AsyncStorage.getItem("nearbynow_email").then(saved => {
       if (saved) setEmail(saved);
     });
   }, []);
@@ -96,15 +96,21 @@ export default function EmailScreen() {
     setError("");
     setSending(true);
     try {
+      // Platform-aware redirect: web uses the HTTPS domain; mobile uses the deep-link scheme.
+      const redirectTo =
+        Platform.OS === "web"
+          ? "https://www.nearbyandnow.com/auth/callback"
+          : "nearbynow://auth/callback";
+
       const { error: authErr } = await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: "nearbyandnow://auth/callback" },
+        options: { emailRedirectTo: redirectTo },
       });
       if (authErr) throw authErr;
       await AsyncStorage.setItem("nearbynow_email", email);
+      // Show "check your inbox" screen — do NOT auto-navigate to /feed.
+      // The user must click the magic link; the /auth/callback screen handles routing.
       setSent(true);
-      // Spinner shows for ~1.1s (matches prototype) then navigates
-      setTimeout(() => router.replace("/feed"), 1100);
     } catch (e: any) {
       setError(e.message ?? "Something went wrong — please try again.");
     } finally {
@@ -112,7 +118,7 @@ export default function EmailScreen() {
     }
   };
 
-  const btnActive  = valid && !sending && !sent;
+  const btnActive  = valid && !sending;
   const btnBg      = btnActive
     ? T.text
     : isDark ? "#3A372E" : "#A8A29A";
@@ -137,7 +143,6 @@ export default function EmailScreen() {
           {/* ── Compact brand bar ─────────────────────────────────────── */}
           <View style={s.brandBar}>
             <Pin size={22} T={T} />
-            {/* Wordmark inline: Nearby &amp; Now */}
             <View style={s.wordmarkRow}>
               <Text style={[s.wNearby, { color: T.text }]}>Nearby </Text>
               <Text style={[s.wAmp,    { color: T.gold }]}>&amp;</Text>
@@ -149,7 +154,6 @@ export default function EmailScreen() {
 
           {/* ── Envelope hero with halo ───────────────────────────────── */}
           <View style={s.heroWrap}>
-            {/* Outer radial glow */}
             <Svg width={120} height={120} viewBox="0 0 120 120" style={StyleSheet.absoluteFill}>
               <Defs>
                 <RadialGradient id="emailHalo" cx="50%" cy="50%" rx="50%" ry="50%">
@@ -160,165 +164,194 @@ export default function EmailScreen() {
               <Ellipse cx="60" cy="60" rx="60" ry="60" fill="url(#emailHalo)" />
             </Svg>
 
-            {/* Gold ring */}
             <View style={[s.heroRing, { borderColor: T.gold }]} />
 
-            {/* White circle with envelope */}
             <View style={[s.heroCircle, { backgroundColor: T.surface, borderColor: T.gold }]}>
               <EnvelopeIcon size={36} color={T.text} />
-
-              {/* Red notification badge */}
-              <View style={[s.heroBadge, { backgroundColor: T.red, borderColor: T.bg }]}>
-                <Text style={s.heroBadgeText}>•••</Text>
+              <View style={[s.heroBadge, { backgroundColor: sent ? T.gold : T.red, borderColor: T.bg }]}>
+                <Text style={s.heroBadgeText}>{sent ? "✓" : "•••"}</Text>
               </View>
             </View>
           </View>
 
-          {/* ── "Stay in the loop." headline ──────────────────────────── */}
-          <View style={s.headlineRow}>
-            <Text style={[s.headlineBase, { color: T.text }]}>Stay in the </Text>
-            <Text style={[s.headlineItalic, { color: T.gold }]}>loop</Text>
-            <Text style={[s.headlineBase, { color: T.text }]}>.</Text>
-          </View>
+          {sent ? (
+            /* ── "Check your inbox" state ─────────────────────────────── */
+            <>
+              <View style={s.headlineRow}>
+                <Text style={[s.headlineBase, { color: T.text }]}>Check your </Text>
+                <Text style={[s.headlineItalic, { color: T.gold }]}>inbox</Text>
+                <Text style={[s.headlineBase, { color: T.text }]}>.</Text>
+              </View>
 
-          {/* ── Body ──────────────────────────────────────────────────── */}
-          <Text style={[s.body, { color: T.textSub }]}>
-            Get your weekly local digest — the best events and spots in your area, curated for you.
-          </Text>
-
-          <View style={s.flex055} />
-
-          {/* ── Email input with live badge ───────────────────────────── */}
-          <View style={s.inputWrap}>
-            <TextInput
-              value={email}
-              onChangeText={t => { setEmail(t); setError(""); }}
-              onSubmitEditing={handleSubmit}
-              placeholder="your@email.com"
-              placeholderTextColor={T.muted}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              returnKeyType="go"
-              editable={!sent}
-              style={[
-                s.input,
-                {
-                  backgroundColor: T.surface,
-                  color:           T.text,
-                  borderColor:     valid ? T.gold : T.border,
-                  fontSize:        Platform.OS === "web" ? 16 : 15,
-                },
-              ]}
-            />
-
-            {/* Validation badge — red •••  when invalid, gold ✓ when valid */}
-            <View style={[s.badge, { backgroundColor: valid ? T.gold : T.red }]}>
-              {valid ? (
-                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-                  <Path
-                    d="M5 12 L 10 17 L 19 7"
-                    stroke="#fff" strokeWidth={2.4}
-                    strokeLinecap="round" strokeLinejoin="round"
-                  />
-                </Svg>
-              ) : (
-                <Text style={s.badgeDots}>•••</Text>
-              )}
-            </View>
-          </View>
-
-          {!!error && (
-            <Text style={[s.errorText, { color: T.red }]}>{error}</Text>
-          )}
-
-          <View style={s.gap12} />
-
-          {/* ── Terms & Privacy checkbox ──────────────────────────────── */}
-          <TouchableOpacity
-            onPress={() => { setAgreed(a => !a); setAgreeError(false); }}
-            style={[
-              s.checkboxRow,
-              agreeError && {
-                borderColor: T.red,
-                borderWidth: 1.5,
-                borderRadius: 10,
-                padding: 8,
-                backgroundColor: T.red + "08",
-              },
-            ]}
-            activeOpacity={0.7}
-          >
-            {/* The box */}
-            <View style={[
-              s.checkbox,
-              {
-                borderColor:     agreeError ? T.red : agreed ? T.text : T.borderSub,
-                backgroundColor: agreed ? T.text : "transparent",
-              },
-            ]}>
-              {agreed && (
-                <Text style={{ color: T.goldBri, fontSize: 11, fontWeight: "700" }}>✓</Text>
-              )}
-            </View>
-
-            {/* The label — with tappable links that do NOT toggle the checkbox */}
-            <Text style={[s.checkboxLabel, { color: T.textSub }]}>
-              I agree to the{" "}
-              <Text
-                style={[s.checkboxLink, { color: T.gold }]}
-                onPress={e => {
-                  e.stopPropagation();
-                  openLegal("https://www.nearbyandnow.com/terms");
-                }}
-              >
-                Terms &amp; Conditions
+              <Text style={[s.body, { color: T.textSub }]}>
+                We sent a magic link to{"\n"}
+                <Text style={{ color: T.text, fontFamily: "Inter_600SemiBold" }}>{email}</Text>
               </Text>
-              {" "}and{" "}
-              <Text
-                style={[s.checkboxLink, { color: T.gold }]}
-                onPress={e => {
-                  e.stopPropagation();
-                  openLegal("https://www.nearbyandnow.com/privacy");
-                }}
-              >
-                Privacy Policy
+
+              <Text style={[s.body, { color: T.muted, marginTop: 8, fontSize: 13 }]}>
+                Tap the link in your email to sign in.{"\n"}It expires in 24 hours.
               </Text>
-            </Text>
-          </TouchableOpacity>
 
-          {/* Error shown when user taps Continue without agreeing */}
-          {agreeError && (
-            <Text style={[s.agreeError, { color: T.red }]}>
-              Please agree to the Terms and Privacy Policy to continue
-            </Text>
-          )}
+              <View style={s.flex055} />
 
-          {/* ── Send magic link button ────────────────────────────────── */}
-          <TouchableOpacity
-            onPress={handleSubmit}
-            disabled={!btnActive}
-            style={[s.primaryBtn, { backgroundColor: btnBg }]}
-            activeOpacity={0.85}
-          >
-            {sending || sent ? (
-              <>
-                <Spinner color={btnTextCol} />
-                <Text style={[s.primaryBtnText, { color: btnTextCol }]}>
-                  Sending magic link…
+              {/* "Wrong email?" lets the user go back and re-enter */}
+              <TouchableOpacity
+                onPress={() => { setSent(false); setSending(false); setError(""); }}
+                style={[s.primaryBtn, { backgroundColor: "transparent", borderWidth: 1.5, borderColor: T.border }]}
+                activeOpacity={0.7}
+              >
+                <Text style={[s.primaryBtnText, { color: T.muted, fontWeight: "400" }]}>
+                  Wrong email? Start over
                 </Text>
-              </>
-            ) : (
-              <Text style={[s.primaryBtnText, { color: btnTextCol }]}>
-                Send magic link →
-              </Text>
-            )}
-          </TouchableOpacity>
+              </TouchableOpacity>
 
-          {/* ── Privacy line ──────────────────────────────────────────── */}
-          <Text style={[s.privacy, { color: T.muted }]}>
-            Your email is required to access Nearby &amp; Now.{"\n"}Unsubscribe from the digest any time.
-          </Text>
+              <Text style={[s.privacy, { color: T.muted }]}>
+                Didn't get it? Check your spam folder or tap above to try a different address.
+              </Text>
+            </>
+          ) : (
+            /* ── Sign-in form ─────────────────────────────────────────── */
+            <>
+              <View style={s.headlineRow}>
+                <Text style={[s.headlineBase, { color: T.text }]}>Stay in the </Text>
+                <Text style={[s.headlineItalic, { color: T.gold }]}>loop</Text>
+                <Text style={[s.headlineBase, { color: T.text }]}>.</Text>
+              </View>
+
+              <Text style={[s.body, { color: T.textSub }]}>
+                Get your weekly local digest — the best events and spots in your area, curated for you.
+              </Text>
+
+              <View style={s.flex055} />
+
+              {/* ── Email input with live badge ─────────────────────── */}
+              <View style={s.inputWrap}>
+                <TextInput
+                  value={email}
+                  onChangeText={t => { setEmail(t); setError(""); }}
+                  onSubmitEditing={handleSubmit}
+                  placeholder="your@email.com"
+                  placeholderTextColor={T.muted}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  returnKeyType="go"
+                  style={[
+                    s.input,
+                    {
+                      backgroundColor: T.surface,
+                      color:           T.text,
+                      borderColor:     valid ? T.gold : T.border,
+                      fontSize:        Platform.OS === "web" ? 16 : 15,
+                    },
+                  ]}
+                />
+
+                <View style={[s.badge, { backgroundColor: valid ? T.gold : T.red }]}>
+                  {valid ? (
+                    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                      <Path
+                        d="M5 12 L 10 17 L 19 7"
+                        stroke="#fff" strokeWidth={2.4}
+                        strokeLinecap="round" strokeLinejoin="round"
+                      />
+                    </Svg>
+                  ) : (
+                    <Text style={s.badgeDots}>•••</Text>
+                  )}
+                </View>
+              </View>
+
+              {!!error && (
+                <Text style={[s.errorText, { color: T.red }]}>{error}</Text>
+              )}
+
+              <View style={s.gap12} />
+
+              {/* ── Terms & Privacy checkbox ──────────────────────── */}
+              <TouchableOpacity
+                onPress={() => { setAgreed(a => !a); setAgreeError(false); }}
+                style={[
+                  s.checkboxRow,
+                  agreeError && {
+                    borderColor: T.red,
+                    borderWidth: 1.5,
+                    borderRadius: 10,
+                    padding: 8,
+                    backgroundColor: T.red + "08",
+                  },
+                ]}
+                activeOpacity={0.7}
+              >
+                <View style={[
+                  s.checkbox,
+                  {
+                    borderColor:     agreeError ? T.red : agreed ? T.text : T.borderSub,
+                    backgroundColor: agreed ? T.text : "transparent",
+                  },
+                ]}>
+                  {agreed && (
+                    <Text style={{ color: T.goldBri, fontSize: 11, fontWeight: "700" }}>✓</Text>
+                  )}
+                </View>
+
+                <Text style={[s.checkboxLabel, { color: T.textSub }]}>
+                  I agree to the{" "}
+                  <Text
+                    style={[s.checkboxLink, { color: T.gold }]}
+                    onPress={e => {
+                      e.stopPropagation();
+                      openLegal("https://www.nearbyandnow.com/terms");
+                    }}
+                  >
+                    Terms &amp; Conditions
+                  </Text>
+                  {" "}and{" "}
+                  <Text
+                    style={[s.checkboxLink, { color: T.gold }]}
+                    onPress={e => {
+                      e.stopPropagation();
+                      openLegal("https://www.nearbyandnow.com/privacy");
+                    }}
+                  >
+                    Privacy Policy
+                  </Text>
+                </Text>
+              </TouchableOpacity>
+
+              {agreeError && (
+                <Text style={[s.agreeError, { color: T.red }]}>
+                  Please agree to the Terms and Privacy Policy to continue
+                </Text>
+              )}
+
+              {/* ── Send magic link button ────────────────────────── */}
+              <TouchableOpacity
+                onPress={handleSubmit}
+                disabled={!btnActive}
+                style={[s.primaryBtn, { backgroundColor: btnBg }]}
+                activeOpacity={0.85}
+              >
+                {sending ? (
+                  <>
+                    <Spinner color={btnTextCol} />
+                    <Text style={[s.primaryBtnText, { color: btnTextCol }]}>
+                      Sending magic link…
+                    </Text>
+                  </>
+                ) : (
+                  <Text style={[s.primaryBtnText, { color: btnTextCol }]}>
+                    Send magic link →
+                  </Text>
+                )}
+              </TouchableOpacity>
+
+              {/* ── Privacy line ──────────────────────────────────── */}
+              <Text style={[s.privacy, { color: T.muted }]}>
+                Your email is required to access Nearby &amp; Now.{"\n"}Unsubscribe from the digest any time.
+              </Text>
+            </>
+          )}
         </ScrollView>
       </View>
     </KeyboardAvoidingView>

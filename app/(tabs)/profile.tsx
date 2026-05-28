@@ -1,7 +1,7 @@
 // app/(tabs)/profile.tsx
 import React, { useState, useEffect } from "react";
 import {
-  View, Text, TextInput, TouchableOpacity, ScrollView, Switch,
+  Alert, View, Text, TextInput, TouchableOpacity, ScrollView, Switch,
   StyleSheet, Platform, Linking, ViewStyle, TextStyle,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -371,7 +371,33 @@ export default function ProfileScreen() {
           ))}
           {session ? (
             <TouchableOpacity
-              onPress={async () => { await supabase.auth.signOut(); router.replace("/location"); }}
+              onPress={() => {
+                Alert.alert(
+                  "Sign out",
+                  "Are you sure you want to sign out?",
+                  [
+                    { text: "Cancel", style: "cancel" },
+                    {
+                      text: "Sign out",
+                      style: "destructive",
+                      onPress: async () => {
+                        await AsyncStorage.multiRemove([
+                          "nearbynow_email",
+                          "hearby_area",
+                          "hearby_show_recs",
+                          "nearbynow_username",
+                          "nearbynow_avatar",
+                          "hearby_lat",
+                          "hearby_lng",
+                          "hearby_coords_area",
+                        ]);
+                        await supabase.auth.signOut();
+                        // The SIGNED_OUT event in _layout.tsx will route to /location.
+                      },
+                    },
+                  ]
+                );
+              }}
               style={[styles.accountRow, { borderBottomWidth: 0 }]}>
               <Text style={[styles.accountLabel, { color: T.red, fontWeight: "700" }]}>Sign out</Text>
             </TouchableOpacity>

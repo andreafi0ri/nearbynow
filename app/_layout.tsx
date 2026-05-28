@@ -105,21 +105,44 @@ export default function RootLayout() {
     };
   }, []);
 
-  // Exchange magic link token from deep link
+  // Handle auth deep links on mobile — exchange PKCE code and route to callback screen.
+  // (On web, detectSessionInUrl:true handles the exchange automatically.)
   useEffect(() => {
     const handleUrl = async (url: string) => {
-      const { queryParams } = Linking.parse(url);
-      const token_hash = queryParams?.token_hash as string | undefined;
-      const type = queryParams?.type as string | undefined;
-      if (token_hash && (type === "magiclink" || type === "email")) {
-        const { error } = await supabase.auth.verifyOtp({ token_hash, type: "magiclink" });
-        if (!error) router.replace("/feed");
+      if (!url.includes("auth/callback")) return;
+      try {
+        // PKCE flow: exchange the code query param for a session.
+        await supabase.auth.exchangeCodeForSession(url);
+      } catch {
+        // Ignore — non-PKCE / token already consumed; the callback screen will poll.
       }
+      router.replace("/auth/callback");
     };
 
     Linking.getInitialURL().then(url => { if (url) handleUrl(url); });
     const sub = Linking.addEventListener("url", e => handleUrl(e.url));
     return () => sub.remove();
+  }, []);
+
+  // Global SIGNED_OUT listener — wipe local state and return to onboarding.
+  // Handles both explicit sign-outs (profile screen) and expired sessions.
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_OUT") {
+        AsyncStorage.multiRemove([
+          "nearbynow_email",
+          "hearby_area",
+          "hearby_show_recs",
+          "nearbynow_username",
+          "nearbynow_avatar",
+          "hearby_lat",
+          "hearby_lng",
+          "hearby_coords_area",
+        ]).catch(() => {});
+        router.replace("/location");
+      }
+    });
+    return () => subscription.unsubscribe();
   }, []);
 
   if (!fontsLoaded) return null;

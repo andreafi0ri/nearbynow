@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { View, ActivityIndicator } from "react-native";
 import { useTheme } from "../src/hooks/useTheme";
+import { supabase } from "../src/lib/supabase";
 
 export default function Index() {
   const router = useRouter();
@@ -11,6 +12,15 @@ export default function Index() {
 
   useEffect(() => {
     (async () => {
+      // Primary: live Supabase session is the source of truth.
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const area = await AsyncStorage.getItem("hearby_area");
+        router.replace(area ? "/feed" : "/location");
+        return;
+      }
+
+      // Fallback: no Supabase session yet — use AsyncStorage state.
       const [area, email] = await Promise.all([
         AsyncStorage.getItem("hearby_area"),    // written by SavedAreasContext
         AsyncStorage.getItem("nearbynow_email"), // written by email.tsx on submit
@@ -18,7 +28,7 @@ export default function Index() {
       if (area && email) {
         router.replace("/feed");
       } else if (area && !email) {
-        // Has an area but hasn't agreed to T&C / provided email yet
+        // Has an area but hasn't completed sign-in yet
         router.replace("/email");
       } else {
         router.replace("/location");

@@ -16,6 +16,7 @@ import { useRouter } from "expo-router";
 import * as Location from "expo-location";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "../src/hooks/useTheme";
+import { supabase } from "../src/lib/supabase";
 import { useSavedAreas } from "../src/context/SavedAreasContext";
 import { LocationInput } from "../src/components/LocationInput";
 import { reverseGeocode } from "../src/services/locationService";
@@ -62,7 +63,13 @@ export default function LocationScreen() {
   // ── Navigation helpers ────────────────────────────────────────────────────
   const saveAndProceed = async (areaName: string) => {
     await addArea(areaName);
-    router.replace("/email");
+    // Skip the email/sign-in screen for users who are already authenticated.
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      router.replace("/feed");
+    } else {
+      router.replace("/email");
+    }
   };
 
   const handleUseLocation = async () => {

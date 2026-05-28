@@ -152,7 +152,7 @@ export default function ProfileScreen() {
     await AsyncStorage.setItem("hearby_show_recs", String(next));
   };
 
-  const handleSignOut = async () => {
+  const handleSignOut = () => {
     Alert.alert(
       "Log out",
       "Are you sure you want to log out?",
@@ -161,20 +161,9 @@ export default function ProfileScreen() {
         {
           text: "Log out",
           style: "destructive",
-          onPress: async () => {
-            await supabase.auth.signOut();
-            await AsyncStorage.multiRemove([
-              "nearbynow_email",
-              "nearbynow_username",
-              "nearbynow_avatar",
-            ]);
-            setIsSignedIn(false);
-            setEmail("");
-            setUsername("nearbynow user");
-            setAvatar("👤");
-            // Keep area — no need to re-enter location
-            router.replace("/email");
-          },
+          // Just trigger signOut — the global SIGNED_OUT listener in
+          // _layout.tsx handles storage cleanup and routing to /email.
+          onPress: () => { supabase.auth.signOut(); },
         },
       ]
     );

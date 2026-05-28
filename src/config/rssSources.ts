@@ -151,7 +151,7 @@ export const RSS_SOURCES: RSSSource[] = [
   {
     url:      "https://www.nationaltrust.org.uk/rss/whats-on",
     name:     "National Trust",
-    area:     "global",
+    area:     "london",      // UK-only — do not serve to non-UK areas
     category: "Outdoors",
     catColor: "#6B8E23", catDot: "#9BBF40",
     img:      "🌿", type: "event",
@@ -582,7 +582,7 @@ export const RSS_SOURCES: RSSSource[] = [
   {
     url:      "https://www.timeout.com/uk/rss",
     name:     "Time Out UK",
-    area:     "global",
+    area:     "london",      // UK-only — do not serve to non-UK areas
     category: "Events",
     catColor: "#000000", catDot: "#444444",
     img:      "🎟️", type: "auto",

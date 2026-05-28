@@ -4,6 +4,22 @@
 
 import { RSS_SOURCES, RSSSource } from "../config/rssSources";
 
+// ─── Word-boundary keyword match ──────────────────────────────────────────────
+
+/**
+ * Returns true when `kw` appears as a whole word (or whole phrase) inside
+ * `area`.  Commas and hyphens are treated as word separators so that, for
+ * example, `"angel"` does NOT match `"los angeles"` (where "angel" is a
+ * substring of "angeles"), but it DOES match `"angel, islington"`.
+ *
+ * This avoids the false-positive where `"angel"` (Islington) fires for
+ * Los Angeles, and `"les"` (Lower East Side) fires for Los Angeles too.
+ */
+function kwMatch(area: string, kw: string): boolean {
+  const normalized = ` ${area.replace(/[-,]+/g, " ")} `;
+  return normalized.includes(` ${kw} `);
+}
+
 // ─── Area token expansion ─────────────────────────────────────────────────────
 
 type TokenMap = { keywords: string[]; tokens: string[] };
@@ -95,7 +111,7 @@ const AREA_TOKEN_TABLE: TokenMap[] = [
   { keywords: ["seattle"],                        tokens: ["seattle"] },
   { keywords: ["chicago"],                        tokens: ["chicago"] },
   { keywords: ["los angeles", "silver lake", "echo park"], tokens: ["los angeles"] },
-  { keywords: ["san francisco", "sf "],           tokens: ["san francisco"] },
+  { keywords: ["san francisco", "sf"],            tokens: ["san francisco"] },
   { keywords: ["miami"],                          tokens: ["miami"] },
   { keywords: ["boston"],                         tokens: ["boston"] },
   { keywords: ["philadelphia", "philly"],         tokens: ["philadelphia"] },
@@ -122,7 +138,7 @@ export function extractAreaTokens(area: string): string[] {
   const tokens = new Set<string>();
 
   for (const entry of AREA_TOKEN_TABLE) {
-    if (entry.keywords.some(kw => lower.includes(kw))) {
+    if (entry.keywords.some(kw => kwMatch(lower, kw))) {
       entry.tokens.forEach(t => tokens.add(t));
     }
   }

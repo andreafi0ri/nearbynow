@@ -4,6 +4,18 @@ import { SEARCH_CONFIG } from "../config/searchConfig";
 const REDDIT_COLOR = "#FF4500";
 const REDDIT_DOT   = "#FF6B35";
 
+// ─── Word-boundary keyword match ──────────────────────────────────────────────
+
+/**
+ * Returns true when `kw` appears as a whole word (or phrase) in `area`.
+ * Commas and hyphens are treated as word separators, so "angel" does NOT
+ * match "los angeles" but DOES match "angel, islington" or bare "angel".
+ */
+function kwMatch(area: string, kw: string): boolean {
+  const normalized = ` ${area.replace(/[-,]+/g, " ")} `;
+  return normalized.includes(` ${kw} `);
+}
+
 // ─── Area → subreddits lookup ────────────────────────────────────────────────
 
 type AreaEntry = { keywords: string[]; subreddits: string[] };
@@ -33,8 +45,8 @@ const AREA_TABLE: AreaEntry[] = [
   { keywords: ["denver"],                               subreddits: ["denver"] },
   { keywords: ["seattle"],                              subreddits: ["seattle"] },
   { keywords: ["chicago"],                              subreddits: ["chicago"] },
-  { keywords: ["los angeles", "la ", "silver lake", "echo park"], subreddits: ["losangeles"] },
-  { keywords: ["san francisco", "sf ", "mission district"],       subreddits: ["sanfrancisco"] },
+  { keywords: ["los angeles", "la", "silver lake", "echo park"],  subreddits: ["losangeles"] },
+  { keywords: ["san francisco", "sf", "mission district"],        subreddits: ["sanfrancisco"] },
   { keywords: ["miami"],                                subreddits: ["miami"] },
   { keywords: ["boston"],                               subreddits: ["boston"] },
   { keywords: ["philadelphia", "philly"],               subreddits: ["philadelphia"] },
@@ -46,7 +58,7 @@ const AREA_TABLE: AreaEntry[] = [
 export function getLocalSubreddits(area: string): string[] {
   const lower = area.toLowerCase();
   for (const entry of AREA_TABLE) {
-    if (entry.keywords.some(kw => lower.includes(kw))) {
+    if (entry.keywords.some(kw => kwMatch(lower, kw))) {
       return entry.subreddits;
     }
   }

@@ -101,7 +101,7 @@ export default function EmailScreen() {
         options: { emailRedirectTo: "nearbyandnow://auth/callback" },
       });
       if (authErr) throw authErr;
-      await AsyncStorage.setItem("hearby_email", email);
+      await AsyncStorage.setItem("nearbynow_email", email);
       setSent(true);
       // Spinner shows for ~1.1s (matches prototype) then navigates
       setTimeout(() => router.replace("/feed"), 1100);
@@ -110,14 +110,6 @@ export default function EmailScreen() {
     } finally {
       setSending(false);
     }
-  };
-
-  const handleSkip = () => {
-    if (!agreed) {
-      setAgreeError(true);
-      return;
-    }
-    router.replace("/feed");
   };
 
   const btnActive  = valid && !sending && !sent;
@@ -323,14 +315,9 @@ export default function EmailScreen() {
             )}
           </TouchableOpacity>
 
-          {/* ── Skip for now ──────────────────────────────────────────── */}
-          <TouchableOpacity onPress={handleSkip} style={s.skip} activeOpacity={0.7}>
-            <Text style={[s.skipText, { color: T.gold }]}>Skip for now</Text>
-          </TouchableOpacity>
-
           {/* ── Privacy line ──────────────────────────────────────────── */}
           <Text style={[s.privacy, { color: T.muted }]}>
-            No spam. Unsubscribe any time. We never sell your data.
+            Your email is required to access Nearby &amp; Now.{"\n"}Unsubscribe from the digest any time.
           </Text>
         </ScrollView>
       </View>
@@ -540,17 +527,6 @@ const s = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     fontWeight: "700",
     fontSize: 15,
-  } as TextStyle,
-
-  // ── Skip ──────────────────────────────────────────────────────────────────
-  skip:       { marginTop: 18, padding: 8 } as ViewStyle,
-
-  skipText:   {
-    fontFamily: "Inter_500Medium",
-    fontWeight: "500",
-    fontSize: 13.5,
-    textDecorationLine: "underline",
-    textUnderlineOffset: 4,
   } as TextStyle,
 
   // ── Privacy ───────────────────────────────────────────────────────────────

@@ -4,7 +4,6 @@ import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { View, ActivityIndicator } from "react-native";
 import { useTheme } from "../src/hooks/useTheme";
-import { supabase } from "../src/lib/supabase";
 
 export default function Index() {
   const router = useRouter();
@@ -12,15 +11,15 @@ export default function Index() {
 
   useEffect(() => {
     (async () => {
-      const [area, { data: { session } }] = await Promise.all([
-        AsyncStorage.getItem("hearby_area"),
-        supabase.auth.getSession(),
+      const [area, email] = await Promise.all([
+        AsyncStorage.getItem("hearby_area"),    // written by SavedAreasContext
+        AsyncStorage.getItem("nearbynow_email"), // written by email.tsx on submit
       ]);
-      // If the user has a session and an area they go straight to the feed.
-      // If they have an area but no session (anonymous) they still go to feed.
-      // Only send to location screen on first launch (no area saved yet).
-      if (area || session) {
+      if (area && email) {
         router.replace("/feed");
+      } else if (area && !email) {
+        // Has an area but hasn't agreed to T&C / provided email yet
+        router.replace("/email");
       } else {
         router.replace("/location");
       }

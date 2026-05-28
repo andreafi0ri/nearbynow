@@ -24,6 +24,9 @@ import { checkFeedHealth } from "../../src/services/rssService";
 
 const AVATAR_OPTIONS = ["👤","🦊","🐻","🦁","🐼","🦋","🌟","🎭","🏄","🎨","🎸","🌿"];
 
+const USERNAME_KEY = "nearbynow_username";
+const AVATAR_KEY   = "nearbynow_avatar";
+
 export default function ProfileScreen() {
   const { theme: T, preference, isDark, setPreference } = useTheme();
   const router = useRouter();
@@ -41,6 +44,19 @@ export default function ProfileScreen() {
   const [healthResults, setHealthResults] = useState("");
   const [healthLoading, setHealthLoading] = useState(false);
 
+  // Load persisted profile values on mount (survives app restarts)
+  useEffect(() => {
+    const load = async () => {
+      const [savedName, savedAvatar] = await Promise.all([
+        AsyncStorage.getItem(USERNAME_KEY),
+        AsyncStorage.getItem(AVATAR_KEY),
+      ]);
+      if (savedName)   setUsername(savedName);
+      if (savedAvatar) setAvatar(savedAvatar);
+    };
+    load().catch(() => {});
+  }, []);
+
   // Load all notification preferences from AsyncStorage on mount
   useEffect(() => {
     loadNotificationPreferences().then(setNotifs);
@@ -55,21 +71,28 @@ export default function ProfileScreen() {
       if (profile.avatar)   setAvatar(profile.avatar);
       if (profile.email)    setEmail(profile.email);
     } else {
-      AsyncStorage.getItem("hearby_email").then(v => { if (v) setEmail(v); });
+      AsyncStorage.getItem("nearbynow_email").then(v => { if (v) setEmail(v); });
     }
   }, [profile]);
 
   const saveName = async () => {
-    if (!nameInput.trim()) return;
-    setUsername(nameInput.trim());
+    const trimmed = nameInput.trim();
+    if (!trimmed) return;
+    setUsername(trimmed);
     setEditingName(false);
-    await updateProfile({ username: nameInput.trim() });
+    await Promise.all([
+      AsyncStorage.setItem(USERNAME_KEY, trimmed),
+      updateProfile({ username: trimmed }),
+    ]);
   };
 
   const saveAvatar = async (opt: string) => {
     setAvatar(opt);
     setShowAvatarPicker(false);
-    await updateProfile({ avatar: opt });
+    await Promise.all([
+      AsyncStorage.setItem(AVATAR_KEY, opt),
+      updateProfile({ avatar: opt }),
+    ]);
   };
 
   const runHealthCheck = async () => {

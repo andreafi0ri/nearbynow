@@ -68,7 +68,7 @@ export default function LocationScreen() {
     if (session) {
       router.replace("/feed");
     } else {
-      router.replace("/email");
+      router.replace("/email?mode=signup");
     }
   };
 

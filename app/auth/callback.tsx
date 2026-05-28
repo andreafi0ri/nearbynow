@@ -20,6 +20,7 @@ import * as Linking from "expo-linking";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../../src/lib/supabase";
 import { consumePendingCallbackUrl } from "../../src/lib/authState";
+import { loadProfile } from "../../src/services/profileService";
 import { useTheme } from "../../src/hooks/useTheme";
 
 const TIMEOUT_MS = 15_000;
@@ -91,6 +92,10 @@ export default function AuthCallback() {
     const proceed = async () => {
       if (done) return;
       done = true;
+      // Sync username/avatar from Supabase user_metadata to local cache
+      // so the profile screen shows the correct values immediately,
+      // even on a new device or after reinstall.
+      await loadProfile().catch(() => {});
       const area = await AsyncStorage.getItem("hearby_area").catch(() => null);
       router.replace(area ? "/feed" : "/location");
     };

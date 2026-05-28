@@ -10,7 +10,7 @@ import {
   ScrollView, Linking, ViewStyle, TextStyle,
 } from "react-native";
 import Svg, { Defs, RadialGradient, Stop, Ellipse, Rect, Path, Circle as SvgCircle } from "react-native-svg";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "../src/hooks/useTheme";
 import { MapBackground } from "../src/components/MapBackground";
@@ -67,10 +67,15 @@ function Spinner({ color }: { color: string }) {
 export default function EmailScreen() {
   const { theme: T, isDark } = useTheme();
   const router = useRouter();
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
+
+  // mode=login → returning user (skip T&C)
+  // mode=signup or no mode → new user (show T&C)
+  const isLogin = mode === "login";
 
   const [email,      setEmail]      = useState("");
   const [sending,    setSending]    = useState(false);  // real API in-flight
-  const [sent,       setSent]       = useState(false);  // API done → show spinner briefly
+  const [sent,       setSent]       = useState(false);  // API done → show "check inbox"
   const [error,      setError]      = useState("");
   const [agreed,     setAgreed]     = useState(false);
   const [agreeError, setAgreeError] = useState(false);
@@ -85,8 +90,8 @@ export default function EmailScreen() {
   }, []);
 
   const handleSubmit = async () => {
-    // Check agreement first
-    if (!agreed) {
+    // Only require T&C agreement for new signups
+    if (!isLogin && !agreed) {
       setAgreeError(true);
       return;
     }
@@ -104,9 +109,25 @@ export default function EmailScreen() {
 
       const { error: authErr } = await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: redirectTo },
+        options: {
+          emailRedirectTo: redirectTo,
+          // shouldCreateUser:false in login mode — Supabase won't create
+          // a new account if the email doesn't exist, returns an error instead.
+          shouldCreateUser: !isLogin,
+        },
       });
-      if (authErr) throw authErr;
+
+      if (authErr) {
+        // Surface a friendly error when the email isn't registered yet
+        if (isLogin && authErr.message.toLowerCase().includes("not found")) {
+          setError("No account found for this email. Please sign up first.");
+        } else {
+          setError(authErr.message);
+        }
+        setSending(false);
+        return;
+      }
+
       await AsyncStorage.setItem("nearbynow_email", email);
       // Show "check your inbox" screen — do NOT auto-navigate to /feed.
       // The user must click the magic link; the /auth/callback screen handles routing.
@@ -184,12 +205,13 @@ export default function EmailScreen() {
               </View>
 
               <Text style={[s.body, { color: T.textSub }]}>
-                We sent a magic link to{"\n"}
+                {isLogin ? "We sent a magic link to" : "We sent a sign-up link to"}
+                {"\n"}
                 <Text style={{ color: T.text, fontFamily: "Inter_600SemiBold" }}>{email}</Text>
-              </Text>
-
-              <Text style={[s.body, { color: T.muted, marginTop: 8, fontSize: 13 }]}>
-                Tap the link in your email to sign in.{"\n"}It expires in 24 hours.
+                {"\n\n"}
+                <Text style={{ color: T.muted, fontSize: 13 }}>
+                  Tap the link in your email to sign in.{"\n"}It expires in 1 hour.
+                </Text>
               </Text>
 
               <View style={s.flex055} />
@@ -213,13 +235,25 @@ export default function EmailScreen() {
             /* ── Sign-in form ─────────────────────────────────────────── */
             <>
               <View style={s.headlineRow}>
-                <Text style={[s.headlineBase, { color: T.text }]}>Stay in the </Text>
-                <Text style={[s.headlineItalic, { color: T.gold }]}>loop</Text>
-                <Text style={[s.headlineBase, { color: T.text }]}>.</Text>
+                {isLogin ? (
+                  <>
+                    <Text style={[s.headlineBase, { color: T.text }]}>Welcome </Text>
+                    <Text style={[s.headlineItalic, { color: T.gold }]}>back</Text>
+                    <Text style={[s.headlineBase, { color: T.text }]}>.</Text>
+                  </>
+                ) : (
+                  <>
+                    <Text style={[s.headlineBase, { color: T.text }]}>Stay in the </Text>
+                    <Text style={[s.headlineItalic, { color: T.gold }]}>loop</Text>
+                    <Text style={[s.headlineBase, { color: T.text }]}>.</Text>
+                  </>
+                )}
               </View>
 
               <Text style={[s.body, { color: T.textSub }]}>
-                Get your weekly local digest — the best events and spots in your area, curated for you.
+                {isLogin
+                  ? "Enter your email and we'll send you\na magic link to sign in."
+                  : "Get your weekly local digest — the best\nevents and spots in your area."}
               </Text>
 
               <View style={s.flex055} />
@@ -268,58 +302,60 @@ export default function EmailScreen() {
 
               <View style={s.gap12} />
 
-              {/* ── Terms & Privacy checkbox ──────────────────────── */}
-              <TouchableOpacity
-                onPress={() => { setAgreed(a => !a); setAgreeError(false); }}
-                style={[
-                  s.checkboxRow,
-                  agreeError && {
-                    borderColor: T.red,
-                    borderWidth: 1.5,
-                    borderRadius: 10,
-                    padding: 8,
-                    backgroundColor: T.red + "08",
-                  },
-                ]}
-                activeOpacity={0.7}
-              >
-                <View style={[
-                  s.checkbox,
-                  {
-                    borderColor:     agreeError ? T.red : agreed ? T.text : T.borderSub,
-                    backgroundColor: agreed ? T.text : "transparent",
-                  },
-                ]}>
-                  {agreed && (
-                    <Text style={{ color: T.goldBri, fontSize: 11, fontWeight: "700" }}>✓</Text>
-                  )}
-                </View>
+              {/* ── Terms & Privacy checkbox — signup only ────────── */}
+              {!isLogin && (
+                <TouchableOpacity
+                  onPress={() => { setAgreed(a => !a); setAgreeError(false); }}
+                  style={[
+                    s.checkboxRow,
+                    agreeError && {
+                      borderColor: T.red,
+                      borderWidth: 1.5,
+                      borderRadius: 10,
+                      padding: 8,
+                      backgroundColor: T.red + "08",
+                    },
+                  ]}
+                  activeOpacity={0.7}
+                >
+                  <View style={[
+                    s.checkbox,
+                    {
+                      borderColor:     agreeError ? T.red : agreed ? T.text : T.borderSub,
+                      backgroundColor: agreed ? T.text : "transparent",
+                    },
+                  ]}>
+                    {agreed && (
+                      <Text style={{ color: T.goldBri, fontSize: 11, fontWeight: "700" }}>✓</Text>
+                    )}
+                  </View>
 
-                <Text style={[s.checkboxLabel, { color: T.textSub }]}>
-                  I agree to the{" "}
-                  <Text
-                    style={[s.checkboxLink, { color: T.gold }]}
-                    onPress={e => {
-                      e.stopPropagation();
-                      openLegal("https://www.nearbyandnow.com/terms");
-                    }}
-                  >
-                    Terms &amp; Conditions
+                  <Text style={[s.checkboxLabel, { color: T.textSub }]}>
+                    I agree to the{" "}
+                    <Text
+                      style={[s.checkboxLink, { color: T.gold }]}
+                      onPress={e => {
+                        e.stopPropagation();
+                        openLegal("https://www.nearbyandnow.com/terms");
+                      }}
+                    >
+                      Terms &amp; Conditions
+                    </Text>
+                    {" "}and{" "}
+                    <Text
+                      style={[s.checkboxLink, { color: T.gold }]}
+                      onPress={e => {
+                        e.stopPropagation();
+                        openLegal("https://www.nearbyandnow.com/privacy");
+                      }}
+                    >
+                      Privacy Policy
+                    </Text>
                   </Text>
-                  {" "}and{" "}
-                  <Text
-                    style={[s.checkboxLink, { color: T.gold }]}
-                    onPress={e => {
-                      e.stopPropagation();
-                      openLegal("https://www.nearbyandnow.com/privacy");
-                    }}
-                  >
-                    Privacy Policy
-                  </Text>
-                </Text>
-              </TouchableOpacity>
+                </TouchableOpacity>
+              )}
 
-              {agreeError && (
+              {!isLogin && agreeError && (
                 <Text style={[s.agreeError, { color: T.red }]}>
                   Please agree to the Terms and Privacy Policy to continue
                 </Text>
@@ -346,10 +382,12 @@ export default function EmailScreen() {
                 )}
               </TouchableOpacity>
 
-              {/* ── Privacy line ──────────────────────────────────── */}
-              <Text style={[s.privacy, { color: T.muted }]}>
-                Your email is required to access Nearby &amp; Now.{"\n"}Unsubscribe from the digest any time.
-              </Text>
+              {/* ── Privacy line — signup only ────────────────────── */}
+              {!isLogin && (
+                <Text style={[s.privacy, { color: T.muted }]}>
+                  Your email is required to access Nearby &amp; Now.{"\n"}Unsubscribe from the digest any time.
+                </Text>
+              )}
             </>
           )}
         </ScrollView>

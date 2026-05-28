@@ -14,6 +14,12 @@ import { useAuth } from "../../src/hooks/useAuth";
 import { useSavedAreas } from "../../src/context/SavedAreasContext";
 import { supabase } from "../../src/lib/supabase";
 import {
+  loadProfile,
+  saveUsername,
+  saveAvatar as saveAvatarMeta,
+  clearProfileCache,
+} from "../../src/services/profileService";
+import {
   loadNotificationPreferences,
   saveNotificationPreferences,
   scheduleWeeklyDigest,
@@ -24,13 +30,10 @@ import { checkFeedHealth } from "../../src/services/rssService";
 
 const AVATAR_OPTIONS = ["👤","🦊","🐻","🦁","🐼","🦋","🌟","🎭","🏄","🎨","🎸","🌿"];
 
-const USERNAME_KEY = "nearbynow_username";
-const AVATAR_KEY   = "nearbynow_avatar";
-
 export default function ProfileScreen() {
   const { theme: T, preference, isDark, setPreference } = useTheme();
   const router = useRouter();
-  const { session, profile, updateProfile } = useAuth();
+  const { session } = useAuth();
   const { areas, activeArea, switchArea, removeArea } = useSavedAreas();
 
   const [username, setUsername]       = useState("hearby user");
@@ -47,20 +50,31 @@ export default function ProfileScreen() {
   // Derived directly from useAuth — always in sync, no async gap on mount.
   const isSignedIn = !!session;
 
-  // Load persisted profile values on mount (survives app restarts)
+  // Load profile from Supabase user_metadata (source of truth) with
+  // AsyncStorage as local cache.  Reload on SIGNED_IN so a user who
+  // signs in on a new device gets their saved username/avatar immediately.
   useEffect(() => {
-    const load = async () => {
-      const [savedName, savedAvatar] = await Promise.all([
-        AsyncStorage.getItem(USERNAME_KEY),
-        AsyncStorage.getItem(AVATAR_KEY),
-      ]);
-      if (savedName)   setUsername(savedName);
-      if (savedAvatar) setAvatar(savedAvatar);
-    };
-    load().catch(() => {});
+    loadProfile().then(p => {
+      setUsername(p.username);
+      setAvatar(p.avatar);
+      setEmail(p.email);
+    });
+
+    const { data: { subscription } } =
+      supabase.auth.onAuthStateChange((event, session) => {
+        if (event === "SIGNED_IN" && session?.user) {
+          loadProfile().then(p => {
+            setUsername(p.username);
+            setAvatar(p.avatar);
+            setEmail(p.email);
+          });
+        }
+      });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  // Load all notification preferences from AsyncStorage on mount
+  // Load notification preferences and feed settings
   useEffect(() => {
     loadNotificationPreferences().then(setNotifs);
     AsyncStorage.getItem("hearby_show_recs")
@@ -68,34 +82,18 @@ export default function ProfileScreen() {
       .catch(() => {});
   }, []);
 
-  useEffect(() => {
-    if (profile) {
-      if (profile.username) setUsername(profile.username);
-      if (profile.avatar)   setAvatar(profile.avatar);
-      if (profile.email)    setEmail(profile.email);
-    } else {
-      AsyncStorage.getItem("nearbynow_email").then(v => { if (v) setEmail(v); });
-    }
-  }, [profile]);
-
   const saveName = async () => {
     const trimmed = nameInput.trim();
     if (!trimmed) return;
     setUsername(trimmed);
     setEditingName(false);
-    await Promise.all([
-      AsyncStorage.setItem(USERNAME_KEY, trimmed),
-      updateProfile({ username: trimmed }),
-    ]);
+    await saveUsername(trimmed);
   };
 
   const saveAvatar = async (opt: string) => {
     setAvatar(opt);
     setShowAvatarPicker(false);
-    await Promise.all([
-      AsyncStorage.setItem(AVATAR_KEY, opt),
-      updateProfile({ avatar: opt }),
-    ]);
+    await saveAvatarMeta(opt);
   };
 
   const runHealthCheck = async () => {
@@ -144,7 +142,15 @@ export default function ProfileScreen() {
   };
 
   const handleSignOut = () => {
-    const doSignOut = () => supabase.auth.signOut();
+    const doSignOut = async () => {
+      await supabase.auth.signOut();
+      await clearProfileCache();
+      // Reset visible local state — _layout.tsx SIGNED_OUT handler
+      // takes care of storage cleanup and routing to /location.
+      setEmail("");
+      setUsername("Nearby & Now user");
+      setAvatar("👤");
+    };
 
     if (Platform.OS === "web") {
       // Alert.alert maps to window.confirm on web, which many browsers
@@ -163,8 +169,7 @@ export default function ProfileScreen() {
   };
 
   const handleSignIn = () => {
-    // Area is already set so after sign-in user goes straight to feed
-    router.push("/email");
+    router.push("/email?mode=login");
   };
 
   const accountRows = [

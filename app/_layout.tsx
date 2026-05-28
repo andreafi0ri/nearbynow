@@ -33,6 +33,7 @@ import {
 } from "@expo-google-fonts/inter";
 import * as SplashScreen from "expo-splash-screen";
 import { supabase } from "../src/lib/supabase";
+import { setPendingCallbackUrl } from "../src/lib/authState";
 
 if (Platform.OS !== "web") {
   SplashScreen.preventAutoHideAsync();
@@ -105,17 +106,14 @@ export default function RootLayout() {
     };
   }, []);
 
-  // Handle auth deep links on mobile — exchange PKCE code and route to callback screen.
-  // (On web, detectSessionInUrl:true handles the exchange automatically.)
+  // Route auth deep links (mobile) to the callback screen.
+  // We store the raw URL in authState so the callback screen can drive
+  // the exchange itself — this works for both warm-start and cold-start.
+  // (On web the browser does a full page load so _layout never sees the URL.)
   useEffect(() => {
-    const handleUrl = async (url: string) => {
+    const handleUrl = (url: string) => {
       if (!url.includes("auth/callback")) return;
-      try {
-        // PKCE flow: exchange the code query param for a session.
-        await supabase.auth.exchangeCodeForSession(url);
-      } catch {
-        // Ignore — non-PKCE / token already consumed; the callback screen will poll.
-      }
+      setPendingCallbackUrl(url);
       router.replace("/auth/callback");
     };
 

@@ -1,63 +1,80 @@
 // app/auth/callback.tsx — Supabase magic link auth callback screen.
 //
-// detectSessionInUrl:true only handles implicit flow (#access_token in hash).
-// For PKCE magic links the email contains ?code=<value> and the client
-// MUST call exchangeCodeForSession explicitly — there is no auto-exchange.
-// We also handle the older ?token_hash= OTP format as a fallback.
+// Handles every URL format Supabase may send:
+//   ?code=<value>                  PKCE exchange  (exchangeCodeForSession)
+//   ?token_hash=<value>&type=<t>   OTP hash       (verifyOtp)
+//   #access_token=<v>&refresh_...  Implicit flow  (setSession — fallback if
+//                                                  detectSessionInUrl missed it)
 //
-// Web flow:
-//   Browser navigates fresh to /auth/callback?code=…
-//   → this screen mounts, reads window.location.href, calls exchangeCodeForSession.
+// URL sources:
+//   Web:               window.location.href  (fresh page load from email link)
+//   Mobile warm-start: authState module      (stored by _layout.tsx deep link handler)
+//   Mobile cold-start: Linking.getInitialURL (app launched from the link)
 //
-// Mobile flow (warm start):
-//   _layout.tsx handles the deep link, calls exchangeCodeForSession, then
-//   router.replace("/auth/callback").  By the time we mount, the session is
-//   already established; getSession() picks it up immediately.
-//
-// Mobile flow (cold start from link):
-//   App starts with nearbynow://auth/callback?code=… as the initial URL.
-//   _layout.tsx fires Linking.getInitialURL and calls exchangeCodeForSession.
-//   We also call Linking.getInitialURL here as a safety net.
+// After the exchange the screen listens for any of INITIAL_SESSION / SIGNED_IN /
+// TOKEN_REFRESHED, then routes to /feed (area saved) or /location.
 import React, { useEffect, useState } from "react";
 import { View, Text, ActivityIndicator, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import * as Linking from "expo-linking";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../../src/lib/supabase";
+import { consumePendingCallbackUrl } from "../../src/lib/authState";
 import { useTheme } from "../../src/hooks/useTheme";
 
 const TIMEOUT_MS = 15_000;
 
-// ─── URL helpers ──────────────────────────────────────────────────────────────
+// ─── URL param helpers ────────────────────────────────────────────────────────
 
-/** Extract a query param by name from any URL string (handles deep-link schemes). */
-function getParam(url: string, name: string): string | null {
+function getQueryParam(url: string, name: string): string | null {
   const match = url.match(new RegExp(`[?&]${name}=([^&#\\s]+)`));
   return match ? decodeURIComponent(match[1]) : null;
 }
 
+function getHashParam(url: string, name: string): string | null {
+  const hash = url.includes("#") ? url.split("#")[1] : "";
+  const params = new URLSearchParams(hash);
+  return params.get(name);
+}
+
+// ─── Exchange helper ──────────────────────────────────────────────────────────
+
 /**
- * Drive the PKCE / OTP code exchange for the given callback URL.
- * Returns true when an exchange was attempted (not necessarily successful).
+ * Attempt to exchange the auth credentials found in `url` for a session.
+ * Tries every format so the screen works regardless of how the Supabase
+ * project is configured (PKCE vs implicit vs OTP token-hash).
  */
 async function exchangeFromUrl(url: string): Promise<void> {
-  const code       = getParam(url, "code");
-  const tokenHash  = getParam(url, "token_hash");
-  const type       = (getParam(url, "type") ?? "magiclink") as Parameters<
-    typeof supabase.auth.verifyOtp
-  >[0]["type"];
-
+  // 1. PKCE code — present when the Supabase project has PKCE enabled for OTP
+  const code = getQueryParam(url, "code");
   if (code) {
-    // PKCE flow — uses the code_verifier stored in localStorage / AsyncStorage
     const { error } = await supabase.auth.exchangeCodeForSession(url);
-    if (error) console.warn("[AuthCallback] exchangeCodeForSession:", error.message);
-    return;
+    if (!error) return;
+    console.warn("[AuthCallback] exchangeCodeForSession:", error.message);
+    // Fall through — might still have a token_hash or hash fragment
   }
 
+  // 2. OTP token-hash — older Supabase behaviour or when PKCE is disabled
+  const tokenHash = getQueryParam(url, "token_hash");
   if (tokenHash) {
-    // Older OTP / implicit flow
+    const type = (getQueryParam(url, "type") ?? "magiclink") as Parameters<
+      typeof supabase.auth.verifyOtp
+    >[0]["type"];
     const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
-    if (error) console.warn("[AuthCallback] verifyOtp:", error.message);
+    if (!error) return;
+    console.warn("[AuthCallback] verifyOtp:", error.message);
+  }
+
+  // 3. Implicit flow hash fragment — detectSessionInUrl:true handles this on
+  //    web, but on mobile we must do it ourselves.
+  const accessToken  = getHashParam(url, "access_token");
+  const refreshToken = getHashParam(url, "refresh_token");
+  if (accessToken && refreshToken) {
+    const { error } = await supabase.auth.setSession({
+      access_token:  accessToken,
+      refresh_token: refreshToken,
+    });
+    if (error) console.warn("[AuthCallback] setSession:", error.message);
   }
 }
 
@@ -79,34 +96,49 @@ export default function AuthCallback() {
     };
 
     const init = async () => {
-      // ── Step 1: Drive the code exchange from the current URL ──────────────
+      // ── 1. Resolve the callback URL ──────────────────────────────────────
+      let url: string | null = null;
+
       if (Platform.OS === "web" && typeof window !== "undefined") {
-        // Fresh browser page-load at /auth/callback?code=…
-        await exchangeFromUrl(window.location.href);
+        // Web: fresh page load — the full URL (including ?code= or #access_token=)
+        // is in window.location.  detectSessionInUrl:true may already be handling
+        // the hash fragment, but we also try explicitly for robustness.
+        url = window.location.href;
       } else {
-        // Mobile: _layout.tsx already did the exchange for warm-start deep
-        // links.  For cold-start (app launched via the link), pick it up here.
-        const initial = await Linking.getInitialURL().catch(() => null);
-        if (initial) await exchangeFromUrl(initial);
+        // Mobile: _layout.tsx stored the deep-link URL before routing here
+        url = consumePendingCallbackUrl();
+        // Cold-start fallback — app was launched directly from the link
+        if (!url) url = await Linking.getInitialURL().catch(() => null);
       }
 
-      // ── Step 2: Fast path — check if session was just established ─────────
+      // ── 2. Drive the exchange ────────────────────────────────────────────
+      if (url) await exchangeFromUrl(url);
+
+      // ── 3. Fast path — session may already be set ────────────────────────
       const { data: { session } } = await supabase.auth.getSession();
       if (session) await proceed();
     };
 
     init().catch(err => console.warn("[AuthCallback] init error:", err));
 
-    // ── Step 3: Auth-state listener — catches async exchange completions ─────
+    // ── 4. Auth-state listener ────────────────────────────────────────────
+    // Fires for every auth event including INITIAL_SESSION (when detectSessionInUrl
+    // establishes a session before our listener was set up) and the async
+    // completion of the exchanges above.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session) {
+        if (
+          session &&
+          (event === "SIGNED_IN" ||
+           event === "INITIAL_SESSION" ||
+           event === "TOKEN_REFRESHED")
+        ) {
           await proceed();
         }
       }
     );
 
-    // ── Step 4: 15-second safety timeout ─────────────────────────────────────
+    // ── 5. Safety timeout ─────────────────────────────────────────────────
     const timer = setTimeout(() => {
       if (!done) {
         done = true;

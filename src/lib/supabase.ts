@@ -12,10 +12,10 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     storage: Platform.OS === "web" ? undefined : AsyncStorage,
     autoRefreshToken: true,
     persistSession: true,
-    // false — the /auth/callback screen drives the PKCE code exchange
-    // explicitly, so we don't need (or want) automatic URL detection here.
-    detectSessionInUrl: false,
-    flowType: "pkce",
+    // true — lets Supabase auto-exchange the #access_token hash fragment
+    // on web (implicit flow).  The callback screen also drives an explicit
+    // exchange for any ?code= or ?token_hash= params it finds in the URL.
+    detectSessionInUrl: true,
   },
 });
 

@@ -6,7 +6,7 @@
 // beneath the chips before the CTA (production extension of the prototype).
 import React, { useEffect, useRef, useState } from "react";
 import {
-  View, Text, TouchableOpacity, Animated,
+  View, Text, TouchableOpacity, Animated, ActivityIndicator,
   StyleSheet, KeyboardAvoidingView, Platform,
   ScrollView, ViewStyle, TextStyle,
 } from "react-native";
@@ -47,6 +47,12 @@ export default function LocationScreen() {
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState("");
 
+  // Returning-user detection
+  const [hasArea,      setHasArea]      = useState(false);
+  const [savedArea,    setSavedArea]    = useState("");
+  const [isSignedIn,   setIsSignedIn]   = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
   // ── Halo pulse animation ──────────────────────────────────────────────────
   const pulse = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -60,16 +66,49 @@ export default function LocationScreen() {
   const pulseScale   = pulse.interpolate({ inputRange: [0, 1], outputRange: [1,    1.08] });
   const pulseOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.55, 0.85] });
 
+  // ── Auth + saved-area check ──────────────────────────────────────────────
+  useEffect(() => {
+    const check = async () => {
+      const [area, { data: { session } }] = await Promise.all([
+        AsyncStorage.getItem("hearby_area"),
+        supabase.auth.getSession(),
+      ]);
+
+      const signedIn = !!session?.user;
+
+      if (area) {
+        setSavedArea(area);
+        setHasArea(true);
+      }
+
+      setIsSignedIn(signedIn);
+
+      // Fully authenticated with a saved area — route to feed immediately
+      if (area && signedIn) {
+        router.replace("/feed");
+        return;
+      }
+
+      setCheckingAuth(false);
+    };
+
+    check().catch(() => setCheckingAuth(false));
+  }, []);
+
   // ── Navigation helpers ────────────────────────────────────────────────────
   const saveAndProceed = async (areaName: string) => {
     await addArea(areaName);
     // Skip the email/sign-in screen for users who are already authenticated.
     const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
+    if (session?.user) {
       router.replace("/feed");
     } else {
       router.replace("/email?mode=signup");
     }
+  };
+
+  const handleSignIn = () => {
+    router.push("/email?mode=login");
   };
 
   const handleUseLocation = async () => {
@@ -138,6 +177,14 @@ export default function LocationScreen() {
 
   // ── Chip background colour (semi-transparent surface) ────────────────────
   const chipBg = isDark ? "rgba(28,26,22,0.85)" : "rgba(255,255,255,0.92)";
+
+  if (checkingAuth) {
+    return (
+      <View style={[s.flex, { backgroundColor: T.bg, alignItems: "center", justifyContent: "center" }]}>
+        <ActivityIndicator color={T.gold} size="large" />
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -237,66 +284,123 @@ export default function LocationScreen() {
           {/* ── Spacer pushes CTA to bottom on tall screens ───────────────── */}
           <View style={s.spacer} />
 
-          {/* ── CTA stack ────────────────────────────────────────────────── */}
-          <View style={s.cta}>
-            {!manual ? (
-              <>
-                <TouchableOpacity
-                  onPress={handleUseLocation}
-                  disabled={loading}
-                  style={[s.primaryBtn, { backgroundColor: T.text }]}
-                  activeOpacity={0.85}
-                >
-                  {/* Gold dot bullet */}
-                  <View style={[s.primaryDot, { backgroundColor: isDark ? "#1A1505" : T.goldLight }]} />
-                  <Text style={[s.primaryBtnText, { color: T.bg }]}>
-                    {loading ? "Detecting location…" : "Use my location"}
-                  </Text>
-                </TouchableOpacity>
+          {hasArea && !isSignedIn ? (
+            /* ── Returning signed-out user ─────────────────────────────── */
+            <View style={[s.returningCard, {
+              backgroundColor: T.bgCardHi,
+              borderColor: T.border,
+              shadowColor: T.border,
+            }]}>
+              <Text style={[s.returningLabel, { color: T.muted }]}>WELCOME BACK</Text>
 
-                <View style={s.gap10} />
+              <Text style={[s.returningArea, { color: T.text }]}>
+                📍 {savedArea}
+              </Text>
 
-                <TouchableOpacity
-                  onPress={() => setManual(true)}
-                  style={[s.secondaryBtn, { borderColor: T.border }]}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[s.secondaryBtnText, { color: T.text }]}>Enter area manually</Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <>
-                <TouchableOpacity
-                  onPress={handleManualSubmit}
-                  disabled={!area.trim()}
-                  style={[s.primaryBtn, {
-                    backgroundColor: area.trim() ? T.text : T.border,
-                  }]}
-                  activeOpacity={0.85}
-                >
-                  <View style={[s.primaryDot, { backgroundColor: isDark ? "#1A1505" : T.goldLight }]} />
-                  <Text style={[s.primaryBtnText, { color: area.trim() ? T.bg : T.muted }]}>
-                    Show me what's on →
-                  </Text>
-                </TouchableOpacity>
+              {/* Primary sign-in CTA */}
+              <TouchableOpacity
+                onPress={handleSignIn}
+                style={[s.primaryBtn, { backgroundColor: T.text }]}
+                activeOpacity={0.85}
+              >
+                <Text style={[s.primaryBtnText, { color: T.bg }]}>
+                  Sign in to your account →
+                </Text>
+              </TouchableOpacity>
 
-                <View style={s.gap10} />
+              {/* Divider */}
+              <View style={s.orRow}>
+                <View style={[s.orLine, { backgroundColor: T.borderSub }]} />
+                <Text style={[s.orText, { color: T.muted }]}>or</Text>
+                <View style={[s.orLine, { backgroundColor: T.borderSub }]} />
+              </View>
 
-                <TouchableOpacity
-                  onPress={() => { setManual(false); setError(""); }}
-                  style={[s.secondaryBtn, { borderColor: T.border }]}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[s.secondaryBtnText, { color: T.text }]}>← Use my location instead</Text>
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
+              {/* Escape hatch — browse without signing in */}
+              <TouchableOpacity
+                onPress={() => setHasArea(false)}
+                style={s.ghostRow}
+              >
+                <Text style={[s.ghostText, { color: T.muted }]}>
+                  Continue without signing in
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            /* ── New user (or returning user who chose to skip) ─────────── */
+            <>
+              {/* ── CTA stack ──────────────────────────────────────────── */}
+              <View style={s.cta}>
+                {!manual ? (
+                  <>
+                    <TouchableOpacity
+                      onPress={handleUseLocation}
+                      disabled={loading}
+                      style={[s.primaryBtn, { backgroundColor: T.text }]}
+                      activeOpacity={0.85}
+                    >
+                      {/* Gold dot bullet */}
+                      <View style={[s.primaryDot, { backgroundColor: isDark ? "#1A1505" : T.goldLight }]} />
+                      <Text style={[s.primaryBtnText, { color: T.bg }]}>
+                        {loading ? "Detecting location…" : "Use my location"}
+                      </Text>
+                    </TouchableOpacity>
 
-          {/* ── Privacy line ──────────────────────────────────────────────── */}
-          <Text style={[s.privacy, { color: T.muted }]}>
-            Your location is never stored or shared with third parties.
-          </Text>
+                    <View style={s.gap10} />
+
+                    <TouchableOpacity
+                      onPress={() => setManual(true)}
+                      style={[s.secondaryBtn, { borderColor: T.border }]}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[s.secondaryBtnText, { color: T.text }]}>Enter area manually</Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <>
+                    <TouchableOpacity
+                      onPress={handleManualSubmit}
+                      disabled={!area.trim()}
+                      style={[s.primaryBtn, {
+                        backgroundColor: area.trim() ? T.text : T.border,
+                      }]}
+                      activeOpacity={0.85}
+                    >
+                      <View style={[s.primaryDot, { backgroundColor: isDark ? "#1A1505" : T.goldLight }]} />
+                      <Text style={[s.primaryBtnText, { color: area.trim() ? T.bg : T.muted }]}>
+                        Show me what's on →
+                      </Text>
+                    </TouchableOpacity>
+
+                    <View style={s.gap10} />
+
+                    <TouchableOpacity
+                      onPress={() => { setManual(false); setError(""); }}
+                      style={[s.secondaryBtn, { borderColor: T.border }]}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[s.secondaryBtnText, { color: T.text }]}>← Use my location instead</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+              </View>
+
+              {/* ── Privacy line ───────────────────────────────────────── */}
+              <Text style={[s.privacy, { color: T.muted }]}>
+                Your location is never stored or shared with third parties.
+              </Text>
+
+              {/* ── Already have an account? — new user only ───────────── */}
+              <TouchableOpacity
+                onPress={handleSignIn}
+                style={{ marginTop: 20, padding: 4 }}
+              >
+                <Text style={[s.signInLink, { color: T.muted }]}>
+                  Already have an account?{" "}
+                  <Text style={{ color: T.gold, fontWeight: "600" }}>Sign in</Text>
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
         </ScrollView>
       </View>
     </KeyboardAvoidingView>
@@ -501,5 +605,68 @@ const s = StyleSheet.create({
     textAlign: "center",
     marginTop: 14,
     maxWidth: 280,
+  } as TextStyle,
+
+  // ── Returning user card ───────────────────────────────────────────────────
+  returningCard: {
+    width: "100%",
+    borderWidth: 2,
+    borderRadius: 16,
+    padding: 20,
+    gap: 12,
+    marginBottom: 24,
+    shadowOffset: { width: 4, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 4,
+  } as ViewStyle,
+
+  returningLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    letterSpacing: 1.4,
+    fontFamily: "DMSans_700Bold",
+    textTransform: "uppercase",
+  } as TextStyle,
+
+  returningArea: {
+    fontSize: 17,
+    fontWeight: "700",
+    fontFamily: "PlayfairDisplay_700Bold",
+    marginBottom: 4,
+  } as TextStyle,
+
+  orRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  } as ViewStyle,
+
+  orLine: {
+    flex: 1,
+    height: 1.5,
+  } as ViewStyle,
+
+  orText: {
+    fontSize: 12,
+    fontFamily: "DMSans_400Regular",
+  } as TextStyle,
+
+  ghostRow: {
+    alignItems: "center",
+    padding: 4,
+  } as ViewStyle,
+
+  ghostText: {
+    fontSize: 13,
+    fontFamily: "DMSans_400Regular",
+    textDecorationLine: "underline",
+  } as TextStyle,
+
+  // ── Sign-in link (new user footer) ────────────────────────────────────────
+  signInLink: {
+    fontSize: 13,
+    fontFamily: "DMSans_400Regular",
+    textAlign: "center",
   } as TextStyle,
 });

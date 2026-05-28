@@ -624,15 +624,42 @@ export default function FeedScreen() {
 
       ) : (
 
-      /* ── All other filters — standard EventCard FlatList ─────────── */
+      /* ── All other filters — same card style as Mix layout ─────────── */
       <FlatList
         data={showAll ? events : filtered}
         keyExtractor={item => String(item.id)}
-        contentContainerStyle={styles.feed}
+        contentContainerStyle={[styles.feed, { paddingHorizontal: 0 }]}
         showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => (
-          <EventCard item={item} saved={saved.has(item.id)} onSave={handleToggle} T={T} />
-        )}
+        renderItem={({ item }) => {
+          if (isCommunityItem(item)) {
+            return (
+              <View style={{ paddingHorizontal: 22 }}>
+                <ListRow
+                  item={item} T={T}
+                  saved={saved.has(item.id)}
+                  onSave={() => handleToggle(item.id)}
+                  isLast={false}
+                />
+              </View>
+            );
+          }
+          if (item.type === "recommendation" && item.source !== "Viator" && item.category !== "Activities") {
+            return (
+              <View style={{ paddingHorizontal: 16 }}>
+                <EventCard item={item} saved={saved.has(item.id)} onSave={handleToggle} T={T} />
+              </View>
+            );
+          }
+          return (
+            <View style={{ paddingHorizontal: 16 }}>
+              <TicketCard
+                item={item} T={T}
+                saved={saved.has(item.id)}
+                onSave={() => handleToggle(item.id)}
+              />
+            </View>
+          );
+        }}
         ListHeaderComponent={(() => {
           const count = showAll ? events.length : filtered.length;
           if (remoteLoading || count === 0) return null;
@@ -640,7 +667,7 @@ export default function FeedScreen() {
             ? `${count} saved item${count !== 1 ? "s" : ""}`
             : `${count} result${count !== 1 ? "s" : ""}${activeFilter !== "All" ? ` · ${activeFilter}` : ""}${showAll && recs.length > 0 ? ` + ${recs.length} nearby` : ""}`;
           return (
-            <Text style={[styles.resultCount, { color: T.muted }]}>{label}</Text>
+            <Text style={[styles.resultCount, { color: T.muted, paddingHorizontal: 16 }]}>{label}</Text>
           );
         })()}
         ListFooterComponent={(
@@ -657,9 +684,11 @@ export default function FeedScreen() {
                 </Text>
                   <View style={[styles.dividerLine, { backgroundColor: T.gold }]} />
                 </View>
-                {recs.map(item => (
-                  <EventCard key={item.id} item={item} saved={saved.has(item.id)} onSave={handleToggle} T={T} />
-                ))}
+                <View style={{ paddingHorizontal: 16 }}>
+                  {recs.map(item => (
+                    <EventCard key={item.id} item={item} saved={saved.has(item.id)} onSave={handleToggle} T={T} />
+                  ))}
+                </View>
               </>
             )}
             {remoteLoading && (

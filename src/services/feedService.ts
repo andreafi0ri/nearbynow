@@ -14,7 +14,7 @@ import { getNearbyActivities } from "./activitiesService";
 import { getNightlife } from "./nightlifeService";
 import { getParksAndOutdoors } from "./parksService";
 import { SEARCH_CONFIG, shouldFetchGooglePlaces, metresToMiles } from "../config/searchConfig";
-import type { Coords } from "./recommendationsService";
+import { geocodeArea, type Coords } from "./recommendationsService";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { notifyNewEvents } from "../utils/notificationHelpers";
 
@@ -86,6 +86,16 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
   const subreddits  = getLocalSubreddits(area);
   const isLancaster = LANCASTER_KEYWORDS.some(kw => area.toLowerCase().includes(kw));
 
+  // ── Resolve coordinates ────────────────────────────────────────────────────
+  // feed.tsx passes coords only when they're already cached for this exact area.
+  // On a first load (or after switching areas) coords is undefined, which would
+  // cause every Google Places service to silently fall back to DEFAULT_LAT/LNG
+  // (Brooklyn, NY). Geocode the area string now so every parallel fetch below
+  // uses the correct location. geocodeArea caches results for 10 minutes, so
+  // repeat calls within the same session are free.
+  const resolvedCoords: Coords | undefined =
+    coords ?? (await geocodeArea(area).catch(() => null)) ?? undefined;
+
   // ── Step 1: Fetch ALL sources in parallel — event sources + always-on GP filters
   //
   // Filter-specific GP sources are fetched here unconditionally, exactly like
@@ -114,15 +124,15 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
     searchEventbrite(area),
     searchMeetup(area),
     searchTicketmaster(area),
-    searchTicketmasterSports(area, coords), // sports-only, 25-mile radius, 1-hr cache
+    searchTicketmasterSports(area, resolvedCoords), // sports-only, 25-mile radius, 1-hr cache
     isLancaster ? fetchVisitLancasterEvents() : Promise.resolve([]),
-    fetchFoodPlaces(area, coords),       // always-on → Food & Drink filter
-    fetchCinemas(area, coords),          // always-on → Cinema filter
-    searchViatorExperiences(area, coords), // always-on → Viator/Nearby
-    getShowtimes(area, coords),          // always-on → AMC filter
-    getNightlife(area, coords),          // always-on → Nightlife filter (hidden from All)
-    getParksAndOutdoors(area, coords),   // always-on → Outdoors filter  (hidden from All)
-    getNearbyActivities(area, coords),   // always-on → Activities filter (shown in All)
+    fetchFoodPlaces(area, resolvedCoords),       // always-on → Food & Drink filter
+    fetchCinemas(area, resolvedCoords),          // always-on → Cinema filter
+    searchViatorExperiences(area, resolvedCoords), // always-on → Viator/Nearby
+    getShowtimes(area, resolvedCoords),          // always-on → AMC filter
+    getNightlife(area, resolvedCoords),          // always-on → Nightlife filter (hidden from All)
+    getParksAndOutdoors(area, resolvedCoords),   // always-on → Outdoors filter  (hidden from All)
+    getNearbyActivities(area, resolvedCoords),   // always-on → Activities filter (shown in All)
   ]);
 
   const seed = mockEventsForArea(area);
@@ -158,7 +168,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
   let googlePlacesItems: EventItem[] = [];
 
   if (shouldFetch) {
-    const gpResult = await Promise.allSettled([getRecommendations(area, coords)]);
+    const gpResult = await Promise.allSettled([getRecommendations(area, resolvedCoords)]);
     googlePlacesItems = gpResult[0].status === "fulfilled"
       ? gpResult[0].value
       : (console.warn("[Feed] GP recommendations failed:", (gpResult[0] as PromiseRejectedResult).reason), []);
@@ -171,7 +181,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
 
   // ── Debug summary ─────────────────────────────────────────────────────────
   console.log("━━━ HEARBY FEED SUMMARY ━━━");
-  console.log(`Area: ${area} | Coords: ${coords ? `${coords.lat}, ${coords.lng}` : "none (using defaults)"}`);
+  console.log(`Area: ${area} | Coords: ${resolvedCoords ? `${resolvedCoords.lat.toFixed(4)}, ${resolvedCoords.lng.toFixed(4)}` : "none (geocoding failed)"}`);
   console.log("Results per source:");
   console.log(`  Reddit:           ${extract(redditResult).length}`);
   console.log(`  RSS:              ${extract(rssResult).length}`);

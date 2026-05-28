@@ -7,7 +7,6 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useTheme } from "../../src/hooks/useTheme";
-import { EventCard } from "../../src/components/EventCard";
 import { TicketCard, ListRow, SectionHeader } from "../../src/components/FeedCards";
 import { BottomSheet } from "../../src/components/BottomSheet";
 import { useSavedEvents } from "../../src/hooks/useSavedEvents";
@@ -592,7 +591,7 @@ export default function FeedScreen() {
             </View>
             <View style={{ paddingHorizontal: 16 }}>
               {mixRecItems.map(item => (
-                <EventCard key={item.id} item={item} saved={saved.has(item.id)} onSave={handleToggle} T={T} />
+                <TicketCard key={item.id} item={item} T={T} saved={saved.has(item.id)} onSave={() => handleToggle(item.id)} />
               ))}
             </View>
           </>
@@ -646,7 +645,7 @@ export default function FeedScreen() {
           if (item.type === "recommendation" && item.source !== "Viator" && item.category !== "Activities") {
             return (
               <View style={{ paddingHorizontal: 16 }}>
-                <EventCard item={item} saved={saved.has(item.id)} onSave={handleToggle} T={T} />
+                <TicketCard item={item} T={T} saved={saved.has(item.id)} onSave={() => handleToggle(item.id)} />
               </View>
             );
           }
@@ -686,7 +685,7 @@ export default function FeedScreen() {
                 </View>
                 <View style={{ paddingHorizontal: 16 }}>
                   {recs.map(item => (
-                    <EventCard key={item.id} item={item} saved={saved.has(item.id)} onSave={handleToggle} T={T} />
+                    <TicketCard key={item.id} item={item} T={T} saved={saved.has(item.id)} onSave={() => handleToggle(item.id)} />
                   ))}
                 </View>
               </>

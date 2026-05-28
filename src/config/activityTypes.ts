@@ -118,39 +118,13 @@ export const ACTIVITY_TYPES: ActivityType[] = [
     googleTypes: ["sports_complex"],
     tags: ["Climbing", "Active", "Sport"],
   },
-  {
-    id: "nightlife",
-    label: "Nightlife",
-    emoji: "🌙",
-    googleTypes: [
-      "night_club",
-      "bar",
-      "cocktail_bar",
-      "wine_bar",
-      "brewery",
-      "pub",
-      "karaoke",
-      // "jazz_club"  — NOT in Places API (New) Table 1 → HTTP 400
-      // "dance_hall" — NOT in Places API (New) Table 1 → HTTP 400
-    ],
-    tags: ["Nightlife", "Bar", "Drinks"],
-  },
-  {
-    id: "rooftop_bar",
-    label: "Rooftop Bars",
-    emoji: "🥂",
-    googleTypes: ["bar", "cocktail_bar"],
-    tags: ["Rooftop", "Cocktails", "Views"],
-  },
-  {
-    id: "jazz_club",
-    label: "Jazz & Blues",
-    emoji: "🎷",
-    // "jazz_club" is NOT in Places API (New) Table 1 → night_club as closest valid fallback
-    googleTypes: ["night_club"],
-    tags: ["Jazz", "Live Music", "Nightlife"],
-  },
 ];
+// Removed from ACTIVITY_TYPES (belong to the Nightlife filter, not Activities):
+//   "nightlife"   — bar, night_club, cocktail_bar, wine_bar, brewery, pub, karaoke
+//   "rooftop_bar" — bar, cocktail_bar
+//   "jazz_club"   — night_club
+// These types dominated the 20-result cap in smaller cities, crowding out
+// bowling alleys, arcades, escape rooms, etc.
 
 /** All unique Google Places types across every activity — used for a single broad search. */
 export const ALL_ACTIVITY_GOOGLE_TYPES: string[] = [

@@ -554,7 +554,15 @@ export async function searchNearbyActivities(
 
   const today = new Date().toISOString().split("T")[0];
 
-  const items: EventItem[] = places
+  // Exclude gyms and fitness centres: sports_complex in includedTypes can
+  // pull in places like Planet Fitness that Google also tags as "gym" or
+  // "fitness_center". Those belong in a Health/Fitness filter, not Activities.
+  const GYM_TYPES = new Set(["gym", "fitness_center"]);
+  const activityPlaces = places.filter(
+    p => !p.types?.some(t => GYM_TYPES.has(t))
+  );
+
+  const items: EventItem[] = activityPlaces
     .map((place): EventItem => {
       // Detect which activity type this place is (try first two Google types)
       const primaryType   = place.types?.[0] ?? "";

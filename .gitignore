@@ -8,3 +8,4 @@ web-build/
 .env
 .env.local
 .env.*.local
+.vercel

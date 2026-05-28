@@ -23,9 +23,6 @@ import { EventItem } from "../../src/data/mockEvents";
 import { EventCard } from "../../src/components/EventCard";
 import { BottomSheet } from "../../src/components/BottomSheet";
 import { getFeed } from "../../src/services/feedService";
-import { getNearbyActivities } from "../../src/services/activitiesService";
-import { getNightlife } from "../../src/services/nightlifeService";
-import { getParksAndOutdoors } from "../../src/services/parksService";
 import { searchViatorExperiences } from "../../src/services/viatorService";
 import { FILTERS, SOURCE_FILTERS, FilterOption } from "../../src/config/filterConfig";
 import { SEARCH_CONFIG } from "../../src/config/searchConfig";
@@ -92,11 +89,9 @@ export default function MapScreen() {
 
   const cameraRef = useRef<MapboxGL.Camera>(null);
 
-  const [feedItems, setFeedItems]           = useState<EventItem[]>([]);
-  const [viatorItems, setViatorItems]       = useState<EventItem[]>([]);
-  const [activityItems, setActivityItems]   = useState<EventItem[]>([]);
-  const [nightlifeItems, setNightlifeItems] = useState<EventItem[]>([]);
-  const [parksItems, setParksItems]         = useState<EventItem[]>([]);
+  const [feedItems, setFeedItems]     = useState<EventItem[]>([]);
+  const [viatorItems, setViatorItems] = useState<EventItem[]>([]);
+  // Nightlife, Activities, Outdoors items are now in feedItems via feedService (always-on)
   const [loading, setLoading]             = useState(false);
   const [selected, setSelected]         = useState<EventItem | null>(null);
   const [activeFilter, setActiveFilter] = useState("All");
@@ -176,54 +171,6 @@ export default function MapScreen() {
       .catch(() => setViatorItems([]));
   }, [activeArea, centre]);
 
-  // ── On-demand Activities fetch — fires when Activities filter is selected ──
-  useEffect(() => {
-    if (activeFilter !== "activities") { setActivityItems([]); return; }
-    const area = activeArea || searchVal;
-    if (!area) return;
-
-    const [centerLng, centerLat] = centre;
-    const coords = (centerLat !== SEARCH_CONFIG.DEFAULT_LAT || centerLng !== SEARCH_CONFIG.DEFAULT_LNG)
-      ? { lat: centerLat, lng: centerLng }
-      : undefined;
-
-    getNearbyActivities(area, coords)
-      .then(results => setActivityItems(results.filter(e => e.lat != null && e.lng != null)))
-      .catch(() => setActivityItems([]));
-  }, [activeFilter, activeArea, centre]);
-
-  // ── On-demand Nightlife fetch — fires when Nightlife filter is selected ───
-  useEffect(() => {
-    if (activeFilter !== "Nightlife") { setNightlifeItems([]); return; }
-    const area = activeArea || searchVal;
-    if (!area) return;
-
-    const [centerLng, centerLat] = centre;
-    const coords = (centerLat !== SEARCH_CONFIG.DEFAULT_LAT || centerLng !== SEARCH_CONFIG.DEFAULT_LNG)
-      ? { lat: centerLat, lng: centerLng }
-      : undefined;
-
-    getNightlife(area, coords)
-      .then(results => setNightlifeItems(results.filter(e => e.lat != null && e.lng != null)))
-      .catch(() => setNightlifeItems([]));
-  }, [activeFilter, activeArea, centre]);
-
-  // ── On-demand Parks & Outdoors fetch — fires when Outdoors filter is selected
-  useEffect(() => {
-    if (activeFilter !== "Outdoors") { setParksItems([]); return; }
-    const area = activeArea || searchVal;
-    if (!area) return;
-
-    const [centerLng, centerLat] = centre;
-    const coords = (centerLat !== SEARCH_CONFIG.DEFAULT_LAT || centerLng !== SEARCH_CONFIG.DEFAULT_LNG)
-      ? { lat: centerLat, lng: centerLng }
-      : undefined;
-
-    getParksAndOutdoors(area, coords)
-      .then(results => setParksItems(results.filter(e => e.lat != null && e.lng != null)))
-      .catch(() => setParksItems([]));
-  }, [activeFilter, activeArea, centre]);
-
   const handleAreaSelect = async (s: LocationSuggestion) => {
     setSearchVal(s.shortName);
     await AsyncStorage.setItem("hearby_lat", String(s.lat));
@@ -263,11 +210,13 @@ export default function MapScreen() {
   const filterLabel = filterCount > 0 ? String(filterCount) : "All";
   const freeFn = FILTERS.find(f => f.id === "Free")?.matchFn;
 
-  // Mirror feed's guard: some recommendation sources only appear under their own category filter
+  // Mirror feed's FILTER_ONLY_SOURCE_MAP: hide filter-specific sources from "All"
   const FILTER_ONLY_SOURCE_MAP: Record<string, string> = {
-    "Food Places":  "Food & Drink",
-    "Showtimes":    "Cinema",
-    "AMC Theatres": "AMC",
+    "Food Places":      "Food & Drink",
+    "Showtimes":        "Cinema",
+    "AMC Theatres":     "AMC",
+    "Nightlife Places": "Nightlife",
+    "Outdoor Places":   "Outdoors",
   };
 
   const catFilter  = useMemo(() => FILTERS.find(f => f.id === activeFilter) ?? FILTERS[0], [activeFilter]);
@@ -281,19 +230,13 @@ export default function MapScreen() {
     return next;
   });
 
-  // All items available for the map (feed + Viator + on-demand filters)
+  // All items for the map = feedItems (contains all categories) + any extra Viator pins
+  // with coords that weren't in the deduplicated feed result.
   const allItems = useMemo(() => {
-    // Viator items are already in feedItems via getFeed; viatorItems adds extras
-    // that have coords but might not have appeared in the feed threshold check.
     const feedIds = new Set(feedItems.map(e => e.id));
-    const extras = [
-      ...viatorItems,
-      ...activityItems,
-      ...nightlifeItems,
-      ...parksItems,
-    ].filter(e => !feedIds.has(e.id));
+    const extras  = viatorItems.filter(e => !feedIds.has(e.id));
     return [...feedItems, ...extras];
-  }, [feedItems, viatorItems, activityItems, nightlifeItems, parksItems]);
+  }, [feedItems, viatorItems]);
 
   const visible = useMemo(() => allItems.filter(e => {
     if (freeOnly && freeFn && !freeFn(e)) return false;
@@ -318,7 +261,7 @@ export default function MapScreen() {
       return e.date >= range[0] && e.date <= range[1];
     }
     return true;
-  }), [allItems, catFilter, srcFilters, range, freeOnly, activeFilter]);
+  }), [allItems, catFilter, srcFilters, range, freeOnly, activeFilter, FILTER_ONLY_SOURCE_MAP]);
 
   // GeoJSON for draw polygon overlay
   const drawGeoJSON = useMemo((): GeoJSON.Feature | null => {

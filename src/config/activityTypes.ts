@@ -2,12 +2,24 @@
 // Central config for all activity venue types used across Google Places.
 // Each entry maps an activity concept to Google Places type strings and
 // the emoji / tags that appear on EventItem cards.
+//
+// IMPORTANT: every string in googleTypes must be a confirmed valid type in
+// Google Places API (New) Table 1 (https://developers.google.com/maps/documentation/places/web-service/place-types).
+// A single invalid type causes the ENTIRE searchNearby request to return HTTP 400,
+// silently returning [] for ALL activities.
+//
+// Confirmed invalid (legacy API only) — DO NOT add back:
+//   "jazz_club"           — not in Table 1
+//   "dance_hall"          — not in Table 1
+//   "nature_reserve"      — not in Table 1
+//   "miniature_golf_course" — not in Table 1
+//   "adventure_sports_center" — not in Table 1
 
 export type ActivityType = {
   id: string;
   label: string;
   emoji: string;
-  googleTypes: string[]; // Google Places API includedTypes strings
+  googleTypes: string[]; // Google Places API (New) Table 1 includedTypes strings
   tags: string[];        // default tags for feed cards
 };
 
@@ -37,14 +49,16 @@ export const ACTIVITY_TYPES: ActivityType[] = [
     id: "mini_golf",
     label: "Mini Golf",
     emoji: "⛳",
-    googleTypes: ["miniature_golf_course"],
+    // "miniature_golf_course" is NOT in Places API (New) Table 1 → used amusement_center + golf_course
+    googleTypes: ["amusement_center", "golf_course"],
     tags: ["Mini Golf", "Outdoors", "Family"],
   },
   {
     id: "axe_throwing",
     label: "Axe Throwing",
     emoji: "🪓",
-    googleTypes: ["adventure_sports_center"],
+    // "adventure_sports_center" is NOT in Places API (New) Table 1 → sports_activity_location
+    googleTypes: ["sports_activity_location"],
     tags: ["Axe Throwing", "Adventure", "Groups"],
   },
   {
@@ -79,7 +93,8 @@ export const ACTIVITY_TYPES: ActivityType[] = [
     id: "go_karts",
     label: "Go-Karts",
     emoji: "🏎️",
-    googleTypes: ["amusement_park", "adventure_sports_center"],
+    // "adventure_sports_center" removed — not in Table 1
+    googleTypes: ["amusement_park", "sports_activity_location"],
     tags: ["Go-Karts", "Racing", "Fun"],
   },
   {
@@ -114,8 +129,9 @@ export const ACTIVITY_TYPES: ActivityType[] = [
       "wine_bar",
       "brewery",
       "pub",
-      "jazz_club",
-      "dance_hall",
+      "karaoke",
+      // "jazz_club"  — NOT in Places API (New) Table 1 → HTTP 400
+      // "dance_hall" — NOT in Places API (New) Table 1 → HTTP 400
     ],
     tags: ["Nightlife", "Bar", "Drinks"],
   },
@@ -130,7 +146,8 @@ export const ACTIVITY_TYPES: ActivityType[] = [
     id: "jazz_club",
     label: "Jazz & Blues",
     emoji: "🎷",
-    googleTypes: ["jazz_club"],
+    // "jazz_club" is NOT in Places API (New) Table 1 → night_club as closest valid fallback
+    googleTypes: ["night_club"],
     tags: ["Jazz", "Live Music", "Nightlife"],
   },
 ];

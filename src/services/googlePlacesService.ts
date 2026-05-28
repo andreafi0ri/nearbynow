@@ -341,14 +341,28 @@ async function gpFetch(endpoint: string, body: object): Promise<GpPlace[]> {
     });
 
     if (!res.ok) {
-      const err = await res.json().catch(() => ({} as GpResponse));
-      throw new Error((err as GpResponse).error?.message ?? `HTTP ${res.status}`);
+      const body = await res.json().catch(() => ({} as GpResponse));
+      const msg  = (body as GpResponse).error?.message ?? `HTTP ${res.status}`;
+      // Surface the full error so it's visible in the Metro console
+      console.error(
+        `[GooglePlaces] ❌ ${endpoint} → ${res.status}\n` +
+        `  Message: ${msg}\n` +
+        `  Tip: make sure "Places API (New)" (NOT the legacy Places API) is enabled\n` +
+        `  at https://console.cloud.google.com/apis/library/places-backend.googleapis.com`
+      );
+      throw new Error(msg);
     }
 
     const data: GpResponse = await res.json();
+    if (!data.places?.length) {
+      console.warn(`[GooglePlaces] ${endpoint} → 200 OK but 0 places returned`);
+    }
     return data.places ?? [];
   } catch (err) {
-    console.warn(`[GooglePlaces] ${endpoint} failed:`, err);
+    if (!(err instanceof Error && err.message.includes("HTTP "))) {
+      // Only log non-HTTP errors here — HTTP errors already logged above
+      console.warn(`[GooglePlaces] ${endpoint} failed:`, err);
+    }
     return [];
   } finally {
     clearTimeout(timer);
@@ -588,7 +602,12 @@ export async function searchNearbyActivities(
     .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
     .slice(0, 15);
 
-  activitiesCache.set(cacheKey, { data: items, expiresAt: Date.now() + ACTIVITIES_CACHE_TTL });
+  // Only cache successful results — never store an empty array.
+  // A stale empty-result cache (e.g. from a previous HTTP 400) would otherwise
+  // block every retry for 30 minutes, even after the underlying API issue is fixed.
+  if (items.length > 0) {
+    activitiesCache.set(cacheKey, { data: items, expiresAt: Date.now() + ACTIVITIES_CACHE_TTL });
+  }
   return items;
 }
 

@@ -3,7 +3,7 @@ import { fetchRedditPosts, getLocalSubreddits } from "./redditService";
 import { fetchRSSFeeds } from "./rssService";
 import { searchEventbrite } from "./eventbriteService";
 import { searchMeetup } from "./meetupService";
-import { searchTicketmaster } from "./ticketmasterService";
+import { searchTicketmaster, searchTicketmasterSports } from "./ticketmasterService";
 import { fetchVisitLancasterEvents } from "./visitLancasterService";
 import { deduplicateFeed, MultiSourceEvent } from "./deduplicationService";
 import { getRecommendations, type FeedResult } from "./recommendationEngine";
@@ -11,6 +11,8 @@ import { searchViatorExperiences } from "./viatorService";
 import { searchNearbyPlaces, searchPlacesByText, fetchCinemas } from "./googlePlacesService";
 import { getShowtimes } from "./showtimesService";
 import { getNearbyActivities } from "./activitiesService";
+import { getNightlife } from "./nightlifeService";
+import { getParksAndOutdoors } from "./parksService";
 import { SEARCH_CONFIG, shouldFetchGooglePlaces, metresToMiles } from "../config/searchConfig";
 import type { Coords } from "./recommendationsService";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -84,36 +86,43 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
   const subreddits  = getLocalSubreddits(area);
   const isLancaster = LANCASTER_KEYWORDS.some(kw => area.toLowerCase().includes(kw));
 
-  // ── Step 1: Fetch all non-Places sources + dedicated food places in parallel
+  // ── Step 1: Fetch ALL sources in parallel — event sources + always-on GP filters
+  //
+  // Filter-specific GP sources are fetched here unconditionally, exactly like
+  // Food Places and Cinema. Each uses its own 30-min/1-hr cache so re-selecting
+  // a filter never costs an extra API call. They carry distinct source names
+  // ("Nightlife Places", "Outdoor Places") so FILTER_ONLY_SOURCE_MAP can hide
+  // them from the "All" view while surfacing them in their dedicated filter.
   const [
     redditResult,
     rssResult,
     eventbriteResult,
     meetupResult,
     ticketmasterResult,
+    sportsResult,
     visitLancasterResult,
     foodPlacesResult,
     cinemaResult,
     viatorAlwaysResult,
     showtimesResult,
+    nightlifeResult,
+    parksResult,
+    activitiesResult,
   ] = await Promise.allSettled([
     Promise.all(subreddits.map(sub => fetchRedditPosts(sub, SEARCH_CONFIG.REDDIT_MAX_RESULTS))).then(r => r.flat()),
     fetchRSSFeeds(area),
     searchEventbrite(area),
     searchMeetup(area),
     searchTicketmaster(area),
+    searchTicketmasterSports(area, coords), // sports-only, 25-mile radius, 1-hr cache
     isLancaster ? fetchVisitLancasterEvents() : Promise.resolve([]),
-    // Food/drink venues are always fetched so the Food & Drink filter always works,
-    // regardless of how many events the other sources return.
-    fetchFoodPlaces(area, coords),
-    // Movie theaters are always fetched so the Cinema filter always works.
-    fetchCinemas(area, coords),
-    // Viator is always fetched so results are ready for the Nearby filter without
-    // waiting for a re-fetch. Shown in All only when threshold is triggered.
-    searchViatorExperiences(area, coords),
-    // AMC showtimes — always fetched for the All feed (today only) and Cinema filter.
-    // 1-hour cache ensures no double-fetching when Cinema filter is activated.
-    getShowtimes(area, coords),
+    fetchFoodPlaces(area, coords),       // always-on → Food & Drink filter
+    fetchCinemas(area, coords),          // always-on → Cinema filter
+    searchViatorExperiences(area, coords), // always-on → Viator/Nearby
+    getShowtimes(area, coords),          // always-on → AMC filter
+    getNightlife(area, coords),          // always-on → Nightlife filter (hidden from All)
+    getParksAndOutdoors(area, coords),   // always-on → Outdoors filter  (hidden from All)
+    getNearbyActivities(area, coords),   // always-on → Activities filter (shown in All)
   ]);
 
   const seed = mockEventsForArea(area);
@@ -128,77 +137,57 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
     ...extract(eventbriteResult),
     ...extract(meetupResult),
     ...extract(ticketmasterResult),
+    ...extract(sportsResult),        // Sports-only TM fetch (25-mile radius, dedup handles overlap)
     ...extract(visitLancasterResult),
     ...extract(foodPlacesResult),
     ...extract(cinemaResult),
-    ...showtimeItems,            // AMC showtimes appear in the All feed
+    ...showtimeItems,
     ...extract(viatorAlwaysResult),
+    ...extract(nightlifeResult),    // Nightlife Places — hidden from All via FILTER_ONLY_SOURCE_MAP
+    ...extract(parksResult),        // Outdoor Places   — hidden from All via FILTER_ONLY_SOURCE_MAP
+    ...extract(activitiesResult),   // Activities (category) — shown in All TicketCard section
   ];
 
-  // ── Step 2: Threshold check — decide whether to fetch Google Places + Viator
-  // Count actual events (type === "event") from all non-Places sources.
-  // Recommendations from Reddit etc. don't count toward the threshold.
+  // ── Step 2: GP recommendations (general food + attractions) ──────────────
+  // These are the "You might also like" items in the All view footer.
+  // Always fetched (threshold 9999 effectively removes the gate).
   const allRaw     = [...seed, ...live];
   const eventItems = allRaw.filter(item => item.type === "event");
   const shouldFetch = shouldFetchGooglePlaces(eventItems.length);
 
   let googlePlacesItems: EventItem[] = [];
-  let activityItems:    EventItem[] = [];
 
   if (shouldFetch) {
-    // Fetch Google Places recommendations and Activities in parallel.
-    // Viator is already always-on (fetched in Step 1 above).
-    const [googleResult, activitiesResult] = await Promise.allSettled([
-      getRecommendations(area, coords),
-      getNearbyActivities(area, coords),
-    ]);
-
-    googlePlacesItems = googleResult.status === "fulfilled"
-      ? googleResult.value
-      : (console.warn("[Feed] Google Places fetch failed:", (googleResult as PromiseRejectedResult).reason), []);
-
-    activityItems = activitiesResult.status === "fulfilled"
-      ? activitiesResult.value
-      : [];
-
-    console.log(
-      `[Feed] Threshold triggered — Google Places: ${googlePlacesItems.length}, ` +
-      `Activities: ${activityItems.length}`,
-    );
-  } else {
-    console.log(
-      `[Feed] Google Places skipped — ${eventItems.length} events found ` +
-        `(threshold: ${SEARCH_CONFIG.GOOGLE_PLACES_THRESHOLD})`,
-    );
+    const gpResult = await Promise.allSettled([getRecommendations(area, coords)]);
+    googlePlacesItems = gpResult[0].status === "fulfilled"
+      ? gpResult[0].value
+      : (console.warn("[Feed] GP recommendations failed:", (gpResult[0] as PromiseRejectedResult).reason), []);
   }
 
   // ── Step 3: Merge, deduplicate, sort ─────────────────────────────────────
-  const allItems = [...allRaw, ...googlePlacesItems, ...activityItems];
+  const allItems = [...allRaw, ...googlePlacesItems];
   const { events: deduplicated, stats } = deduplicateFeed(allItems);
   const items = sortByDate(deduplicated);
 
   // ── Debug summary ─────────────────────────────────────────────────────────
   console.log("━━━ HEARBY FEED SUMMARY ━━━");
-  console.log(`Area: ${area} | Coords: ${coords ? `${coords.lat}, ${coords.lng}` : "none"}`);
-  console.log("Radii in use:");
-  console.log(`  Google Places: ${SEARCH_CONFIG.GOOGLE_PLACES_RADIUS_METRES}m (${metresToMiles(SEARCH_CONFIG.GOOGLE_PLACES_RADIUS_METRES)} mi) — ${shouldFetch ? "ACTIVE" : "SKIPPED (≥5 events found)"}`);
-  console.log(`  Eventbrite:    ${SEARCH_CONFIG.EVENTBRITE_RADIUS_KM}km`);
-  console.log(`  Meetup:        ${SEARCH_CONFIG.MEETUP_RADIUS_KM}km`);
-  console.log(`  Ticketmaster:  ${SEARCH_CONFIG.TICKETMASTER_RADIUS_KM}km`);
+  console.log(`Area: ${area} | Coords: ${coords ? `${coords.lat}, ${coords.lng}` : "none (using defaults)"}`);
   console.log("Results per source:");
-  console.log(`  Reddit:          ${extract(redditResult).length}`);
-  console.log(`  RSS:             ${extract(rssResult).length}`);
-  console.log(`  Eventbrite:      ${extract(eventbriteResult).length}`);
-  console.log(`  Meetup:          ${extract(meetupResult).length}`);
-  console.log(`  Ticketmaster:    ${extract(ticketmasterResult).length}`);
-  console.log(`  Visit Lancaster: ${extract(visitLancasterResult).length}`);
-  console.log(`  Food Places:     ${extract(foodPlacesResult).length} (always-on)`);
-  console.log(`  Cinemas:         ${extract(cinemaResult).length} (always-on)`);
-  console.log(`  AMC Showtimes:   ${showtimeItems.length} showtime cards (${new Set(showtimeItems.map(s => s.location.split(",")[0])).size} theatres)`);
-  console.log(`  Viator:          ${extract(viatorAlwaysResult).length} (always-on — hidden from All until threshold)`);
-  console.log(`  Google Places:   ${googlePlacesItems.length} (threshold-gated recommendations)`);
-  console.log(`  Activities:      ${activityItems.length} (Google Places, threshold-gated)`);
-  console.log(`Google Places threshold: ${SEARCH_CONFIG.GOOGLE_PLACES_THRESHOLD} — ${shouldFetch ? "SHOWN (too few events)" : "NOT shown (enough events)"}`);
+  console.log(`  Reddit:           ${extract(redditResult).length}`);
+  console.log(`  RSS:              ${extract(rssResult).length}`);
+  console.log(`  Eventbrite:       ${extract(eventbriteResult).length}`);
+  console.log(`  Meetup:           ${extract(meetupResult).length}`);
+  console.log(`  Ticketmaster:     ${extract(ticketmasterResult).length}`);
+  console.log(`  TM Sports:        ${extract(sportsResult).length} (sports-only, 25mi radius)`);
+  console.log(`  Visit Lancaster:  ${extract(visitLancasterResult).length}`);
+  console.log(`  Food Places:      ${extract(foodPlacesResult).length} (always-on, filter-only)`);
+  console.log(`  Cinemas:          ${extract(cinemaResult).length} (always-on)`);
+  console.log(`  AMC Showtimes:    ${showtimeItems.length} cards`);
+  console.log(`  Viator:           ${extract(viatorAlwaysResult).length} (always-on)`);
+  console.log(`  Nightlife Places: ${extract(nightlifeResult).length} (always-on, filter-only)`);
+  console.log(`  Outdoor Places:   ${extract(parksResult).length} (always-on, filter-only)`);
+  console.log(`  Activities:       ${extract(activitiesResult).length} (always-on, shown in All)`);
+  console.log(`  GP Recs:          ${googlePlacesItems.length} (recommendations footer)`);
   console.log("Deduplication stats:");
   console.log(`  Input:                 ${stats.inputCount} items`);
   console.log(`  Output:                ${stats.outputCount} items`);

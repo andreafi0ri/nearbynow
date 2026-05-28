@@ -1,7 +1,16 @@
 // src/services/meetupService.ts
 //
-// Meetup GraphQL API — no API key required for public event data.
-// Docs: https://www.meetup.com/api/guide
+// Meetup GraphQL API — requires an OAuth Bearer token.
+// Docs:  https://www.meetup.com/api/guide
+// Keys:  https://www.meetup.com/api/oauth/list/
+//
+// Add to .env.local:
+//   EXPO_PUBLIC_MEETUP_KEY=your_access_token
+//
+// Note: browser CORS blocks direct requests on web — this service only
+// produces results on React Native / Expo Go.  A server-side proxy at
+// app/api/meetup+api.ts would be needed to support web (requires
+// expo-router server-output mode).
 
 import { EventItem } from "../data/mockEvents";
 import { geocodeArea } from "./recommendationsService";
@@ -162,13 +171,21 @@ const DEFAULT_LON = SEARCH_CONFIG.DEFAULT_LNG;  // -73.9442
 
 /**
  * Searches Meetup for in-person public events near the given area string.
- * No API key required — uses the Meetup public GraphQL endpoint.
+ * Requires EXPO_PUBLIC_MEETUP_KEY — Meetup now mandates OAuth Bearer tokens.
  * Online-only events are excluded.
  *
  * @param area - Human-readable area name e.g. "Brixton, London"
- * @returns Up to 10 EventItems, or [] on failure
+ * @returns Up to 10 EventItems, or [] on failure / no key
  */
 export async function searchMeetup(area: string): Promise<EventItem[]> {
+  const apiKey = process.env.EXPO_PUBLIC_MEETUP_KEY;
+  if (!apiKey) {
+    // Meetup API now requires OAuth auth — skip silently when no key configured.
+    // Set EXPO_PUBLIC_MEETUP_KEY in .env.local to enable Meetup results.
+    console.warn("[Meetup] No EXPO_PUBLIC_MEETUP_KEY set — skipping. See https://www.meetup.com/api/oauth/list/");
+    return [];
+  }
+
   try {
     // Geocode the area to get lat/lon for the GraphQL query
     const coords = await geocodeArea(area);
@@ -177,7 +194,11 @@ export async function searchMeetup(area: string): Promise<EventItem[]> {
 
     const res = await fetch("https://api.meetup.com/gql", {
       method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
       body: JSON.stringify({
         query: MEETUP_QUERY,
         variables: { lat, lon, radius: SEARCH_CONFIG.MEETUP_RADIUS_KM },

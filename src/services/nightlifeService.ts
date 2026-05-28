@@ -13,6 +13,8 @@ import { EventItem } from "../data/mockEvents";
 import { searchNearbyPlaces } from "./googlePlacesService";
 import { SEARCH_CONFIG } from "../config/searchConfig";
 
+// Only types confirmed valid for Google Places API (New) Nearby Search (Table 1).
+// Any invalid type in the array causes the ENTIRE request to fail with HTTP 400.
 const NIGHTLIFE_TYPES = [
   "night_club",
   "bar",
@@ -20,9 +22,9 @@ const NIGHTLIFE_TYPES = [
   "wine_bar",
   "brewery",
   "pub",
-  "jazz_club",
-  "dance_hall",
   "karaoke",
+  // Removed: "jazz_club"  — not in Places API (New) Table 1 → HTTP 400
+  // Removed: "dance_hall" — not in Places API (New) Table 1 → HTTP 400
 ];
 
 const nightlifeCache = new Map<string, { data: EventItem[]; expiresAt: number }>();
@@ -66,9 +68,12 @@ export async function getNightlife(
     return [];
   });
 
-  // Override category and styling — Google Places returns these as "Food & Drink"
+  // Override category and styling — Google Places returns these as "Food & Drink".
+  // Use a distinct source name so FILTER_ONLY_SOURCE_MAP can exclude them from the
+  // "All" feed while still surfacing them under the Nightlife filter.
   const nightlifeItems: EventItem[] = results.map(item => ({
     ...item,
+    source:   "Nightlife Places",
     category: "Nightlife",
     catColor: "#4A1570",   // deep purple
     catDot:   "#9B59B6",
@@ -79,10 +84,15 @@ export async function getNightlife(
   // Best bars first
   nightlifeItems.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
 
-  nightlifeCache.set(cacheKey, {
-    data:      nightlifeItems,
-    expiresAt: Date.now() + CACHE_TTL,
-  });
+  // Only cache successful results — never store an empty array.
+  // A stale empty-result cache (e.g. from a previous HTTP 400) would otherwise
+  // block every retry for 30 minutes, even after the underlying API issue is fixed.
+  if (nightlifeItems.length > 0) {
+    nightlifeCache.set(cacheKey, {
+      data:      nightlifeItems,
+      expiresAt: Date.now() + CACHE_TTL,
+    });
+  }
 
   console.log(`[Nightlife] ${nightlifeItems.length} venues for "${area}"`);
   return nightlifeItems;

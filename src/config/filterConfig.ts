@@ -104,7 +104,15 @@ export const FILTERS: FilterOption[] = [
     id: "Sport",
     label: "Sport",
     icon: "🏃",
-    matchFn: item => item.category === "Sport",
+    matchFn: item =>
+      item.category === "Sport" ||
+      // Catch TM events whose segment resolved to Sport but category might differ,
+      // or general-fetch TM items with explicit sport genre tags.
+      (item.source === "Ticketmaster" &&
+        item.tags?.some(t =>
+          ["MLB", "NBA", "NFL", "NHL", "MLS", "NCAA", "Sports",
+           "Tennis", "Golf", "Boxing", "Racing"].includes(t)
+        ) === true),
   },
   {
     id: "activities",
@@ -171,7 +179,8 @@ export const SOURCE_FILTERS: FilterOption[] = [
     icon: "📰",
     matchFn: item =>
       !item.source.startsWith("r/") &&
-      !["Eventbrite", "Meetup", "Ticketmaster", "Google Places", "Showtimes", "Viator", "Food Places"].includes(item.source),
+      !["Eventbrite", "Meetup", "Ticketmaster", "Google Places", "Showtimes", "Viator",
+        "Food Places", "Nightlife Places", "Outdoor Places", "AMC Theatres"].includes(item.source),
   },
   {
     id: "Eventbrite",

@@ -257,6 +257,42 @@ export const MOCK_EVENTS: EventItem[] = [
     tags: ["Free", "Outdoors", "Brooklyn"],
   },
 
+  // ── Sports Tickets mocks — dev testing for Sport filter and map pins ─────
+  {
+    id: 21, type: "event",
+    title: "New York Mets vs. Philadelphia Phillies",
+    desc: "MLB regular season game at Citi Field. Get your tickets before they sell out!",
+    longDesc: "Catch the Mets take on division rivals the Philadelphia Phillies at Citi Field in Queens. Enjoy a classic ballpark experience with hot dogs, great views, and live MLB action.",
+    time: "Sat 1:10 PM",
+    location: "Citi Field, Queens, NY",
+    lat: 40.7571, lng: -73.8458,
+    date: nextWeekday(6),
+    startIso: nextWeekday(6) + "T13:10:00",
+    endIso:   nextWeekday(6) + "T16:30:00",
+    source: "Ticketmaster", category: "Sport",
+    catColor: "#1A9E98", catDot: "#3ABFB8",
+    saves: 54, img: "⚾",
+    booking: { label: "From $45", url: "https://www.ticketmaster.com", affiliate: true },
+    tags: ["MLB", "Baseball", "From $45"],
+  },
+  {
+    id: 22, type: "event",
+    title: "Brooklyn Nets vs. Boston Celtics",
+    desc: "NBA game at Barclays Center. Witness the rivalry live courtside.",
+    longDesc: "The Brooklyn Nets host the Boston Celtics in this thrilling NBA matchup at Barclays Center. One of the most electric atmospheres in basketball.",
+    time: "Wed 7:30 PM",
+    location: "Barclays Center, Brooklyn, NY",
+    lat: 40.6826, lng: -73.9754,
+    date: nextWeekday(3),
+    startIso: nextWeekday(3) + "T19:30:00",
+    endIso:   nextWeekday(3) + "T22:00:00",
+    source: "Ticketmaster", category: "Sport",
+    catColor: "#1A9E98", catDot: "#3ABFB8",
+    saves: 89, img: "🏀",
+    booking: { label: "From $78", url: "https://www.ticketmaster.com", affiliate: true },
+    tags: ["NBA", "Basketball", "From $78"],
+  },
+
   // ── Deduplication test data ────────────────────────────────────────────────
   // id:8 should merge with id:1 (hard merge — same event, two sources)
   // id:9 should NOT merge with id:2 (fuzzy match — different location string)

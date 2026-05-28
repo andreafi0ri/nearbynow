@@ -13,9 +13,6 @@ import { EventItem } from "../../src/data/mockEvents";
 import { EventCard } from "../../src/components/EventCard";
 import { BottomSheet } from "../../src/components/BottomSheet";
 import { getFeed } from "../../src/services/feedService";
-import { getNearbyActivities } from "../../src/services/activitiesService";
-import { getNightlife } from "../../src/services/nightlifeService";
-import { getParksAndOutdoors } from "../../src/services/parksService";
 import { fetchNearbyPlaces } from "../../src/services/recommendationsService";
 import { FILTERS, SOURCE_FILTERS, FilterOption } from "../../src/config/filterConfig";
 import { LocationInput } from "../../src/components/LocationInput";
@@ -94,22 +91,15 @@ export default function MapScreen() {
   const drawModeRef     = useRef(false);
 
   const [mapboxLoaded, setMapboxLoaded] = useState(!!(window as any).mapboxgl);
-  const [feedPosts, setFeedPosts]           = useState<EventItem[]>([]);
-  const [recItems, setRecItems]             = useState<EventItem[]>([]);
-  const [activityItems, setActivityItems]   = useState<EventItem[]>([]);
-  const [nightlifeItems, setNightlifeItems] = useState<EventItem[]>([]);
-  const [parksItems, setParksItems]         = useState<EventItem[]>([]);
-  // feedItems drives map markers (incl. dynamic recs as map pans + on-demand filters)
+  const [feedPosts, setFeedPosts] = useState<EventItem[]>([]);
+  const [recItems, setRecItems]   = useState<EventItem[]>([]);
+  // feedItems = feed result + dynamic map-move recs; all categories (Nightlife, Activities,
+  // Outdoors) are already inside feedPosts via feedService's always-on fetches.
   const feedItems = useMemo(() => {
-    const base = [...feedPosts, ...recItems];
+    const base    = [...feedPosts, ...recItems];
     const baseIds = new Set(base.map(e => e.id));
-    const extras = [
-      ...activityItems,
-      ...nightlifeItems,
-      ...parksItems,
-    ].filter(e => !baseIds.has(e.id));
-    return [...base, ...extras];
-  }, [feedPosts, recItems, activityItems, nightlifeItems, parksItems]);
+    return [...base, ...recItems.filter(e => !baseIds.has(e.id))];
+  }, [feedPosts, recItems]);
   // listFeedItems is frozen to the getFeed result so the list matches the feed screen
   const [listFeedItems, setListFeedItems] = useState<EventItem[]>([]);
   const [loading, setLoading]           = useState(false);
@@ -154,11 +144,13 @@ export default function MapScreen() {
   const filterLabel = filterCount > 0 ? String(filterCount) : "All";
   const freeFn = FILTERS.find(f => f.id === "Free")?.matchFn;
 
-  // Mirror feed's guard: some recommendation sources only appear under their own category filter
+  // Mirror feed's FILTER_ONLY_SOURCE_MAP
   const FILTER_ONLY_SOURCE_MAP: Record<string, string> = {
-    "Food Places":  "Food & Drink",
-    "Showtimes":    "Cinema",
-    "AMC Theatres": "AMC",
+    "Food Places":      "Food & Drink",
+    "Showtimes":        "Cinema",
+    "AMC Theatres":     "AMC",
+    "Nightlife Places": "Nightlife",
+    "Outdoor Places":   "Outdoors",
   };
 
   // ── Filtered views ──────────────────────────────────────────────────────────
@@ -182,36 +174,21 @@ export default function MapScreen() {
     return true;
   }), [feedItems, catFilter, srcFilters, range, freeOnly]);
 
-  const listItems = useMemo(() => {
-    // Merge on-demand items into the list pool when their filter is active
-    let pool = listFeedItems;
-    const poolIds = () => new Set(pool.map(e => e.id));
-    if (activeFilter === "activities" && activityItems.length > 0) {
-      const ids = poolIds();
-      pool = [...pool, ...activityItems.filter(e => !ids.has(e.id))];
-    } else if (activeFilter === "Nightlife" && nightlifeItems.length > 0) {
-      const ids = poolIds();
-      pool = [...pool, ...nightlifeItems.filter(e => !ids.has(e.id))];
-    } else if (activeFilter === "Outdoors" && parksItems.length > 0) {
-      const ids = poolIds();
-      pool = [...pool, ...parksItems.filter(e => !ids.has(e.id))];
+  // listItems filters the frozen getFeed result for the sidebar list.
+  // All categories (Nightlife, Activities, Outdoors) are already in listFeedItems.
+  const listItems = useMemo(() => listFeedItems.filter(e => {
+    if (freeOnly && freeFn && !freeFn(e)) return false;
+    const requiredCat = FILTER_ONLY_SOURCE_MAP[e.source];
+    if (requiredCat && activeFilter !== requiredCat) return false;
+    if (!catFilter.matchFn(e)) return false;
+    if (srcFilters.length > 0 && !srcFilters.some(f => f.matchFn(e))) return false;
+    if (range) {
+      if (e.type === "recommendation") return true;
+      if (!e.date) return false;
+      return e.date >= range[0] && e.date <= range[1];
     }
-    return pool.filter(e => {
-      if (freeOnly && freeFn && !freeFn(e)) return false;
-      // Match feed's FILTER_ONLY_SOURCE_MAP: hide food/showtime recs outside their category
-      const requiredCat = FILTER_ONLY_SOURCE_MAP[e.source];
-      if (requiredCat && activeFilter !== requiredCat) return false;
-      if (!catFilter.matchFn(e)) return false;
-      if (srcFilters.length > 0 && !srcFilters.some(f => f.matchFn(e))) return false;
-      // Recommendations pass date filter regardless (same as feed screen)
-      if (range) {
-        if (e.type === "recommendation") return true;
-        if (!e.date) return false;
-        return e.date >= range[0] && e.date <= range[1];
-      }
-      return true;
-    });
-  }, [listFeedItems, activityItems, nightlifeItems, parksItems, catFilter, srcFilters, range, freeOnly, activeFilter]);
+    return true;
+  }), [listFeedItems, catFilter, srcFilters, range, freeOnly, activeFilter, FILTER_ONLY_SOURCE_MAP]);
 
   // ── Load Mapbox GL JS from CDN ───────────────────────────────────────────────
   useEffect(() => {
@@ -349,63 +326,6 @@ export default function MapScreen() {
       .catch(() => { setFeedPosts([]); setRecItems([]); })
       .finally(() => setLoading(false));
   }, [activeArea]);
-
-  // ── On-demand Activities fetch — fires when Activities filter is selected ──
-  useEffect(() => {
-    if (activeFilter !== "activities") { setActivityItems([]); return; }
-    const area = activeArea || searchVal;
-    if (!area) return;
-
-    Promise.all([
-      AsyncStorage.getItem("hearby_lat"),
-      AsyncStorage.getItem("hearby_lng"),
-      AsyncStorage.getItem("hearby_coords_area"),
-    ]).then(([latStr, lngStr, coordsArea]) => {
-      const coords = latStr && lngStr && coordsArea === area
-        ? { lat: parseFloat(latStr), lng: parseFloat(lngStr) }
-        : undefined;
-      return getNearbyActivities(area, coords);
-    }).then(results => setActivityItems(results.filter(e => e.lat != null && e.lng != null)))
-      .catch(() => setActivityItems([]));
-  }, [activeFilter, activeArea]);
-
-  // ── On-demand Nightlife fetch — fires when Nightlife filter is selected ───
-  useEffect(() => {
-    if (activeFilter !== "Nightlife") { setNightlifeItems([]); return; }
-    const area = activeArea || searchVal;
-    if (!area) return;
-
-    Promise.all([
-      AsyncStorage.getItem("hearby_lat"),
-      AsyncStorage.getItem("hearby_lng"),
-      AsyncStorage.getItem("hearby_coords_area"),
-    ]).then(([latStr, lngStr, coordsArea]) => {
-      const coords = latStr && lngStr && coordsArea === area
-        ? { lat: parseFloat(latStr), lng: parseFloat(lngStr) }
-        : undefined;
-      return getNightlife(area, coords);
-    }).then(results => setNightlifeItems(results.filter(e => e.lat != null && e.lng != null)))
-      .catch(() => setNightlifeItems([]));
-  }, [activeFilter, activeArea]);
-
-  // ── On-demand Parks & Outdoors fetch — fires when Outdoors filter is selected
-  useEffect(() => {
-    if (activeFilter !== "Outdoors") { setParksItems([]); return; }
-    const area = activeArea || searchVal;
-    if (!area) return;
-
-    Promise.all([
-      AsyncStorage.getItem("hearby_lat"),
-      AsyncStorage.getItem("hearby_lng"),
-      AsyncStorage.getItem("hearby_coords_area"),
-    ]).then(([latStr, lngStr, coordsArea]) => {
-      const coords = latStr && lngStr && coordsArea === area
-        ? { lat: parseFloat(latStr), lng: parseFloat(lngStr) }
-        : undefined;
-      return getParksAndOutdoors(area, coords);
-    }).then(results => setParksItems(results.filter(e => e.lat != null && e.lng != null)))
-      .catch(() => setParksItems([]));
-  }, [activeFilter, activeArea]);
 
   // ── Draw overlay ─────────────────────────────────────────────────────────────
   useEffect(() => {

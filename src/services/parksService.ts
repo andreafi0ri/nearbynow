@@ -23,7 +23,7 @@ const PARKS_TYPES = [
   "campground",
   "marina",
   "beach",
-  "nature_reserve",
+  // "nature_reserve" — NOT a valid Google Places API (New) includedType; causes HTTP 400
   "playground",
   "sports_complex",
   "golf_course",
@@ -74,9 +74,12 @@ export async function getParksAndOutdoors(
     return [];
   });
 
-  // Override category and styling for consistent Outdoors presentation
+  // Override category and styling for consistent Outdoors presentation.
+  // Use a distinct source name so FILTER_ONLY_SOURCE_MAP can exclude them from the
+  // "All" feed while still surfacing them under the Outdoors filter.
   const parksItems: EventItem[] = results.map(item => ({
     ...item,
+    source:   "Outdoor Places",
     category: "Outdoors",
     catColor: "#2D7A3A",   // forest green
     catDot:   "#4AAD5C",
@@ -84,10 +87,15 @@ export async function getParksAndOutdoors(
     tags:     buildParksTags(item),
   }));
 
-  parksCache.set(cacheKey, {
-    data:      parksItems,
-    expiresAt: Date.now() + CACHE_TTL,
-  });
+  // Only cache successful results — never store an empty array.
+  // A stale empty-result cache (e.g. from a previous HTTP 400) would otherwise
+  // block every retry for 1 hour, even after the underlying API issue is fixed.
+  if (parksItems.length > 0) {
+    parksCache.set(cacheKey, {
+      data:      parksItems,
+      expiresAt: Date.now() + CACHE_TTL,
+    });
+  }
 
   console.log(`[Parks & Outdoors] ${parksItems.length} Google Places venues for "${area}"`);
   return parksItems;

@@ -27,13 +27,14 @@ export const SEARCH_CONFIG = {
   TICKETMASTER_RADIUS_KM: 16,           // ~10 miles
 
   // ── Google Places threshold ──────────────────────────
-  // Google Places results are ONLY fetched and shown
-  // when the total number of live events from ALL other
-  // sources (Reddit, Eventbrite, Meetup, Ticketmaster,
-  // Facebook, RSS) combined is LESS THAN this number.
-  // If event count >= GOOGLE_PLACES_THRESHOLD → skip
-  // Google Places entirely, do not fetch, do not show.
-  GOOGLE_PLACES_THRESHOLD: 5,
+  // Google Places results are fetched when the total number
+  // of live events from ALL other sources combined is LESS
+  // THAN this number.  Set to 9999 so GP recommendations are
+  // always included regardless of how many events exist — this
+  // ensures the "Google Places" source filter always has results
+  // and the Mix layout's recommendations footer is populated
+  // even in event-rich cities like NYC.
+  GOOGLE_PLACES_THRESHOLD: 9999,
 
   // ── Sparse area radius expansion ────────────────────
   // When Google Places IS triggered (events < 5),
@@ -84,9 +85,8 @@ export const getRadiusLabel = (metres: number): string => {
  * Determines whether Google Places should be fetched based on how many live
  * events were found from other sources.
  *
- * Rule: ONLY fetch Google Places if eventCount < GOOGLE_PLACES_THRESHOLD (5).
- * This check happens BEFORE the API call — if events ≥ 5, the API is never
- * called, saving quota and improving load speed.
+ * Rule: fetch Google Places when eventCount < GOOGLE_PLACES_THRESHOLD.
+ * With the threshold set to 9999, this effectively always returns true.
  *
  * @param eventCount - total live events found from all non-Places sources
  * @returns true if Google Places should be fetched, false if not

@@ -43,7 +43,9 @@ export default function ProfileScreen() {
   const [showRecs, setShowRecs] = useState(false);
   const [healthResults, setHealthResults] = useState("");
   const [healthLoading, setHealthLoading] = useState(false);
-  const [isSignedIn, setIsSignedIn] = useState(false);
+
+  // Derived directly from useAuth — always in sync, no async gap on mount.
+  const isSignedIn = !!session;
 
   // Load persisted profile values on mount (survives app restarts)
   useEffect(() => {
@@ -54,8 +56,6 @@ export default function ProfileScreen() {
       ]);
       if (savedName)   setUsername(savedName);
       if (savedAvatar) setAvatar(savedAvatar);
-      const { data: { session } } = await supabase.auth.getSession();
-      setIsSignedIn(!!session?.user);
     };
     load().catch(() => {});
   }, []);
@@ -77,15 +77,6 @@ export default function ProfileScreen() {
       AsyncStorage.getItem("nearbynow_email").then(v => { if (v) setEmail(v); });
     }
   }, [profile]);
-
-  // Keep isSignedIn in sync if the user signs in/out in another tab or screen
-  useEffect(() => {
-    const { data: { subscription } } =
-      supabase.auth.onAuthStateChange((event, session) => {
-        setIsSignedIn(!!session?.user);
-      });
-    return () => subscription.unsubscribe();
-  }, []);
 
   const saveName = async () => {
     const trimmed = nameInput.trim();

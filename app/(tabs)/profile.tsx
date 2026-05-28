@@ -390,10 +390,9 @@ export default function ProfileScreen() {
           {[
             { key: "breaking", label: "Breaking local news",  sub: "Incidents, closures, urgent updates" },
             { key: "events",   label: "New events nearby",    sub: "When new events appear in your area" },
-            { key: "recs",     label: "Recommendations",      sub: "New restaurants and places to try" },
             { key: "weekly",   label: "Weekly digest email",  sub: "Every Monday morning summary" },
           ].map((n, i) => (
-            <View key={n.key} style={[styles.notifRow, { borderBottomColor: T.borderSub, borderBottomWidth: i < 3 ? 1.5 : 0 }]}>
+            <View key={n.key} style={[styles.notifRow, { borderBottomColor: T.borderSub, borderBottomWidth: i < 2 ? 1.5 : 0 }]}>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.notifLabel, { color: T.text }]}>{n.label}</Text>
                 <Text style={[styles.notifSub, { color: T.muted }]}>{n.sub}</Text>

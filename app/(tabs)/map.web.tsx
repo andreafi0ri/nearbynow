@@ -151,6 +151,7 @@ export default function MapScreen() {
     "AMC Theatres":     "AMC",
     "Nightlife Places": "Nightlife",
     "Outdoor Places":   "Outdoors",
+    "Wellness Places":  "wellness",
   };
 
   // ── Filtered views ──────────────────────────────────────────────────────────

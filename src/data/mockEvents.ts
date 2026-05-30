@@ -293,6 +293,27 @@ export const MOCK_EVENTS: EventItem[] = [
     tags: ["NBA", "Basketball", "From $78"],
   },
 
+  {
+    id: 23, type: "recommendation",
+    title: "Aire Ancient Baths",
+    desc: "Luxury thermal spa in Tribeca. Ancient bathing rituals in a stunning converted building.",
+    longDesc: "Inspired by the ancient bathing traditions of Rome, Greece and the Ottoman Empire, Aire Ancient Baths offers a unique wellness experience in a beautifully restored building in Tribeca. Thermal pools, aromatherapy steam rooms, salt rooms and massage treatments.",
+    time: "Open until 11:00 PM",
+    location: "88 Franklin St, Tribeca, New York",
+    lat: 40.7183, lng: -74.0071,
+    date: fmt(today),
+    source: "Google Places", category: "Wellness",
+    catColor: "#C25F8F", catDot: "#E88AB4",
+    saves: 312, img: "💆",
+    booking: {
+      label: "Book a Treatment",
+      url: "https://www.beaire.com/en/new-york",
+      affiliate: false,
+    },
+    rating: 4.8, reviews: 2341,
+    tags: ["Spa", "Wellness", "Luxury"],
+  },
+
   // ── Deduplication test data ────────────────────────────────────────────────
   // id:8 should merge with id:1 (hard merge — same event, two sources)
   // id:9 should NOT merge with id:2 (fuzzy match — different location string)
@@ -325,7 +346,7 @@ export const MOCK_EVENTS: EventItem[] = [
 ];
 
 export const CATEGORY_FILTERS = [
-  "All", "Events", "Food & Drink", "Nightlife", "Music", "Community", "Sport", "Activities", "Outdoors", "Nearby",
+  "All", "Events", "Food & Drink", "Nightlife", "Music", "Community", "Sport", "Activities", "Wellness", "Outdoors", "Nearby",
 ];
 
 export const DATE_PRESETS = [
@@ -357,6 +378,7 @@ export const SOURCE_COLORS: Record<string, string> = {
   "Nashville Post":     "#1ABC9C",
   "AMC Theatres":       "#CC0000",
   "Activities":         "#1A9E98",
+  "Wellness":           "#C25F8F",
   "Nightlife":          "#4A1570",
   "Outdoors":           "#2D7A3A",
 };

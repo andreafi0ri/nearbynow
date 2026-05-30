@@ -217,6 +217,7 @@ export default function MapScreen() {
     "AMC Theatres":     "AMC",
     "Nightlife Places": "Nightlife",
     "Outdoor Places":   "Outdoors",
+    "Wellness Places":  "wellness",
   };
 
   const catFilter  = useMemo(() => FILTERS.find(f => f.id === activeFilter) ?? FILTERS[0], [activeFilter]);

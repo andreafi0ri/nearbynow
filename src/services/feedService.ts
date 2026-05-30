@@ -10,7 +10,7 @@ import { getRecommendations, type FeedResult } from "./recommendationEngine";
 import { searchViatorExperiences } from "./viatorService";
 import { searchNearbyPlaces, searchPlacesByText, fetchCinemas } from "./googlePlacesService";
 import { getShowtimes } from "./showtimesService";
-import { getNearbyActivities } from "./activitiesService";
+import { getNearbyActivities, getWellnessVenues } from "./activitiesService";
 import { getNightlife } from "./nightlifeService";
 import { getParksAndOutdoors } from "./parksService";
 import { SEARCH_CONFIG, shouldFetchGooglePlaces, metresToMiles } from "../config/searchConfig";
@@ -118,6 +118,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
     nightlifeResult,
     parksResult,
     activitiesResult,
+    wellnessResult,
   ] = await Promise.allSettled([
     Promise.all(subreddits.map(sub => fetchRedditPosts(sub, SEARCH_CONFIG.REDDIT_MAX_RESULTS))).then(r => r.flat()),
     fetchRSSFeeds(area),
@@ -133,6 +134,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
     getNightlife(area, resolvedCoords),          // always-on → Nightlife filter (hidden from All)
     getParksAndOutdoors(area, resolvedCoords),   // always-on → Outdoors filter  (hidden from All)
     getNearbyActivities(area, resolvedCoords),   // always-on → Activities filter (shown in All)
+    getWellnessVenues(area, resolvedCoords),     // always-on → Wellness filter  (hidden from All)
   ]);
 
   const seed = mockEventsForArea(area);
@@ -156,6 +158,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
     ...extract(nightlifeResult),    // Nightlife Places — hidden from All via FILTER_ONLY_SOURCE_MAP
     ...extract(parksResult),        // Outdoor Places   — hidden from All via FILTER_ONLY_SOURCE_MAP
     ...extract(activitiesResult),   // Activities (category) — shown in All TicketCard section
+    ...extract(wellnessResult),     // Wellness Places  — hidden from All via FILTER_ONLY_SOURCE_MAP
   ];
 
   // ── Step 2: GP recommendations (general food + attractions) ──────────────
@@ -197,6 +200,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
   console.log(`  Nightlife Places: ${extract(nightlifeResult).length} (always-on, filter-only)`);
   console.log(`  Outdoor Places:   ${extract(parksResult).length} (always-on, filter-only)`);
   console.log(`  Activities:       ${extract(activitiesResult).length} (always-on, shown in All)`);
+  console.log(`  Wellness:         ${extract(wellnessResult).length} (always-on, filter-only)`);
   console.log(`  GP Recs:          ${googlePlacesItems.length} (recommendations footer)`);
   console.log("Deduplication stats:");
   console.log(`  Input:                 ${stats.inputCount} items`);

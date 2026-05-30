@@ -118,6 +118,27 @@ export const ACTIVITY_TYPES: ActivityType[] = [
     googleTypes: ["sports_complex"],
     tags: ["Climbing", "Active", "Sport"],
   },
+  {
+    id: "spa",
+    label: "Spas",
+    emoji: "💆",
+    googleTypes: ["spa"],
+    tags: ["Spa", "Wellness", "Relaxation"],
+  },
+  {
+    id: "beauty_salon",
+    label: "Beauty & Wellness",
+    emoji: "✨",
+    googleTypes: ["beauty_salon"],
+    tags: ["Beauty", "Wellness"],
+  },
+  {
+    id: "yoga",
+    label: "Yoga & Pilates",
+    emoji: "🧘",
+    googleTypes: ["yoga_studio"],
+    tags: ["Yoga", "Wellness", "Active"],
+  },
 ];
 // Removed from ACTIVITY_TYPES (belong to the Nightlife filter, not Activities):
 //   "nightlife"   — bar, night_club, cocktail_bar, wine_bar, brewery, pub, karaoke

@@ -9,6 +9,10 @@ export type FilterOption = {
   label: string;
   icon: string;
   matchFn: (item: EventItem) => boolean;
+  /** When true, results are fetched on-demand when this filter is selected. */
+  onDemand?: boolean;
+  /** Short label shown in the filter chip / section header when on-demand is active. */
+  onDemandLabel?: string;
 };
 
 const getToday = () => new Date().toISOString().split("T")[0];
@@ -135,6 +139,17 @@ export const FILTERS: FilterOption[] = [
       item.tags?.some(t =>
         ["outdoor", "park", "nature", "garden", "trail", "hike", "walk"].includes(t.toLowerCase())
       ) === true,
+  },
+  {
+    id: "wellness",
+    label: "Wellness",
+    icon: "💆",
+    onDemand: true,
+    onDemandLabel: "Spas & wellness nearby",
+    matchFn: (item) =>
+      item.tags?.some(t =>
+        ["Spa", "Wellness", "Yoga", "Beauty", "Relaxation"].includes(t)
+      ) === true || item.category === "Wellness",
   },
   {
     id: "Cinema",

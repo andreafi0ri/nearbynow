@@ -203,6 +203,7 @@ export default function FeedScreen() {
     "AMC Theatres":     "AMC",
     "Nightlife Places": "Nightlife",  // bars/clubs hidden from All, shown under Nightlife filter
     "Outdoor Places":   "Outdoors",   // parks hidden from All, shown under Outdoors filter
+    "Wellness Places":  "wellness",   // spas/yoga hidden from All, shown under Wellness filter
   };
 
   const freeFn = useMemo(() => FILTERS.find(f => f.id === "Free")?.matchFn, []);

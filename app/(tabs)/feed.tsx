@@ -111,7 +111,7 @@ export default function FeedScreen() {
 
   // Date filter
   const [showSaved, setShowSaved] = useState(false);
-  const [datePreset, setDatePreset] = useState<string | null>(null);
+  const [datePreset, setDatePreset] = useState<string | null>("This Week");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
 

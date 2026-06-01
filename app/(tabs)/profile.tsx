@@ -436,7 +436,7 @@ export default function ProfileScreen() {
           ))}
         </View>
 
-        <Text style={[styles.version, { color: T.mutedL }]}>hearby · MVP v1.0</Text>
+        <Text style={[styles.version, { color: T.mutedL }]}>Nearby &amp; Now</Text>
 
         {/* ── Dev: RSS feed health check ── */}
         {__DEV__ && (

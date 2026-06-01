@@ -666,7 +666,7 @@ export default function FeedScreen() {
           if (remoteLoading || count === 0) return null;
           const label = showSaved
             ? `${count} saved item${count !== 1 ? "s" : ""}`
-            : `${count} result${count !== 1 ? "s" : ""}${activeFilter !== "All" ? ` · ${activeFilter}` : ""}${showAll && recs.length > 0 ? ` + ${recs.length} nearby` : ""}`;
+            : `${count} result${count !== 1 ? "s" : ""} · this week in your area${activeFilter !== "All" ? ` · ${activeFilter}` : ""}`;
           return (
             <Text style={[styles.resultCount, { color: T.muted, paddingHorizontal: 16 }]}>{label}</Text>
           );

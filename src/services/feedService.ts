@@ -162,9 +162,15 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
     ...extract(wellnessResult),     // Wellness Places  — hidden from All via FILTER_ONLY_SOURCE_MAP
   ];
 
-  // ── Step 2: GP recommendations (general food + attractions) ──────────────
-  // These are the "You might also like" items in the All view footer.
-  // Always fetched (threshold 9999 effectively removes the gate).
+  // ── Step 2: GP recommendations + SerpAPI gap-fill ────────────────────────
+  //
+  // getRecommendations runs unconditionally — it powers both the "You might
+  // also like" footer (profile toggle) and the Google Places source filter.
+  // Gating it on event count meant the toggle and filter appeared broken in
+  // any city with ≥ 20 events.
+  //
+  // searchSerpEvents remains threshold-gated to conserve the free tier quota
+  // (100 searches/month). Only fires in sparse areas.
   const allRaw     = [...seed, ...live];
   const eventItems = allRaw.filter(item => item.type === "event");
   const shouldFetch = shouldFetchGooglePlaces(eventItems.length);
@@ -172,18 +178,18 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
   let googlePlacesItems: EventItem[] = [];
   let serpItems:         EventItem[] = [];
 
+  // GP recommendations — always fetch regardless of event count
+  const gpResult = await getRecommendations(area, resolvedCoords).catch(err => {
+    console.warn("[Feed] GP recommendations failed:", err);
+    return [] as EventItem[];
+  });
+  googlePlacesItems = gpResult;
+
+  // SerpAPI gap-fill — only when events are sparse
   if (shouldFetch) {
-    // Run Google Places recommendations and SerpAPI gap-fill in parallel.
-    // SerpAPI only fires here (threshold gate) — conserves the free tier.
-    const [gpResult, serpResult] = await Promise.allSettled([
-      getRecommendations(area, resolvedCoords),
-      searchSerpEvents(area, resolvedCoords),
-    ]);
-    googlePlacesItems = gpResult.status === "fulfilled"
-      ? gpResult.value
-      : (console.warn("[Feed] GP recommendations failed:", (gpResult as PromiseRejectedResult).reason), []);
-    serpItems = serpResult.status === "fulfilled" ? serpResult.value : [];
-    if (serpItems.length > 0 || serpResult.status === "fulfilled") {
+    const serpResult = await searchSerpEvents(area, resolvedCoords).catch(() => [] as EventItem[]);
+    serpItems = serpResult;
+    if (serpItems.length > 0) {
       console.log(`[Feed] Google Events gap-fill: ${serpItems.length} new-source events`);
     }
   }

@@ -549,6 +549,9 @@ export default function FeedScreen() {
                 <View style={styles.sectionHeaderInner}>
                   <Text style={styles.sectionEmoji}>📍</Text>
                   <Text style={[styles.sectionLabel, { color: T.text }]}>Happening near you</Text>
+                  <Text style={[styles.sectionCount, { color: T.muted }]}>
+                    {sectionableItems.length} result{sectionableItems.length !== 1 ? "s" : ""}
+                  </Text>
                 </View>
                 <View style={[styles.sectionLine, { backgroundColor: T.borderSub }]} />
               </View>
@@ -808,6 +811,7 @@ const styles = StyleSheet.create({
   sectionHeaderInner: { flexDirection: "row", alignItems: "center", gap: 7, marginBottom: 8 } as ViewStyle,
   sectionEmoji:       { fontSize: 13 } as TextStyle,
   sectionLabel:       { fontSize: 11, fontWeight: "700", fontFamily: "DMSans_700Bold", letterSpacing: 0.8, textTransform: "uppercase" } as TextStyle,
+  sectionCount:       { fontSize: 10, fontFamily: "Inter_500Medium", letterSpacing: 1.2, textTransform: "uppercase", marginLeft: "auto" } as TextStyle,
   sectionLine:        { height: 1.5, width: "100%" } as ViewStyle,
   recDivider:     { flexDirection: "row", alignItems: "center", gap: 8, marginVertical: 14 } as ViewStyle,
   dividerLine:    { flex: 1, height: 2 } as ViewStyle,

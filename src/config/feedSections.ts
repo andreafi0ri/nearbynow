@@ -43,8 +43,14 @@ export function getSectionForItem(item: {
   source?: string;
   type?: string;
 }): FeedSection {
+  // Check explicit source mapping first — Viator and Activities are
+  // type:"recommendation" but still have named sections (ticketed/community).
+  const mapped = SOURCE_SECTION[item.source ?? ""];
+  if (mapped) return mapped;
+  // Unknown recommendation-type items (e.g. GP recs) go to footer.
   if (item.type === "recommendation") return "recommendation";
-  return SOURCE_SECTION[item.source ?? ""] ?? "community";
+  // Everything else defaults to community.
+  return "community";
 }
 
 export type SectionConfig = {

@@ -669,7 +669,8 @@ export default function FeedScreen() {
         contentContainerStyle={[styles.feed, { paddingHorizontal: 0 }]}
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => {
-          if (isCommunityItem(item)) {
+          // Community items (RSS, Reddit, Google Events) → compact ListRow
+          if (getSectionForItem(item) === "community") {
             return (
               <View style={{ paddingHorizontal: 22 }}>
                 <ListRow
@@ -678,13 +679,6 @@ export default function FeedScreen() {
                   onSave={() => handleToggle(item.id)}
                   isLast={false}
                 />
-              </View>
-            );
-          }
-          if (item.type === "recommendation" && item.source !== "Viator" && item.category !== "Activities") {
-            return (
-              <View style={{ paddingHorizontal: 16 }}>
-                <TicketCard item={item} T={T} saved={saved.has(item.id)} onSave={() => handleToggle(item.id)} />
               </View>
             );
           }

@@ -614,9 +614,12 @@ export default function FeedScreen() {
           </>
         )}
 
-        {/* Recommendations footer — only shown when the "Show recommendations"
-            toggle is ON in Profile → Feed settings */}
-        {showRecsEnabled && mixRecItems.length > 0 && (
+        {/* Recommendations footer — shown when:
+            (a) the "Show recommendations" toggle is ON, OR
+            (b) the user explicitly selected a source filter (!showAll)
+                e.g. selecting the Google Places source should always show results
+                regardless of the toggle preference */}
+        {(showRecsEnabled || !showAll) && mixRecItems.length > 0 && (
           <>
             <View style={[styles.recDivider, { marginHorizontal: 16 }]}>
               <View style={[styles.dividerLine, { backgroundColor: T.gold }]} />

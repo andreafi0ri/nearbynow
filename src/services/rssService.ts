@@ -58,13 +58,18 @@ function shouldKeepRSSItem(dateStr: string): boolean {
 
 /**
  * Ordered list of public CORS proxy services.
- * allorigins.win is tried first — most reliable on free tier.
- * Falls through to the next proxy on any error or invalid XML.
+ * Tried in order — falls through on any error, timeout, or non-XML response.
+ *
+ * Verified status (2026-06):
+ *   codetabs   ✅ working — tried first
+ *   allorigins ⚠️ frequent timeouts — kept as fallback
+ *   corsproxy  ❌ returning 403 on everything — removed
+ *   thingproxy ✅ working — new fallback
  */
 const CORS_PROXIES = [
-  "https://api.allorigins.win/raw?url=",
-  "https://corsproxy.io/?",
   "https://api.codetabs.com/v1/proxy?quest=",
+  "https://api.allorigins.win/raw?url=",
+  "https://thingproxy.freeboard.io/fetch/",
 ];
 
 // ─── Proxy health cache ───────────────────────────────────────────────────────
@@ -133,7 +138,9 @@ async function fetchWithProxy(url: string): Promise<string> {
         return text;
       }
 
-      // Got a response but not valid XML
+      // Got a 200 but the body is HTML not XML — likely a paywall, redirect,
+      // or dead feed URL. Log it so dead sources are visible in console.
+      console.warn(`[RSS] ${proxy.split("/")[2]} returned HTML not XML for: ${url}`);
       markProxy(proxy, false);
     } catch {
       // Network error or timeout

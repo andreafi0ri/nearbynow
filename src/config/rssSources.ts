@@ -518,11 +518,10 @@ export const RSS_SOURCES: RSSSource[] = [
   // Note: visitlancastercity.com/events/ is scraped directly by visitLancasterService.ts
   // Verified working (via codetabs proxy) as of 2026-06:
   //   ✅ LancasterPA.com         — 100 items, 28 events
-  //   ✅ WITF Public Radio       — 50 items, 35 events  (replaces: LancasterOnline paywall,
-  //                                                       Discover Lancaster dead feed,
-  //                                                       Discover Lancaster Blog 404,
-  //                                                       Lancaster Chamber dead feed)
-  //   ✅ LancasterHistory.org    — 10 items, 10 events  (replaces: Lancaster Heritage dead)
+  //   ✅ LancasterHistory.org    — 10 items, 10 events
+  // Removed:
+  //   ❌ WITF Public Radio — 90% news/politics, only 2-3 real events per 50 items,
+  //                          no events-only category feed available
   {
     url:      "https://www.lancasterpa.com/feed/",
     name:     "LancasterPA.com",
@@ -530,15 +529,6 @@ export const RSS_SOURCES: RSSSource[] = [
     category: "Events",
     img:      "📰", type: "auto",
     tags:     ["Lancaster"],
-  },
-  {
-    url:      "https://www.witf.org/feed/",
-    name:     "WITF Public Radio",
-    area:     "lancaster",
-    category: "Community",
-    catColor: "#2D7A3A", catDot: "#4CAF50",
-    img:      "📻", type: "auto",
-    tags:     ["Lancaster", "Community"],
   },
   {
     url:      "https://www.lancasterhistory.org/feed/",

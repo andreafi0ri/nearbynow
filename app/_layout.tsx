@@ -1,8 +1,8 @@
 // app/_layout.tsx
-import { useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { Platform } from "react-native";
+import { Platform, View, Text, TouchableOpacity } from "react-native";
 import * as Linking from "expo-linking";
 import * as Notifications from "expo-notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -37,6 +37,46 @@ import { setPendingCallbackUrl } from "../src/lib/authState";
 
 if (Platform.OS !== "web") {
   SplashScreen.preventAutoHideAsync();
+}
+
+// ─── Error boundary ───────────────────────────────────────────────────────────
+
+class AppErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError(): { hasError: boolean } {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo): void {
+    console.error("[ErrorBoundary]", error, info.componentStack);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24, backgroundColor: "#0F0D08" }}>
+          <Text style={{ fontSize: 32, marginBottom: 16 }}>😕</Text>
+          <Text style={{ fontSize: 17, fontWeight: "700", textAlign: "center", marginBottom: 8, color: "#F5F0E8" }}>
+            Something went wrong
+          </Text>
+          <Text style={{ fontSize: 14, textAlign: "center", color: "#888", marginBottom: 24 }}>
+            Pull down to refresh or tap below
+          </Text>
+          <TouchableOpacity
+            onPress={() => this.setState({ hasError: false })}
+            style={{ backgroundColor: "#1C1A15", borderRadius: 12, padding: 14, paddingHorizontal: 28, borderWidth: 1.5, borderColor: "#3A3528" }}
+          >
+            <Text style={{ color: "#D4A80C", fontWeight: "700" }}>Try again</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 /** Reads the active theme from context to set the correct StatusBar style. */
@@ -146,11 +186,13 @@ export default function RootLayout() {
   if (!fontsLoaded) return null;
 
   return (
-    <ThemeProvider>
-      <SavedAreasProvider>
-        <AppStatusBar />
-        <Stack screenOptions={{ headerShown: false }} />
-      </SavedAreasProvider>
-    </ThemeProvider>
+    <AppErrorBoundary>
+      <ThemeProvider>
+        <SavedAreasProvider>
+          <AppStatusBar />
+          <Stack screenOptions={{ headerShown: false }} />
+        </SavedAreasProvider>
+      </ThemeProvider>
+    </AppErrorBoundary>
   );
 }

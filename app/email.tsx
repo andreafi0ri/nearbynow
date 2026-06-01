@@ -570,7 +570,7 @@ const s = StyleSheet.create({
   } as TextStyle,
 
   checkboxLink: {
-    fontFamily: "DMSans_600SemiBold",
+    fontFamily: "DMSans_700Bold",
     textDecorationLine: "underline",
   } as TextStyle,
 

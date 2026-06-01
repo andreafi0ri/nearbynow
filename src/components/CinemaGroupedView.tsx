@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
   theatreName:    { fontSize: 14, fontWeight: "700", fontFamily: "DMSans_700Bold" } as TextStyle,
   theatreAddress: { fontSize: 12, fontFamily: "DMSans_400Regular", marginTop: 1 } as TextStyle,
   theatreBtn:     { borderWidth: 1.5, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 } as ViewStyle,
-  theatreBtnText: { fontSize: 11, fontFamily: "DMSans_600SemiBold" } as TextStyle,
+  theatreBtnText: { fontSize: 11, fontFamily: "DMSans_700Bold" } as TextStyle,
   // ── Movie row ───────────────────────────────────────────────────────────────
   movieRow:       { borderWidth: 2, borderTopWidth: 0, padding: 14, gap: 10 } as ViewStyle,
   movieInfo:      { gap: 3 } as ViewStyle,
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
   pillsScroll:    { marginTop: 4 } as ViewStyle,
   pillsContent:   { flexDirection: "row", gap: 7 } as ViewStyle,
   pill:           { borderWidth: 1.5, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 } as ViewStyle,
-  pillText:       { fontSize: 12, fontWeight: "600", fontFamily: "DMSans_600SemiBold" } as TextStyle,
+  pillText:       { fontSize: 12, fontWeight: "600", fontFamily: "DMSans_700Bold" } as TextStyle,
   // ── Ticket button ───────────────────────────────────────────────────────────
   ticketBtn:      { borderWidth: 2, borderRadius: 12, padding: 10, alignItems: "center", marginTop: 4 } as ViewStyle,
   ticketBtnText:  { fontSize: 13, fontWeight: "700", fontFamily: "DMSans_700Bold" } as TextStyle,

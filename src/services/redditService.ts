@@ -50,6 +50,7 @@ const AREA_TABLE: AreaEntry[] = [
   { keywords: ["miami"],                                subreddits: ["miami"] },
   { keywords: ["boston"],                               subreddits: ["boston"] },
   { keywords: ["philadelphia", "philly"],               subreddits: ["philadelphia"] },
+  { keywords: ["lancaster", "lancaster pa", "lancaster county"], subreddits: ["lancaster"] },
   // Australian cities
   { keywords: ["melbourne", "fitzroy", "collingwood"], subreddits: ["melbourne"] },
   { keywords: ["sydney", "surry hills", "newtown"],    subreddits: ["sydney"] },

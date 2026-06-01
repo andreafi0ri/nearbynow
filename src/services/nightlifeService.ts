@@ -48,6 +48,15 @@ export async function getNightlife(
     return [];
   }
 
+  // Only surface nightlife venues after 5 pm local time.
+  // Before then the filter still works (tapping it triggers a fetch),
+  // but bars and clubs don't appear in the All feed during daytime.
+  const hour = new Date().getHours();
+  if (hour < 17) {
+    console.log("[Nightlife] Before 5 pm — returning empty for All feed");
+    return [];
+  }
+
   const cacheKey = `nightlife-${area}-${coords?.lat?.toFixed(2)}-${coords?.lng?.toFixed(2)}`;
   const cached = nightlifeCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {

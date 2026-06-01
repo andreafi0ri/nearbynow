@@ -30,7 +30,7 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: "Missing query" });
     }
 
-    const upstream = await fetch("https://api.meetup.com/gql", {
+    const upstream = await fetch("https://api.meetup.com/gql2", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

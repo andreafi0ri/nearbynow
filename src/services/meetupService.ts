@@ -1,8 +1,10 @@
 // src/services/meetupService.ts
 //
-// Meetup GraphQL API
+// Meetup GraphQL API (gql2 endpoint)
 // Docs:  https://www.meetup.com/api/guide
-// Keys:  https://www.meetup.com/api/oauth/list/
+//
+// The old /gql endpoint was deprecated — the current endpoint is /gql2.
+// recommendedEvents replaces keywordSearch (which no longer exists on gql2).
 //
 // On native, add EXPO_PUBLIC_MEETUP_KEY to .env.local for authenticated queries.
 // On web, requests route through /api/meetup-search (Vercel proxy) which calls
@@ -17,46 +19,43 @@ import { SEARCH_CONFIG } from "../config/searchConfig";
 // Requests route through /api/meetup-search on web
 // and call Meetup directly on native.
 const MEETUP_ENDPOINT = Platform.OS === "web"
-  ? "/api/meetup-search"          // Vercel proxy — no CORS restriction
-  : "https://api.meetup.com/gql"; // Direct on native
+  ? "/api/meetup-search"           // Vercel proxy — no CORS restriction
+  : "https://api.meetup.com/gql2"; // Direct on native (updated from /gql → /gql2)
 
 // ─── API types ────────────────────────────────────────────────────────────────
 
 type MuVenue = {
-  name: string;
+  name:    string;
   address: string;
-  city: string;
-  lat: number;
-  lng: number;
+  city:    string;
+  lat:     number;
+  lon:     number; // API uses "lon" not "lng"
 };
 
 type MuGroup = {
-  name: string;
+  name:    string;
   urlname: string;
 };
 
 type MuEvent = {
-  id: string;
-  title: string;
+  id:          string;
+  title:       string;
   description: string;
-  dateTime: string;
-  endTime: string | null;
-  venue: MuVenue | null;
-  group: MuGroup;
-  eventUrl: string;
-  isOnline: boolean;
-  going: number | null;
+  dateTime:    string;
+  endTime:     string | null;
+  venue:       MuVenue | null;
+  group:       MuGroup;
+  eventUrl:    string;
+  isOnline:    boolean;
 };
 
 type MuEdge = {
-  node: {
-    result: MuEvent | Record<string, unknown>;
-  };
+  node: MuEvent;
 };
 
 type MuResponse = {
   data?: {
-    results?: {
+    recommendedEvents?: {
       edges: MuEdge[];
     };
   };
@@ -64,29 +63,28 @@ type MuResponse = {
 };
 
 // ─── GraphQL query ────────────────────────────────────────────────────────────
+// Uses recommendedEvents (replaces the deprecated keywordSearch field).
+// - `first` is a top-level arg, not wrapped in `input: {}`
+// - venue uses `lon` (not `lng`)
+// - `going` is a connection type on gql2 — omitted to keep the query simple
 
 const MEETUP_QUERY = `
   query($lat: Float!, $lon: Float!, $radius: Float!) {
-    results: keywordSearch(
+    recommendedEvents(
       filter: { lat: $lat, lon: $lon, radius: $radius }
-      input: { first: ${SEARCH_CONFIG.MEETUP_MAX_RESULTS} }
+      first: ${SEARCH_CONFIG.MEETUP_MAX_RESULTS}
     ) {
       edges {
         node {
-          result {
-            ... on Event {
-              id
-              title
-              description
-              dateTime
-              endTime
-              venue { name address city lat lng }
-              group { name urlname }
-              eventUrl
-              isOnline
-              going
-            }
-          }
+          id
+          title
+          description
+          dateTime
+          endTime
+          venue { name address city lat lon }
+          group { name urlname }
+          eventUrl
+          isOnline
         }
       }
     }
@@ -131,10 +129,6 @@ function isoToDate(isoStr: string): string {
   return isoStr.split("T")[0];
 }
 
-function isMuEvent(result: MuEvent | Record<string, unknown>): result is MuEvent {
-  return typeof (result as MuEvent).id === "string" && typeof (result as MuEvent).title === "string";
-}
-
 function toEventItem(ev: MuEvent, area: string): EventItem {
   const desc     = stripHtml(ev.description);
   const location = ev.isOnline
@@ -158,10 +152,10 @@ function toEventItem(ev: MuEvent, area: string): EventItem {
     category:  "Community",
     catColor:  "#2860C8",
     catDot:    "#5A90F8",
-    saves:     ev.going ?? 0,
+    saves:     0,
     img:       "🤝",
     lat:       ev.venue?.lat,
-    lng:       ev.venue?.lng,
+    lng:       ev.venue?.lon, // API field is "lon", EventItem stores as "lng"
     booking:   { label: "RSVP on Meetup", url: ev.eventUrl, affiliate: false },
     tags:      [ev.group.name],
   };
@@ -175,21 +169,20 @@ const DEFAULT_LON = SEARCH_CONFIG.DEFAULT_LNG;  // -73.9442
 
 /**
  * Searches Meetup for in-person public events near the given area string.
- * Requires EXPO_PUBLIC_MEETUP_KEY — Meetup now mandates OAuth Bearer tokens.
+ * Uses the recommendedEvents field on the gql2 endpoint.
  * Online-only events are excluded.
  *
  * @param area - Human-readable area name e.g. "Brixton, London"
- * @returns Up to 10 EventItems, or [] on failure / no key
+ * @returns Up to MEETUP_MAX_RESULTS EventItems, or [] on failure
  */
 export async function searchMeetup(area: string): Promise<EventItem[]> {
   const apiKey = process.env.EXPO_PUBLIC_MEETUP_KEY;
 
-  // On native, Meetup requires an OAuth Bearer token.
+  // On native, an OAuth Bearer token improves result quality.
   // On web, the /api/meetup-search proxy calls Meetup without auth
-  // (public event queries only — no key needed via the proxy).
+  // (recommendedEvents is publicly accessible on gql2).
   if (Platform.OS !== "web" && !apiKey) {
-    console.warn("[Meetup] No EXPO_PUBLIC_MEETUP_KEY set — skipping on native. See https://www.meetup.com/api/oauth/list/");
-    return [];
+    console.warn("[Meetup] No EXPO_PUBLIC_MEETUP_KEY — results may be limited on native. See https://www.meetup.com/api/oauth/list/");
   }
 
   try {
@@ -202,7 +195,7 @@ export async function searchMeetup(area: string): Promise<EventItem[]> {
       "Content-Type": "application/json",
       Accept: "application/json",
     };
-    // Include the Bearer token on native; the web proxy calls Meetup without auth
+    // Include the Bearer token on native when available
     if (Platform.OS !== "web" && apiKey) {
       headers.Authorization = `Bearer ${apiKey}`;
     }
@@ -224,18 +217,19 @@ export async function searchMeetup(area: string): Promise<EventItem[]> {
       throw new Error(json.errors[0].message);
     }
 
-    const edges = json.data?.results?.edges ?? [];
+    // gql2/recommendedEvents: node IS the event (no "result" union wrapper)
+    const edges = json.data?.recommendedEvents?.edges ?? [];
     const items: EventItem[] = [];
 
     for (const edge of edges) {
-      const result = edge.node.result;
-      if (!isMuEvent(result)) continue;
-      if (result.isOnline) continue;          // local events only
-      if (!result.title?.trim()) continue;
-      items.push(toEventItem(result, area));
+      const ev = edge.node;
+      if (!ev?.id || !ev?.title?.trim()) continue;
+      if (ev.isOnline) continue; // local events only
+      items.push(toEventItem(ev, area));
       if (items.length >= SEARCH_CONFIG.MEETUP_MAX_RESULTS) break;
     }
 
+    console.log(`[Meetup] ${items.length} events for "${area}"`);
     return items;
   } catch (err) {
     console.warn("[Meetup] fetch failed:", err);

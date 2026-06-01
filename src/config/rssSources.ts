@@ -516,15 +516,13 @@ export const RSS_SOURCES: RSSSource[] = [
 
   // ─── Lancaster, PA ────────────────────────────────────────────────────────
   // Note: visitlancastercity.com/events/ is scraped directly by visitLancasterService.ts
-  {
-    url:      "https://lancasteronline.com/search/?f=rss&t=article&c=news&l=50&s=start_time&sd=desc",
-    name:     "LancasterOnline",
-    area:     "lancaster",
-    category: "Events",
-    catColor: "#003087", catDot: "#0055CC",
-    img:      "📰", type: "auto",
-    tags:     ["Lancaster"],
-  },
+  // Verified working (via codetabs proxy) as of 2026-06:
+  //   ✅ LancasterPA.com         — 100 items, 28 events
+  //   ✅ WITF Public Radio       — 50 items, 35 events  (replaces: LancasterOnline paywall,
+  //                                                       Discover Lancaster dead feed,
+  //                                                       Discover Lancaster Blog 404,
+  //                                                       Lancaster Chamber dead feed)
+  //   ✅ LancasterHistory.org    — 10 items, 10 events  (replaces: Lancaster Heritage dead)
   {
     url:      "https://www.lancasterpa.com/feed/",
     name:     "LancasterPA.com",
@@ -534,50 +532,36 @@ export const RSS_SOURCES: RSSSource[] = [
     tags:     ["Lancaster"],
   },
   {
-    url:      "https://www.discoverlancaster.com/feed/",
-    name:     "Discover Lancaster",
-    area:     "lancaster",
-    category: "Events",
-    catColor: "#8B2131", catDot: "#BF3050",
-    img:      "🎟️", type: "event",
-    tags:     ["Lancaster"],
-  },
-  {
-    url:      "https://www.lancastermennonitehistorical.org/feed/",
-    name:     "Lancaster Heritage",
-    area:     "lancaster",
-    category: "Events",
-    img:      "🏛️", type: "auto",
-    tags:     ["Lancaster", "Heritage"],
-  },
-  {
-    url:      "https://www.discoverlancaster.com/blog/feed/",
-    name:     "Discover Lancaster Blog",
-    area:     "lancaster",
-    category: "Events",
-    catColor: "#2860C8", catDot: "#5A90F8",
-    img:      "📍", type: "event",
-    tags:     ["Lancaster", "Tourism"],
-  },
-  {
-    url:      "https://www.lancasterchamber.com/news/rss",
-    name:     "Lancaster Chamber",
+    url:      "https://www.witf.org/feed/",
+    name:     "WITF Public Radio",
     area:     "lancaster",
     category: "Community",
-    catColor: "#2860C8", catDot: "#5A90F8",
-    img:      "🤝", type: "auto",
-    tags:     ["Lancaster", "Business"],
+    catColor: "#2D7A3A", catDot: "#4CAF50",
+    img:      "📻", type: "auto",
+    tags:     ["Lancaster", "Community"],
+  },
+  {
+    url:      "https://www.lancasterhistory.org/feed/",
+    name:     "LancasterHistory.org",
+    area:     "lancaster",
+    category: "Culture",
+    catColor: "#8B2131", catDot: "#BF3050",
+    img:      "🏛️", type: "auto",
+    tags:     ["Lancaster", "Heritage", "History"],
   },
 
   // ─── Global fallback — always included ───────────────────────────────────
+  // Verified working (via codetabs proxy) as of 2026-06:
+  //   ✅ Consequence of Sound    — 15 items, 9 events   (replaces: Time Out USA 404,
+  //                                                       Eventbrite Blog 404)
   {
-    url:      "https://www.timeout.com/usa/rss",
-    name:     "Time Out USA",
+    url:      "https://consequence.net/feed/",
+    name:     "Consequence of Sound",
     area:     "global",
-    category: "Events",
-    catColor: "#000000", catDot: "#444444",
+    category: "Music",
+    catColor: "#7B5CE0", catDot: "#A688FF",
     img:      "🎟️", type: "auto",
-    tags:     ["Events"],
+    tags:     ["Music", "Events", "Concerts"],
   },
   {
     url:      "https://www.timeout.com/uk/rss",
@@ -587,14 +571,5 @@ export const RSS_SOURCES: RSSSource[] = [
     catColor: "#000000", catDot: "#444444",
     img:      "🎟️", type: "auto",
     tags:     ["UK", "Events"],
-  },
-  {
-    url:      "https://www.eventbrite.com/blog/feed/",
-    name:     "Eventbrite Blog",
-    area:     "global",
-    category: "Events",
-    catColor: "#F05537", catDot: "#FF8066",
-    img:      "🎟️", type: "auto",
-    tags:     ["Events"],
   },
 ];

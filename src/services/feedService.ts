@@ -157,7 +157,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
     ...extract(viatorAlwaysResult),
     ...extract(nightlifeResult),    // Nightlife Places — hidden from All via FILTER_ONLY_SOURCE_MAP
     ...extract(parksResult),        // Outdoor Places   — hidden from All via FILTER_ONLY_SOURCE_MAP
-    ...extract(activitiesResult),   // Activities (category) — shown in All TicketCard section
+    ...extract(activitiesResult),   // Activity Places — hidden from All, shown under Activities filter
     ...extract(wellnessResult),     // Wellness Places  — hidden from All via FILTER_ONLY_SOURCE_MAP
   ];
 

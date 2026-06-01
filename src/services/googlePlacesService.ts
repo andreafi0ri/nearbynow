@@ -591,7 +591,7 @@ export async function searchNearbyActivities(
         location:  place.formattedAddress ?? "",
         lat:       place.location?.latitude,
         lng:       place.location?.longitude,
-        source:    "Google Places",
+        source:    "Activity Places",
         sourceUrl: place.websiteUri,
         category:  "Activities",
         catColor:  "#1A9E98",

@@ -218,6 +218,7 @@ export default function MapScreen() {
     "Nightlife Places": "Nightlife",
     "Outdoor Places":   "Outdoors",
     "Wellness Places":  "wellness",
+    "Activity Places":  "activities",
   };
 
   const catFilter  = useMemo(() => FILTERS.find(f => f.id === activeFilter) ?? FILTERS[0], [activeFilter]);

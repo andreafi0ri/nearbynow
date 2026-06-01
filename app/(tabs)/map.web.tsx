@@ -152,6 +152,7 @@ export default function MapScreen() {
     "Nightlife Places": "Nightlife",
     "Outdoor Places":   "Outdoors",
     "Wellness Places":  "wellness",
+    "Activity Places":  "activities",
   };
 
   // ── Filtered views ──────────────────────────────────────────────────────────

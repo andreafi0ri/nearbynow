@@ -314,6 +314,28 @@ export const MOCK_EVENTS: EventItem[] = [
     tags: ["Spa", "Wellness", "Luxury"],
   },
 
+  {
+    id: 24, type: "event",
+    title: "Lancaster Central Market — Saturday Opening",
+    desc: "America's oldest publicly owned farmers market. Fresh produce, baked goods, meats, and local crafts every Tuesday, Friday, and Saturday.",
+    longDesc: "Lancaster Central Market has operated continuously since the 1730s, making it the oldest publicly owned farmers market in the United States. Located in Penn Square in the heart of downtown Lancaster, it features over 60 vendors selling fresh local produce, meats, baked goods, flowers, and handcrafted items.",
+    time: "Sat 6:00 AM – 2:00 PM",
+    location: "23 N Market St, Lancaster, PA",
+    lat: 40.0379, lng: -76.3055,
+    date: nextWeekday(6),
+    startIso: nextWeekday(6) + "T06:00:00",
+    endIso:   nextWeekday(6) + "T14:00:00",
+    source: "Google Events", category: "Community",
+    catColor: "#2860C8", catDot: "#5A90F8",
+    saves: 89, img: "🤝",
+    booking: {
+      label: "View event",
+      url: "https://www.centralmarketlancaster.com",
+      affiliate: false,
+    },
+    tags: ["Free", "Farmers Market", "Lancaster"],
+  },
+
   // ── Deduplication test data ────────────────────────────────────────────────
   // id:8 should merge with id:1 (hard merge — same event, two sources)
   // id:9 should NOT merge with id:2 (fuzzy match — different location string)
@@ -377,6 +399,7 @@ export const SOURCE_COLORS: Record<string, string> = {
   "Denverite":          "#8E44AD",
   "Nashville Post":     "#1ABC9C",
   "AMC Theatres":       "#CC0000",
+  "Google Events":      "#4285F4",
   "Activities":         "#1A9E98",
   "Wellness":           "#C25F8F",
   "Nightlife":          "#4A1570",

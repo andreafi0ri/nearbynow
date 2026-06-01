@@ -11,6 +11,7 @@ import { searchViatorExperiences } from "./viatorService";
 import { searchNearbyPlaces, searchPlacesByText, fetchCinemas } from "./googlePlacesService";
 import { getShowtimes } from "./showtimesService";
 import { getNearbyActivities, getWellnessVenues } from "./activitiesService";
+import { searchSerpEvents } from "./serpEventsService";
 import { getNightlife } from "./nightlifeService";
 import { getParksAndOutdoors } from "./parksService";
 import { SEARCH_CONFIG, shouldFetchGooglePlaces, metresToMiles } from "../config/searchConfig";
@@ -169,16 +170,28 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
   const shouldFetch = shouldFetchGooglePlaces(eventItems.length);
 
   let googlePlacesItems: EventItem[] = [];
+  let serpItems:         EventItem[] = [];
 
   if (shouldFetch) {
-    const gpResult = await Promise.allSettled([getRecommendations(area, resolvedCoords)]);
-    googlePlacesItems = gpResult[0].status === "fulfilled"
-      ? gpResult[0].value
-      : (console.warn("[Feed] GP recommendations failed:", (gpResult[0] as PromiseRejectedResult).reason), []);
+    // Run Google Places recommendations and SerpAPI gap-fill in parallel.
+    // SerpAPI only fires here (threshold gate) — conserves the free tier.
+    const [gpResult, serpResult] = await Promise.allSettled([
+      getRecommendations(area, resolvedCoords),
+      searchSerpEvents(area, resolvedCoords),
+    ]);
+    googlePlacesItems = gpResult.status === "fulfilled"
+      ? gpResult.value
+      : (console.warn("[Feed] GP recommendations failed:", (gpResult as PromiseRejectedResult).reason), []);
+    serpItems = serpResult.status === "fulfilled" ? serpResult.value : [];
+    if (serpItems.length > 0 || serpResult.status === "fulfilled") {
+      console.log(`[Feed] Google Events gap-fill: ${serpItems.length} new-source events`);
+    }
   }
 
   // ── Step 3: Merge, deduplicate, sort ─────────────────────────────────────
-  const allItems = [...allRaw, ...googlePlacesItems];
+  // SerpAPI items before GP recommendations — curated event listings rank higher
+  // than venue recommendations in the feed.
+  const allItems = [...allRaw, ...serpItems, ...googlePlacesItems];
   const { events: deduplicated, stats } = deduplicateFeed(allItems);
   const items = sortByDate(deduplicated);
 
@@ -201,6 +214,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
   console.log(`  Outdoor Places:   ${extract(parksResult).length} (always-on, filter-only)`);
   console.log(`  Activities:       ${extract(activitiesResult).length} (always-on, shown in All)`);
   console.log(`  Wellness:         ${extract(wellnessResult).length} (always-on, filter-only)`);
+  console.log(`  Google Events:    ${serpItems.length} (gap-fill, new sources only)`);
   console.log(`  GP Recs:          ${googlePlacesItems.length} (recommendations footer)`);
   console.log("Deduplication stats:");
   console.log(`  Input:                 ${stats.inputCount} items`);

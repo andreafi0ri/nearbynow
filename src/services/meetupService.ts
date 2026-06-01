@@ -1,20 +1,24 @@
 // src/services/meetupService.ts
 //
-// Meetup GraphQL API — requires an OAuth Bearer token.
+// Meetup GraphQL API
 // Docs:  https://www.meetup.com/api/guide
 // Keys:  https://www.meetup.com/api/oauth/list/
 //
-// Add to .env.local:
-//   EXPO_PUBLIC_MEETUP_KEY=your_access_token
-//
-// Note: browser CORS blocks direct requests on web — this service only
-// produces results on React Native / Expo Go.  A server-side proxy at
-// app/api/meetup+api.ts would be needed to support web (requires
-// expo-router server-output mode).
+// On native, add EXPO_PUBLIC_MEETUP_KEY to .env.local for authenticated queries.
+// On web, requests route through /api/meetup-search (Vercel proxy) which calls
+// Meetup server-side without auth — public event queries do not require OAuth.
 
+import { Platform } from "react-native";
 import { EventItem } from "../data/mockEvents";
 import { geocodeArea } from "./recommendationsService";
 import { SEARCH_CONFIG } from "../config/searchConfig";
+
+// Direct Meetup calls are blocked by CORS on web.
+// Requests route through /api/meetup-search on web
+// and call Meetup directly on native.
+const MEETUP_ENDPOINT = Platform.OS === "web"
+  ? "/api/meetup-search"          // Vercel proxy — no CORS restriction
+  : "https://api.meetup.com/gql"; // Direct on native
 
 // ─── API types ────────────────────────────────────────────────────────────────
 
@@ -179,10 +183,12 @@ const DEFAULT_LON = SEARCH_CONFIG.DEFAULT_LNG;  // -73.9442
  */
 export async function searchMeetup(area: string): Promise<EventItem[]> {
   const apiKey = process.env.EXPO_PUBLIC_MEETUP_KEY;
-  if (!apiKey) {
-    // Meetup API now requires OAuth auth — skip silently when no key configured.
-    // Set EXPO_PUBLIC_MEETUP_KEY in .env.local to enable Meetup results.
-    console.warn("[Meetup] No EXPO_PUBLIC_MEETUP_KEY set — skipping. See https://www.meetup.com/api/oauth/list/");
+
+  // On native, Meetup requires an OAuth Bearer token.
+  // On web, the /api/meetup-search proxy calls Meetup without auth
+  // (public event queries only — no key needed via the proxy).
+  if (Platform.OS !== "web" && !apiKey) {
+    console.warn("[Meetup] No EXPO_PUBLIC_MEETUP_KEY set — skipping on native. See https://www.meetup.com/api/oauth/list/");
     return [];
   }
 
@@ -192,13 +198,18 @@ export async function searchMeetup(area: string): Promise<EventItem[]> {
     const lat    = coords?.lat ?? DEFAULT_LAT;
     const lon    = coords?.lng ?? DEFAULT_LON;
 
-    const res = await fetch("https://api.meetup.com/gql", {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    };
+    // Include the Bearer token on native; the web proxy calls Meetup without auth
+    if (Platform.OS !== "web" && apiKey) {
+      headers.Authorization = `Bearer ${apiKey}`;
+    }
+
+    const res = await fetch(MEETUP_ENDPOINT, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
+      headers,
       body: JSON.stringify({
         query: MEETUP_QUERY,
         variables: { lat, lon, radius: SEARCH_CONFIG.MEETUP_RADIUS_KM },

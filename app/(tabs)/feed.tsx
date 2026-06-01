@@ -20,6 +20,7 @@ import { getShowtimes, clearShowtimesCache } from "../../src/services/showtimesS
 import type { ShowtimeGroup } from "../../src/services/showtimesService";
 import { Wordmark } from "../../src/components/Wordmark";
 import { SEARCH_CONFIG, getRadiusLabel } from "../../src/config/searchConfig";
+import { getSectionForItem, FEED_SECTION_CONFIG, FeedSection } from "../../src/config/feedSections";
 import { scheduleEventNotification } from "../../src/services/notificationService";
 import * as Notifications from "expo-notifications";
 
@@ -250,39 +251,39 @@ export default function FeedScreen() {
          !FILTER_ONLY_SOURCES.has(i.source ?? "")
   );
 
-  // ── Mix layout partition (All view only) ────────────────────────────────
-  // Community sources: Reddit posts, local news, community categories
-  const COMMUNITY_SOURCES = new Set(["Nashville Scene", "The Tennessean", "Local News"]);
-  const isCommunityItem = (item: EventItem) =>
-    item.category === "Community" ||
-    item.category === "Local Gov"  ||
-    item.source?.startsWith("r/")  ||
-    COMMUNITY_SOURCES.has(item.source ?? "");
+  // ── Three-section partition (All view only) ─────────────────────────────
+  //
+  // Each event is routed to exactly one section via getSectionForItem().
+  // "recommendation" items stay in the footer — never sectioned.
+  // Any source not explicitly listed in feedSections.ts defaults to "community"
+  // so new RSS sources appear in the right bucket automatically.
 
-  // Events + Activities + Viator recs → TicketCard section
-  // (Activities are type:"recommendation" but shown as ticket-style cards)
-  const mixTicketItems    = filtered.filter(i =>
-    (i.type === "event" || i.category === "Activities" || i.source === "Viator")
-    && !isCommunityItem(i)
+  // All items eligible for the sectioned list (events + filter-shown recs like
+  // Viator/Activities — excludes pure recommendation-type items for footer)
+  const sectionableItems = filtered.filter(
+    i => i.type === "event" ||
+         i.source === "Viator" ||
+         i.category === "Activities"
   );
-  const mixCommunityItems = filtered.filter(isCommunityItem);
-  // Remaining recs (not activities, not Viator, not community) → "You might also like" footer
-  const mixRecItems       = filtered.filter(
+
+  const happeningItems = sectionableItems.filter(i => getSectionForItem(i) === "happening");
+  const communityItems = sectionableItems.filter(i => getSectionForItem(i) === "community");
+  const ticketedItems  = sectionableItems.filter(i => getSectionForItem(i) === "ticketed");
+
+  // Remaining recs (GP recommendations) → "You might also like" footer
+  const mixRecItems = filtered.filter(
     i => i.type === "recommendation"
-      && i.category !== "Activities"
       && i.source !== "Viator"
-      && !isCommunityItem(i)
+      && i.category !== "Activities"
       && !FILTER_ONLY_SOURCES.has(i.source ?? "")
   );
 
-  // Time-aware section label: "Tonight" after 5 pm, otherwise "This weekend"
-  const eventSectionLabel = (() => {
-    const h = new Date().getHours();
-    if (h >= 17) return "Tonight";
-    const day = new Date().getDay();
-    if (day === 0 || day === 6) return "This weekend";
-    return "This weekend";
-  })();
+  // Only show section headers when 2+ sections have content.
+  // Single section → flat list without headers (no orphaned heading).
+  const nonEmptySectionCount = FEED_SECTION_CONFIG.filter(
+    s => (s.key === "happening" ? happeningItems : s.key === "ticketed" ? ticketedItems : communityItems).length > 0
+  ).length;
+  const showSectionHeaders = nonEmptySectionCount >= 2;
 
   // True when we should render the sectioned Mix layout
   const isMixLayout = activeFilter === "All" && !showSaved;
@@ -534,21 +535,26 @@ export default function FeedScreen() {
         <CinemaGroupedView groups={cinemaGroups} T={T} />
       ) : isMixLayout ? (
 
-      /* ── "All" view — sectioned Mix layout ──────────────────────── */
+      /* ── "All" view — three-section layout ──────────────────────── */
       <ScrollView
         contentContainerStyle={[styles.feed, { paddingHorizontal: 0, paddingBottom: 60 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Events + Activities section — TicketCards */}
-        {mixTicketItems.length > 0 && (
+        {/* ── Section helper — renders header + cards for one section ── */}
+        {/* Happening near you — Meetup events */}
+        {happeningItems.length > 0 && (
           <>
-            <SectionHeader
-              label={eventSectionLabel}
-              count={`${mixTicketItems.length} result${mixTicketItems.length !== 1 ? "s" : ""}`}
-              T={T}
-            />
+            {showSectionHeaders && (
+              <View style={[styles.sectionHeader, { borderBottomColor: T.borderSub }]}>
+                <View style={styles.sectionHeaderInner}>
+                  <Text style={styles.sectionEmoji}>📍</Text>
+                  <Text style={[styles.sectionLabel, { color: T.text }]}>Happening near you</Text>
+                </View>
+                <View style={[styles.sectionLine, { backgroundColor: T.borderSub }]} />
+              </View>
+            )}
             <View style={{ paddingHorizontal: 16 }}>
-              {mixTicketItems.map(item => (
+              {happeningItems.map(item => (
                 <TicketCard
                   key={item.id} item={item} T={T}
                   saved={saved.has(item.id)}
@@ -559,21 +565,49 @@ export default function FeedScreen() {
           </>
         )}
 
-        {/* Community section — ListRows */}
-        {mixCommunityItems.length > 0 && (
+        {/* From the community — RSS, Reddit, Google Events, Visit Lancaster, etc. */}
+        {communityItems.length > 0 && (
           <>
-            <SectionHeader
-              label="From the community"
-              count={`${mixCommunityItems.length}`}
-              T={T}
-            />
+            {showSectionHeaders && (
+              <View style={[styles.sectionHeader, { borderBottomColor: T.borderSub }]}>
+                <View style={styles.sectionHeaderInner}>
+                  <Text style={styles.sectionEmoji}>🤝</Text>
+                  <Text style={[styles.sectionLabel, { color: T.text }]}>From the community</Text>
+                </View>
+                <View style={[styles.sectionLine, { backgroundColor: T.borderSub }]} />
+              </View>
+            )}
             <View style={{ paddingHorizontal: 22 }}>
-              {mixCommunityItems.map((item, i) => (
+              {communityItems.map((item, i) => (
                 <ListRow
                   key={item.id} item={item} T={T}
                   saved={saved.has(item.id)}
                   onSave={() => handleToggle(item.id)}
-                  isLast={i === mixCommunityItems.length - 1}
+                  isLast={i === communityItems.length - 1}
+                />
+              ))}
+            </View>
+          </>
+        )}
+
+        {/* Ticketed events — Ticketmaster, AMC, Viator, Eventbrite, etc. */}
+        {ticketedItems.length > 0 && (
+          <>
+            {showSectionHeaders && (
+              <View style={[styles.sectionHeader, { borderBottomColor: T.borderSub }]}>
+                <View style={styles.sectionHeaderInner}>
+                  <Text style={styles.sectionEmoji}>🎟️</Text>
+                  <Text style={[styles.sectionLabel, { color: T.text }]}>Ticketed events</Text>
+                </View>
+                <View style={[styles.sectionLine, { backgroundColor: T.borderSub }]} />
+              </View>
+            )}
+            <View style={{ paddingHorizontal: 16 }}>
+              {ticketedItems.map(item => (
+                <TicketCard
+                  key={item.id} item={item} T={T}
+                  saved={saved.has(item.id)}
+                  onSave={() => handleToggle(item.id)}
                 />
               ))}
             </View>
@@ -608,7 +642,7 @@ export default function FeedScreen() {
         )}
 
         {/* Empty state */}
-        {!remoteLoading && mixTicketItems.length === 0 && mixCommunityItems.length === 0 && mixRecItems.length === 0 && (
+        {!remoteLoading && happeningItems.length === 0 && communityItems.length === 0 && ticketedItems.length === 0 && mixRecItems.length === 0 && (
           <View style={styles.empty}>
             <Text style={styles.emptyIcon}>{noAreaData ? "🗺️" : "📅"}</Text>
             <Text style={[styles.emptyTitle, { color: T.text }]}>
@@ -772,6 +806,12 @@ const styles = StyleSheet.create({
   applyText:      { fontSize: 13, fontWeight: "700", fontFamily: "DMSans_700Bold" } as TextStyle,
   feed:           { padding: 14, paddingBottom: 40 } as ViewStyle,
   resultCount:    { fontSize: 11, fontFamily: "DMSans_700Bold", fontWeight: "700", letterSpacing: 0.6, textTransform: "uppercase", paddingBottom: 10 } as TextStyle,
+  // ── Section headers (three-section All view) ────────────────────────────
+  sectionHeader:      { marginTop: 20, marginBottom: 4, paddingBottom: 10, paddingHorizontal: 16 } as ViewStyle,
+  sectionHeaderInner: { flexDirection: "row", alignItems: "center", gap: 7, marginBottom: 8 } as ViewStyle,
+  sectionEmoji:       { fontSize: 13 } as TextStyle,
+  sectionLabel:       { fontSize: 11, fontWeight: "700", fontFamily: "DMSans_700Bold", letterSpacing: 0.8, textTransform: "uppercase" } as TextStyle,
+  sectionLine:        { height: 1.5, width: "100%" } as ViewStyle,
   recDivider:     { flexDirection: "row", alignItems: "center", gap: 8, marginVertical: 14 } as ViewStyle,
   dividerLine:    { flex: 1, height: 2 } as ViewStyle,
   dividerText:    { fontSize: 11, fontWeight: "700", fontFamily: "DMSans_700Bold", letterSpacing: 0.6, textTransform: "uppercase" } as TextStyle,

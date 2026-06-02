@@ -540,7 +540,13 @@ export default function FeedScreen() {
         contentContainerStyle={[styles.feed, { paddingHorizontal: 0, paddingBottom: 60 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Section helper — renders header + cards for one section ── */}
+        {/* Total count — shown whenever there are results, matches FlatList header */}
+        {!remoteLoading && sectionableItems.length > 0 && (
+          <Text style={[styles.resultCount, { color: T.muted, paddingHorizontal: 16 }]}>
+            {sectionableItems.length} result{sectionableItems.length !== 1 ? "s" : ""} · this week in your area
+          </Text>
+        )}
+
         {/* Happening near you — Meetup events */}
         {happeningItems.length > 0 && (
           <>

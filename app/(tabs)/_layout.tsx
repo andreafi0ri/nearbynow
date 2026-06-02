@@ -104,13 +104,13 @@ const s = StyleSheet.create({
     left: 0,
     right: 0,
     height: 96,
-    alignItems: "center",
-    justifyContent: "flex-start",
+    flexDirection: "row",   // pill is a row child → flex:1 fills the full width
+    alignItems: "flex-start",
+    paddingTop: 20,
     pointerEvents: "box-none" as any,
     zIndex: 30,
   } as ViewStyle,
   pill: {
-    marginTop: 20,
     marginHorizontal: 16,
     flex: 1,
     height: 64,

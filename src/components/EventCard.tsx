@@ -196,15 +196,19 @@ export function EventCard({
 
       <View style={styles.body}>
 
-        {/* Header row — hidden when image overlay already shows category info */}
-        <View style={[styles.headerRow, item.imageUrl && !imgError ? { display: "none" } : {}]}>
+        {/* Header row — category label hidden when image overlay covers it; save button always shown */}
+        <View style={styles.headerRow}>
           <View style={styles.headerLeft}>
-            <Text style={styles.emoji}>{item.img}</Text>
-            <Text style={[styles.catLabel, { color: item.catDot }]}>{item.category}</Text>
-            {item.type === "recommendation" && (
-              <View style={[styles.nearbyBadge, { backgroundColor: T.goldLight, borderColor: T.gold }]}>
-                <Text style={[styles.nearbyText, { color: T.goldDim }]}>NEARBY</Text>
-              </View>
+            {!(item.imageUrl && !imgError) && (
+              <>
+                <Text style={styles.emoji}>{item.img}</Text>
+                <Text style={[styles.catLabel, { color: item.catDot }]}>{item.category}</Text>
+                {item.type === "recommendation" && (
+                  <View style={[styles.nearbyBadge, { backgroundColor: T.goldLight, borderColor: T.gold }]}>
+                    <Text style={[styles.nearbyText, { color: T.goldDim }]}>NEARBY</Text>
+                  </View>
+                )}
+              </>
             )}
           </View>
           <TouchableOpacity
@@ -348,7 +352,7 @@ const styles = StyleSheet.create({
   stripe:        { height:4 } as ViewStyle,
   // ── Hero image ────────────────────────────────────────────────────────────
   imageWrap:     { width:"100%", height:160, position:"relative", overflow:"hidden" } as ViewStyle,
-  heroImage:     { width:"100%", height:"100%" } as any,
+  heroImage:     { width:"100%", height:160 } as any,
   imageStripe:   { position:"absolute", top:0, left:0, right:0, height:3, zIndex:2 } as ViewStyle,
   imageFade:     { position:"absolute", bottom:0, left:0, right:0, height:70, backgroundColor:"rgba(0,0,0,0.42)", zIndex:1 } as ViewStyle,
   imageOverlay:  { position:"absolute", bottom:10, left:12, flexDirection:"row", alignItems:"center", gap:5, zIndex:3 } as ViewStyle,

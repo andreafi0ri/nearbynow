@@ -43,6 +43,12 @@ type AMCShowtime = {
   theatreId: number;
   purchaseUrl: string;
   attributes: { id: number; name: string }[];
+  // Media object returned by the showtime endpoint (not the movies endpoint)
+  media?: {
+    posterDynamic?: string;
+    heroDesktopDynamic?: string;
+    posterDynamic180X74?: string;
+  };
 };
 
 type AMCMovie = {
@@ -477,6 +483,8 @@ function groupShowtimesByMovie(
       showings,
       tags: buildShowtimeTags(movie, upcoming),
       isCanceled: false,
+      // Poster from the showtime's media object (posterDynamic is a Cloudinary URL)
+      imageUrl: upcoming[0]?.media?.posterDynamic || upcoming[0]?.media?.heroDesktopDynamic || undefined,
     };
 
     groups.push({ movie, theatre, showtimes: upcoming, feedItem });

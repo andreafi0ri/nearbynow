@@ -617,6 +617,7 @@ export async function searchNearbyActivities(
         rating:    place.rating,
         reviews:   place.userRatingCount,
         tags,
+        imageUrl:  buildGpPhotoUrl(place),
       };
     })
     // Sort by rating descending, cap at 15

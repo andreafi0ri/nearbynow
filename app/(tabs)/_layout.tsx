@@ -113,7 +113,6 @@ const s = StyleSheet.create({
     marginTop: 20,
     marginHorizontal: 16,
     flex: 1,
-    maxWidth: 380,
     height: 64,
     borderRadius: 32,
     borderWidth: 1,

@@ -1,7 +1,7 @@
 // app/(tabs)/map.web.tsx — web-only: Mapbox GL JS map
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
-  View, Text, TouchableOpacity, Modal, Pressable, ScrollView, Switch,
+  View, Text, TouchableOpacity, Modal, Pressable, ScrollView, Switch, Linking,
   StyleSheet, ViewStyle, TextStyle,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -59,13 +59,30 @@ function PillButton({ T, label, value, active, onPress }: {
   );
 }
 
+/** Teardrop-shaped marker per design spec §10.
+ *  Unselected: white fill + colored stroke. Selected: solid color fill, enlarged.
+ *  transform-origin is bottom-center so the pin tip stays anchored to the coord.
+ */
 function markerHTML(emoji: string, color: string, sel: boolean): string {
-  const s = sel ? 44 : 36;
-  return `<div style="width:${s}px;height:${s}px;border-radius:${s/2}px;` +
-    `background:${sel ? color : "#1a1a1a"};border:2.5px solid ${color};` +
-    `display:flex;align-items:center;justify-content:center;` +
-    `font-size:${sel ? 18 : 14}px;box-shadow:3px 3px 0 rgba(0,0,0,0.25);cursor:pointer;` +
-    `transform:${sel ? "scale(1.2)" : "scale(1)"};transition:transform .15s;">${emoji}</div>`;
+  const fill   = sel ? color : "rgba(255,255,255,0.96)";
+  const stroke = color;
+  const sw     = sel ? 0 : 2.5;
+  const scale  = sel ? 1.28 : 1;
+  const emojiFontSize = sel ? 16 : 14;
+  return `<div style="
+    cursor:pointer;
+    transform:scale(${scale}) translateY(0);
+    transform-origin:bottom center;
+    transition:transform .16s cubic-bezier(.3,1.3,.5,1);
+    filter:drop-shadow(0 4px 6px rgba(0,0,0,${sel ? 0.45 : 0.22}));
+    position:relative;width:38px;height:46px;">
+    <svg width="38" height="46" viewBox="0 0 38 46" style="position:absolute;top:0;left:0;">
+      <path d="M19 1 C9 1 1 9 1 19 C1 31 19 45 19 45 C19 45 37 31 37 19 C37 9 29 1 19 1 Z"
+        fill="${fill}" stroke="${stroke}" stroke-width="${sw}"/>
+    </svg>
+    <div style="position:absolute;top:6px;left:50%;transform:translateX(-50%);
+      font-size:${emojiFontSize}px;line-height:1;">${emoji}</div>
+  </div>`;
 }
 
 function radiusForZoom(zoom: number): number {
@@ -545,114 +562,185 @@ export default function MapScreen() {
         )}
       </BottomSheet>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
-        {/* Mapbox map container */}
-        <View style={[styles.mapWrap, { borderColor: T.border, shadowColor: T.border }]}>
-          {!mapboxLoaded && (
-            <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-              <Text style={{ color: T.muted, fontFamily: "DMSans_400Regular" }}>Loading map…</Text>
-            </View>
-          )}
-          {React.createElement("div", {
-            ref: mapContainerRef,
-            style: { width: "100%", height: "100%", display: mapboxLoaded ? "block" : "none" },
-          })}
-        </View>
-
-        {/* Draw controls */}
-        {drawMode && (
-          <View style={[styles.drawBar, { backgroundColor: T.bgCard, borderColor: T.border }]}>
-            {drawPoints.length === 0 ? (
-              <Text style={[styles.drawHint, { color: T.muted }]}>Click the map to start drawing your area</Text>
-            ) : !drawClosed ? (
-              <>
-                <Text style={[styles.drawHint, { color: T.muted, flex: 1 }]}>
-                  {drawPoints.length} point{drawPoints.length !== 1 ? "s" : ""}
-                  {drawPoints.length >= 3 ? " — click near first point to close" : ""}
-                </Text>
-                <TouchableOpacity onPress={() => setDrawPoints(p => p.slice(0, -1))} style={[styles.drawBtn, { borderColor: T.borderSub }]}>
-                  <Text style={{ fontSize: 12, fontWeight: "600", color: T.muted, fontFamily: "DMSans_700Bold" }}>Undo</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={clearDraw} style={[styles.drawBtn, { borderColor: T.red }]}>
-                  <Text style={{ fontSize: 12, fontWeight: "600", color: T.red, fontFamily: "DMSans_700Bold" }}>Clear</Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <>
-                <Text style={[styles.drawHint, { color: T.goldDim, flex: 1, fontWeight: "700" }]}>✦ Area selected</Text>
-                <TouchableOpacity onPress={clearDraw} style={[styles.drawBtn, { borderColor: T.borderSub }]}>
-                  <Text style={{ fontSize: 12, color: T.muted, fontFamily: "DMSans_700Bold" }}>Clear</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => setDrawMode(false)} style={[styles.drawBtn, { borderColor: T.text, backgroundColor: T.text }]}>
-                  <Text style={{ fontSize: 12, fontWeight: "700", color: T.goldBri, fontFamily: "DMSans_700Bold" }}>Done</Text>
-                </TouchableOpacity>
-              </>
-            )}
+      {/* ── Full-bleed map ──────────────────────────────────────────────────── */}
+      <View style={styles.mapFull}>
+        {!mapboxLoaded && (
+          <View style={styles.mapLoading}>
+            <Text style={{ color: T.muted, fontFamily: "DMSans_400Regular" }}>Loading map…</Text>
           </View>
         )}
+        {React.createElement("div", {
+          ref: mapContainerRef,
+          style: { width: "100%", height: "100%", display: mapboxLoaded ? "block" : "none" },
+          onClick: () => setSelected(null),
+        })}
+      </View>
 
-        {/* Events counter */}
-        {!loading && listFeedItems.length > 0 && (
-          <View style={[styles.countBar, { borderBottomColor: T.borderSub }]}>
-            <Text style={[styles.countText, { color: T.muted }]}>
-              {listItems.length} event{listItems.length !== 1 ? "s" : ""} found
-            </Text>
-          </View>
-        )}
-
-        {/* Event list */}
-        <View style={{ padding: 12 }}>
-          {noAreaData ? (
-            <View style={styles.empty}>
-              <Text style={styles.emptyIcon}>🗺️</Text>
-              <Text style={[styles.emptyTitle, { color: T.text }]}>Nothing here yet</Text>
-              <Text style={[styles.emptySub, { color: T.muted }]}>Try a different location or extend your time range</Text>
-            </View>
-          ) : listItems.length === 0 && dateActive ? (
-            <View style={styles.empty}>
-              <Text style={styles.emptyIcon}>📅</Text>
-              <Text style={[styles.emptyTitle, { color: T.text }]}>No results for this date</Text>
-              <Text style={[styles.emptySub, { color: T.muted }]}>Try a different date or tap × to clear</Text>
-            </View>
-          ) : (
-            listItems.map(item => (
-              <TouchableOpacity key={item.id} onPress={() => setSelected(item)}
-                style={[styles.listRow, {
-                  backgroundColor: selected?.id === item.id ? T.bgCardHi : T.bgCard,
-                  borderColor: selected?.id === item.id ? item.catColor : T.borderSub,
-                  shadowColor: T.borderSub,
-                }]}>
-                <View style={[styles.listIcon, { backgroundColor: item.catColor + "20", borderColor: item.catColor }]}>
-                  <Text style={{ fontSize: 18 }}>{item.img}</Text>
-                </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={[styles.listTitle, { color: T.text }]} numberOfLines={1}>{item.title}</Text>
-                  <Text style={[styles.listSub, { color: T.muted }]}>{item.time}</Text>
-                </View>
-                <Text style={{ color: T.muted, fontSize: 12 }}>→</Text>
+      {/* ── Draw controls (floating bar above preview) ─────────────────────── */}
+      {drawMode && (
+        <View style={[styles.drawBar, { backgroundColor: T.bgCard, borderColor: T.border }]}>
+          {drawPoints.length === 0 ? (
+            <Text style={[styles.drawHint, { color: T.muted }]}>Click the map to start drawing your area</Text>
+          ) : !drawClosed ? (
+            <>
+              <Text style={[styles.drawHint, { color: T.muted, flex: 1 }]}>
+                {drawPoints.length} pt{drawPoints.length !== 1 ? "s" : ""}
+                {drawPoints.length >= 3 ? " — close to finish" : ""}
+              </Text>
+              <TouchableOpacity onPress={() => setDrawPoints(p => p.slice(0, -1))} style={[styles.drawBtn, { borderColor: T.borderSub }]}>
+                <Text style={{ fontSize: 11, fontWeight: "600", color: T.muted, fontFamily: "DMSans_700Bold" }}>Undo</Text>
               </TouchableOpacity>
-            ))
+              <TouchableOpacity onPress={clearDraw} style={[styles.drawBtn, { borderColor: T.red }]}>
+                <Text style={{ fontSize: 11, fontWeight: "600", color: T.red, fontFamily: "DMSans_700Bold" }}>Clear</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <Text style={[styles.drawHint, { color: T.goldDim, flex: 1, fontWeight: "700" }]}>✦ Area selected</Text>
+              <TouchableOpacity onPress={clearDraw} style={[styles.drawBtn, { borderColor: T.borderSub }]}>
+                <Text style={{ fontSize: 11, color: T.muted, fontFamily: "DMSans_700Bold" }}>Clear</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setDrawMode(false)} style={[styles.drawBtn, { borderColor: T.text, backgroundColor: T.text }]}>
+                <Text style={{ fontSize: 11, fontWeight: "700", color: T.goldBri, fontFamily: "DMSans_700Bold" }}>Done</Text>
+              </TouchableOpacity>
+            </>
           )}
         </View>
-      </ScrollView>
+      )}
 
-      {/* Selected event sheet */}
-      <Modal visible={selected !== null} animationType="slide" transparent onRequestClose={() => setSelected(null)}>
-        <Pressable style={styles.overlay} onPress={() => setSelected(null)} />
-        <View style={[styles.sheet, { backgroundColor: T.bg, borderColor: T.border }]}>
-          <View style={[styles.sheetHandle, { backgroundColor: T.borderSub }]} />
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
-            {selected && <EventCard item={selected} saved={saved.has(selected.id)} onSave={toggle} T={T} />}
-          </ScrollView>
+      {/* ── FABs — slide up when preview card is visible ────────────────────── */}
+      <View style={[styles.fabs, { bottom: selected ? 220 : 110 }]}>
+        <TouchableOpacity
+          onPress={() => { setDrawMode(m => !m); clearDraw(); }}
+          style={[styles.fab, { backgroundColor: drawMode ? T.text : T.surface, borderColor: drawMode ? T.gold : T.border }]}
+          accessibilityLabel="Draw area"
+        >
+          <Text style={{ fontSize: 16 }}>✏️</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => {
+            if (mapRef.current) {
+              const center = mapRef.current.getCenter();
+              mapRef.current.flyTo({ center, zoom: mapRef.current.getZoom(), duration: 300 });
+            }
+          }}
+          style={[styles.fab, { backgroundColor: T.surface, borderColor: T.border }]}
+          accessibilityLabel="My location"
+        >
+          <Text style={{ fontSize: 16 }}>⊕</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* ── Floating preview card + dot pager ──────────────────────────────── */}
+      {selected && (
+        <View style={styles.previewWrap}>
+          {/* Dot pager */}
+          <View style={styles.pager}>
+            <TouchableOpacity
+              onPress={() => {
+                const i = visible.findIndex(v => v.id === selected.id);
+                if (i > 0) setSelected(visible[i - 1]);
+              }}
+              style={styles.pagerArrow}
+              accessibilityLabel="Previous"
+            >
+              <Text style={{ color: T.text, fontSize: 18, opacity: 0.7 }}>‹</Text>
+            </TouchableOpacity>
+            <View style={styles.dots}>
+              {visible.slice(0, 9).map((v, i) => {
+                const idx = visible.findIndex(x => x.id === selected.id);
+                return (
+                  <View
+                    key={v.id}
+                    style={[
+                      styles.dot,
+                      {
+                        width: i === idx ? 16 : 6,
+                        backgroundColor: i === idx ? T.gold : (isDark ? "rgba(255,255,255,0.35)" : "rgba(0,0,0,0.22)"),
+                      },
+                    ]}
+                  />
+                );
+              })}
+            </View>
+            <TouchableOpacity
+              onPress={() => {
+                const i = visible.findIndex(v => v.id === selected.id);
+                if (i < visible.length - 1) setSelected(visible[i + 1]);
+              }}
+              style={styles.pagerArrow}
+              accessibilityLabel="Next"
+            >
+              <Text style={{ color: T.text, fontSize: 18, opacity: 0.7 }}>›</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Preview card */}
+          <View style={[styles.previewCard, { backgroundColor: T.bgCard, borderColor: T.border }]}>
+            <View style={[styles.previewAccent, { backgroundColor: selected.catColor }]} />
+            <View style={styles.previewBody}>
+              <View style={[styles.previewIconWrap, { backgroundColor: selected.catColor + "1A", borderColor: selected.catColor + "33" }]}>
+                <Text style={{ fontSize: 22 }}>{selected.img}</Text>
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={[styles.previewCat, { color: selected.catColor }]}>{selected.category.toUpperCase()}</Text>
+                <Text style={[styles.previewTitle, { color: T.text }]} numberOfLines={1}>{selected.title}</Text>
+                <Text style={[styles.previewMeta, { color: T.muted }]} numberOfLines={1}>🕐 {selected.time} · 📍 {selected.location}</Text>
+              </View>
+            </View>
+            <View style={styles.previewFooter}>
+              <Text style={[styles.previewSource, { borderColor: T.border }]}>{selected.source}</Text>
+              <View style={{ flex: 1 }} />
+              <TouchableOpacity
+                onPress={() => toggle(selected.id)}
+                style={[styles.previewSaveBtn, { backgroundColor: T.bgCardHi, borderColor: T.border }]}
+                accessibilityLabel="Save"
+              >
+                <Text style={{ fontSize: 16, color: saved.has(selected.id) ? selected.catColor : T.muted }}>
+                  {saved.has(selected.id) ? "♥" : "♡"}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => selected.booking?.url && Linking.openURL(selected.booking.url)}
+                style={[styles.previewViewBtn, { backgroundColor: T.text }]}
+              >
+                <Text style={[styles.previewViewText, { color: T.goldBri }]}>View details</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
-      </Modal>
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe:          { flex: 1 } as ViewStyle,
-  header:        { borderBottomWidth: 2, padding: 14, zIndex: 10, elevation: 10 } as ViewStyle,
+  safe:          { flex: 1, position: "relative" } as ViewStyle,
+  header:        { borderBottomWidth: 0, padding: 14, zIndex: 10, elevation: 10, position: "relative" } as ViewStyle,
+  // ── Full-bleed map ───────────────────────────────────────────────────────
+  mapFull:       { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 0 } as ViewStyle,
+  mapLoading:    { flex: 1, alignItems: "center", justifyContent: "center" } as ViewStyle,
+  // ── FABs ────────────────────────────────────────────────────────────────
+  fabs:          { position: "absolute", right: 16, zIndex: 20, flexDirection: "column", gap: 10, transition: "bottom .25s" as any } as ViewStyle,
+  fab:           { width: 46, height: 46, borderRadius: 14, borderWidth: 1, alignItems: "center", justifyContent: "center", shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.14, shadowRadius: 14, elevation: 6 } as ViewStyle,
+  // ── Floating preview card ────────────────────────────────────────────────
+  previewWrap:   { position: "absolute", left: 16, right: 16, bottom: 104, zIndex: 20 } as ViewStyle,
+  pager:         { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 9 } as ViewStyle,
+  pagerArrow:    { padding: "0 6px" as any } as ViewStyle,
+  dots:          { flexDirection: "row", gap: 5, alignItems: "center" } as ViewStyle,
+  dot:           { height: 6, borderRadius: 3 } as ViewStyle,
+  previewCard:   { borderRadius: 16, overflow: "hidden", borderWidth: 1, shadowColor: "#000", shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.22, shadowRadius: 34, elevation: 12 } as ViewStyle,
+  previewAccent: { height: 3 } as ViewStyle,
+  previewBody:   { flexDirection: "row", alignItems: "center", gap: 12, padding: "13px 15px" as any } as ViewStyle,
+  previewIconWrap: { width: 48, height: 48, borderRadius: 12, borderWidth: 1, alignItems: "center", justifyContent: "center", flexShrink: 0 } as ViewStyle,
+  previewCat:    { fontSize: 9.5, fontWeight: "700", fontFamily: "Inter_700Bold", letterSpacing: 1.6, textTransform: "uppercase" } as TextStyle,
+  previewTitle:  { fontSize: 15, fontWeight: "600", fontFamily: "Inter_700Bold", lineHeight: 20, marginTop: 2 } as TextStyle,
+  previewMeta:   { fontSize: 11.5, fontFamily: "Inter_400Regular", marginTop: 3 } as TextStyle,
+  previewFooter: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 15, paddingBottom: 14 } as ViewStyle,
+  previewSource: { fontSize: 9.5, fontWeight: "600", fontFamily: "Inter_700Bold", letterSpacing: 0.8, color: "#888", borderWidth: 1, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 5 } as TextStyle,
+  previewSaveBtn:{ width: 38, height: 38, borderRadius: 11, borderWidth: 1, alignItems: "center", justifyContent: "center" } as ViewStyle,
+  previewViewBtn:{ height: 38, paddingHorizontal: 16, borderRadius: 11, alignItems: "center", justifyContent: "center" } as ViewStyle,
+  previewViewText:{ fontSize: 13, fontWeight: "700", fontFamily: "Inter_700Bold" } as TextStyle,
   // ── 3-pill bar ──────────────────────────────────────────────────────────
   pillBar:       { flexDirection: "row", gap: 8, marginTop: 10, paddingBottom: 10 } as ViewStyle,
   pill:          { flex: 1, borderWidth: 1.5, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, flexDirection: "row", alignItems: "center", gap: 4 } as ViewStyle,

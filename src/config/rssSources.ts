@@ -541,18 +541,8 @@ export const RSS_SOURCES: RSSSource[] = [
   },
 
   // ─── Global fallback — always included ───────────────────────────────────
-  // Verified working (via codetabs proxy) as of 2026-06:
-  //   ✅ Consequence of Sound    — 15 items, 9 events   (replaces: Time Out USA 404,
-  //                                                       Eventbrite Blog 404)
-  {
-    url:      "https://consequence.net/feed/",
-    name:     "Consequence of Sound",
-    area:     "global",
-    category: "Music",
-    catColor: "#7B5CE0", catDot: "#A688FF",
-    img:      "🎟️", type: "auto",
-    tags:     ["Music", "Events", "Concerts"],
-  },
+  // Removed (2026-06): Consequence of Sound — scored 4/15 items but all 4 were
+  // music industry news / celebrity stories, zero genuine local events.
   {
     url:      "https://www.timeout.com/uk/rss",
     name:     "Time Out UK",

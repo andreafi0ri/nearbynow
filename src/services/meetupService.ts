@@ -47,7 +47,7 @@ type MuEvent = {
   group:       MuGroup;
   eventUrl:    string;
   isOnline:    boolean;
-  featuredEventPhoto?: { baseUrl?: string };
+  featuredEventPhoto?: { baseUrl?: string; id?: string };
 };
 
 type MuEdge = {
@@ -65,12 +65,14 @@ type MuResponse = {
 
 // ─── Image helper ─────────────────────────────────────────────────────────────
 
-/** Builds a 640×360 Meetup photo URL from the baseUrl template. */
+/** Builds a Meetup photo URL from baseUrl + id.
+ *  Real format: {baseUrl}{id}/680x510.webp
+ *  e.g. https://secure-content.meetupstatic.com/images/classic-events/534464573/680x510.webp
+ */
 function pickMeetupImage(ev: MuEvent): string | undefined {
-  const baseUrl = ev.featuredEventPhoto?.baseUrl;
-  if (!baseUrl) return undefined;
-  // Meetup baseUrl contains a {size} token e.g. "https://secure.meetupstatic.com/photos/event/abc/{size}.jpeg"
-  return baseUrl.replace("{size}", "640x360");
+  const { baseUrl, id } = ev.featuredEventPhoto ?? {};
+  if (!baseUrl || !id) return undefined;
+  return `${baseUrl}${id}/680x510.webp`;
 }
 
 // ─── GraphQL query ────────────────────────────────────────────────────────────
@@ -96,7 +98,7 @@ const MEETUP_QUERY = `
           group { name urlname }
           eventUrl
           isOnline
-          featuredEventPhoto { baseUrl }
+          featuredEventPhoto { baseUrl id }
         }
       }
     }

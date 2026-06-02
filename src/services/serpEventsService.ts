@@ -282,6 +282,7 @@ function mapSerpEvent(event: SerpEvent, area: string): EventItem | null {
     booking,
     tags:      buildEventTags(event),
     isCanceled: false,
+    imageUrl:  event.thumbnail ?? undefined,
   };
 }
 

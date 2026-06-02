@@ -1,8 +1,8 @@
 // src/components/EventCard.tsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View, Text, TouchableOpacity, Linking, Modal, Pressable,
-  StyleSheet, ViewStyle, TextStyle, Platform,
+  Image, StyleSheet, ViewStyle, TextStyle, Platform,
 } from "react-native";
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
@@ -154,7 +154,11 @@ export function EventCard({
   const isMerged     = item.isMerged   === true;
   const sourceLinks  = item.sourceLinks ?? [];
   const showTimes    = item.showTimes && item.showTimes.length > 1 ? item.showTimes : null;
-  const [calOpen, setCalOpen] = useState(false);
+  const [calOpen,   setCalOpen]   = useState(false);
+  const [imgError,  setImgError]  = useState(false);
+
+  // Reset image error state when the card item changes
+  useEffect(() => { setImgError(false); }, [item.id]);
 
   return (
     <View style={[
@@ -162,11 +166,38 @@ export function EventCard({
       { backgroundColor: T.bgCard, borderColor: isAff ? T.gold : T.border, shadowColor: T.border },
       isCanceled && { opacity: 0.6 },
     ]}>
-      <View style={[styles.stripe, { backgroundColor: item.catColor }]} />
+      {/* Hero image — shown when imageUrl is available and hasn't errored */}
+      {item.imageUrl && !imgError ? (
+        <View style={styles.imageWrap}>
+          <Image
+            source={{ uri: item.imageUrl }}
+            style={styles.heroImage as any}
+            resizeMode="cover"
+            onError={() => setImgError(true)}
+          />
+          {/* Thin category-colour accent at top of image */}
+          <View style={[styles.imageStripe, { backgroundColor: item.catColor }]} />
+          {/* Dark fade at bottom for overlay legibility */}
+          <View style={styles.imageFade} />
+          {/* Category + NEARBY badge overlaid on image */}
+          <View style={styles.imageOverlay}>
+            <Text style={styles.emoji}>{item.img}</Text>
+            <Text style={[styles.catLabel, { color: "#FFFFFF" }]}>{item.category}</Text>
+            {item.type === "recommendation" && (
+              <View style={styles.nearbyBadgeOnImage}>
+                <Text style={styles.nearbyTextOnImage}>NEARBY</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      ) : (
+        <View style={[styles.stripe, { backgroundColor: item.catColor }]} />
+      )}
+
       <View style={styles.body}>
 
-        {/* Header row */}
-        <View style={styles.headerRow}>
+        {/* Header row — hidden when image overlay already shows category info */}
+        <View style={[styles.headerRow, item.imageUrl && !imgError ? { display: "none" } : {}]}>
           <View style={styles.headerLeft}>
             <Text style={styles.emoji}>{item.img}</Text>
             <Text style={[styles.catLabel, { color: item.catDot }]}>{item.category}</Text>
@@ -315,6 +346,14 @@ export function EventCard({
 const styles = StyleSheet.create({
   card:          { borderRadius:16, borderWidth:2, marginBottom:14, overflow:"hidden", shadowOffset:{width:4,height:4}, shadowOpacity:1, shadowRadius:0, elevation:4 } as ViewStyle,
   stripe:        { height:4 } as ViewStyle,
+  // ── Hero image ────────────────────────────────────────────────────────────
+  imageWrap:     { width:"100%", height:160, position:"relative", overflow:"hidden" } as ViewStyle,
+  heroImage:     { width:"100%", height:"100%" } as any,
+  imageStripe:   { position:"absolute", top:0, left:0, right:0, height:3, zIndex:2 } as ViewStyle,
+  imageFade:     { position:"absolute", bottom:0, left:0, right:0, height:70, backgroundColor:"rgba(0,0,0,0.42)", zIndex:1 } as ViewStyle,
+  imageOverlay:  { position:"absolute", bottom:10, left:12, flexDirection:"row", alignItems:"center", gap:5, zIndex:3 } as ViewStyle,
+  nearbyBadgeOnImage: { borderWidth:1, borderColor:"rgba(255,255,255,0.6)", borderRadius:10, paddingHorizontal:6, paddingVertical:1, backgroundColor:"rgba(255,255,255,0.15)" } as ViewStyle,
+  nearbyTextOnImage:  { fontSize:9, fontWeight:"700", letterSpacing:1, textTransform:"uppercase", color:"#FFFFFF", fontFamily:"DMSans_700Bold" } as TextStyle,
   body:          { padding:14 } as ViewStyle,
   headerRow:     { flexDirection:"row", justifyContent:"space-between", alignItems:"center", marginBottom:10 } as ViewStyle,
   headerLeft:    { flexDirection:"row", alignItems:"center", gap:6, flex:1, flexWrap:"wrap" } as ViewStyle,

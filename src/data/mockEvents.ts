@@ -46,6 +46,7 @@ export type EventItem = {
   endIso?: string;
   lat?: number;
   lng?: number;
+  imageUrl?: string;       // Hero image URL when available — falls back to stripe+emoji
   isCanceled?: boolean;    // Set true when Meta confirms cancellation
   showTimes?: string[];    // Multiple show times for recurring/multi-session events
   // Multi-source merge fields (populated by deduplicationService)
@@ -67,6 +68,7 @@ export const MOCK_EVENTS: EventItem[] = [
     source: "Facebook Events", category: "Food & Drink",
     catColor: "#D43030", catDot: "#FF6B6B", saves: 34, img: "🥦", booking: null,
     lat: 51.4613, lng: -0.1156,
+    imageUrl: "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=600&q=80",
     tags: ["free", "market", "food"],
     // Multi-source mock — lets the EventCard sourceLinks UI render in development
     sourceLinks: [
@@ -87,6 +89,7 @@ export const MOCK_EVENTS: EventItem[] = [
     source: "Instagram", category: "Music",
     catColor: "#7B5CE0", catDot: "#A688FF", saves: 21, img: "🎸", booking: null,
     lat: 51.4586, lng: -0.1124,
+    imageUrl: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&q=80",
     tags: ["free", "music", "open mic"],
   },
   {
@@ -98,6 +101,7 @@ export const MOCK_EVENTS: EventItem[] = [
     source: "r/brixton", category: "Community",
     catColor: "#2860C8", catDot: "#5A90F8", saves: 8, img: "🏛️", booking: null,
     lat: 51.4617, lng: -0.1235,
+    imageUrl: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=600&q=80",
   },
   {
     id: 4, type: "recommendation",

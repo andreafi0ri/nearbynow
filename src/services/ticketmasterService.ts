@@ -33,6 +33,8 @@ type TmDateDetail = {
   localTime?: string;
 };
 
+type TmImage = { url: string; width?: number; height?: number; ratio?: string; fallback?: boolean };
+
 type TmEvent = {
   id: string;
   name: string;
@@ -43,6 +45,7 @@ type TmEvent = {
   classifications?: TmClassification[];
   _embedded?: { venues?: TmVenue[] };
   priceRanges?: Array<{ min?: number; max?: number; currency?: string }>;
+  images?: TmImage[];
 };
 
 type TmResponse = {
@@ -51,6 +54,15 @@ type TmResponse = {
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Picks the best image from a Ticketmaster event's images array. Prefers 16:9 at 500–1024px wide. */
+function pickTicketmasterImage(images?: TmImage[]): string | undefined {
+  if (!images?.length) return undefined;
+  const preferred = images.find(i => i.ratio === "16_9" && (i.width ?? 0) >= 500 && (i.width ?? 0) <= 1024 && !i.fallback);
+  const any169    = images.find(i => i.ratio === "16_9" && !i.fallback);
+  const first     = images.find(i => !i.fallback);
+  return (preferred ?? any169 ?? first)?.url;
+}
 
 function hashId(str: string): number {
   let n = 0;
@@ -132,6 +144,7 @@ function toEventItem(ev: TmEvent, area: string): EventItem {
     lng:       isNaN(lng) ? undefined : lng,
     booking:   { label: "Buy Tickets", url: ev.url, affiliate: true },
     tags,
+    imageUrl:  pickTicketmasterImage(ev.images),
   };
 }
 
@@ -217,6 +230,7 @@ function mapTMEventInline(ev: TmEvent, area: string): EventItem {
     lng:       isNaN(lng) ? undefined : lng,
     booking:   { label: bookingLabel, url: ev.url, affiliate: true },
     tags,
+    imageUrl:  pickTicketmasterImage(ev.images),
   };
 }
 

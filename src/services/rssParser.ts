@@ -459,6 +459,35 @@ export function extractVenue(description: string, sourceArea: string): string {
   return AREA_TO_CITY[sourceArea.toLowerCase()] ?? sourceArea;
 }
 
+// ─── RSS image extraction ─────────────────────────────────────────────────────
+
+function isImageUrl(url: string): boolean {
+  return /\.(jpg|jpeg|png|webp|gif)(\?|$)/i.test(url) ||
+    url.includes("/image/") ||
+    url.includes("/photo/") ||
+    url.includes("/img/");
+}
+
+/**
+ * Extracts the first usable image URL from an RSS item.
+ * Checks (in order): enclosure, imageUrl field, first <img> in description HTML.
+ */
+function extractRSSImage(item: RSSParsedItem): string | undefined {
+  // Enclosure (e.g. <enclosure url="..." type="image/jpeg"/>)
+  const enc = item.enclosures?.find(e => e.mimeType?.startsWith("image/"))?.url;
+  if (enc && isImageUrl(enc)) return enc;
+
+  // imageUrl field (react-native-rss-parser extracts <media:content> here)
+  if (item.imageUrl && isImageUrl(item.imageUrl)) return item.imageUrl;
+
+  // First <img src="..."> in the description HTML
+  const raw = typeof item.description === "string" ? item.description : "";
+  const m = raw.match(/<img[^>]+src=["']([^"']+)["']/i);
+  if (m?.[1] && isImageUrl(m[1])) return m[1];
+
+  return undefined;
+}
+
 // ─── Stable numeric ID ────────────────────────────────────────────────────────
 
 function stableId(s: string): number {
@@ -558,5 +587,6 @@ export function parseRSSItem(item: RSSParsedItem, source: RSSSource): EventItem 
     img,
     booking:   url ? { label: "Read more", url, affiliate: false } : null,
     tags:      tags.length > 0 ? tags : undefined,
+    imageUrl:  extractRSSImage(item),
   };
 }

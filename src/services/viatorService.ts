@@ -230,6 +230,26 @@ function mapViatorEmoji(product: ViatorProduct): string {
   return "⭐";
 }
 
+// ─── Image helper ─────────────────────────────────────────────────────────────
+
+/** Picks the best available image from a Viator product. */
+function pickViatorImage(product: ViatorProduct): string | undefined {
+  // Structured images array (API v2) — prefer variants in the 400–800px range
+  const structured = (product as any).images?.[0]?.variants
+    ?.find((v: any) => (v.width ?? 0) >= 400 && (v.width ?? 0) <= 800)?.url;
+  if (structured) return structured;
+
+  // Hi-res thumbnail (some API versions)
+  const hi = (product as any).thumbnailHiResURL;
+  if (hi) return hi;
+
+  // Standard thumbnail fallback
+  const thumb = (product as any).thumbnailURL;
+  if (thumb) return thumb;
+
+  return undefined;
+}
+
 // ─── Duration helper ──────────────────────────────────────────────────────────
 
 function buildViatorTime(product: ViatorProduct): string {
@@ -301,6 +321,7 @@ function mapViatorProduct(product: ViatorProduct, area: string): EventItem {
     tags:      buildViatorTags(product),
     showTimes: undefined,
     isCanceled: false,
+    imageUrl:  pickViatorImage(product),
   };
 }
 

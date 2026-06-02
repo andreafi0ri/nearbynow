@@ -47,6 +47,7 @@ type MuEvent = {
   group:       MuGroup;
   eventUrl:    string;
   isOnline:    boolean;
+  featuredEventPhoto?: { baseUrl?: string };
 };
 
 type MuEdge = {
@@ -61,6 +62,16 @@ type MuResponse = {
   };
   errors?: Array<{ message: string }>;
 };
+
+// ─── Image helper ─────────────────────────────────────────────────────────────
+
+/** Builds a 640×360 Meetup photo URL from the baseUrl template. */
+function pickMeetupImage(ev: MuEvent): string | undefined {
+  const baseUrl = ev.featuredEventPhoto?.baseUrl;
+  if (!baseUrl) return undefined;
+  // Meetup baseUrl contains a {size} token e.g. "https://secure.meetupstatic.com/photos/event/abc/{size}.jpeg"
+  return baseUrl.replace("{size}", "640x360");
+}
 
 // ─── GraphQL query ────────────────────────────────────────────────────────────
 // Uses recommendedEvents (replaces the deprecated keywordSearch field).
@@ -85,6 +96,7 @@ const MEETUP_QUERY = `
           group { name urlname }
           eventUrl
           isOnline
+          featuredEventPhoto { baseUrl }
         }
       }
     }
@@ -158,6 +170,7 @@ function toEventItem(ev: MuEvent, area: string): EventItem {
     lng:       ev.venue?.lon, // API field is "lon", EventItem stores as "lng"
     booking:   { label: "RSVP on Meetup", url: ev.eventUrl, affiliate: false },
     tags:      [ev.group.name],
+    imageUrl:  pickMeetupImage(ev),
   };
 }
 

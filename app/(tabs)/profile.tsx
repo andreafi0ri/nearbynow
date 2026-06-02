@@ -248,7 +248,7 @@ export default function ProfileScreen() {
                 <TouchableOpacity onPress={() => { setEditingName(true); setNameInput(username); }} style={styles.nameRow}>
                   <Text style={[styles.username, { color: T.text }]}>{username}</Text>
                   <View style={[styles.editPill, { backgroundColor: T.goldLight, borderColor: T.gold }]}>
-                    <Text style={[styles.editPillText, { color: T.goldDim }]}>Edit</Text>
+                    <Text style={[styles.editPillText, { color: T.goldBri }]}>Edit</Text>
                   </View>
                 </TouchableOpacity>
               )}

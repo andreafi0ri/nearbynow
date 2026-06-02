@@ -322,7 +322,7 @@ export default function FeedScreen() {
             >
               <Text style={[styles.areaText, { color: T.text }]} numberOfLines={1}>{area || "…"}</Text>
               <View style={[styles.changePill, { backgroundColor: T.goldLight, borderColor: T.gold }]}>
-                <Text style={[styles.changeText, { color: T.goldDim }]}>{areas.length > 1 ? "▾ switch" : "▾ change"}</Text>
+                <Text style={[styles.changeText, { color: T.goldBri }]}>{areas.length > 1 ? "▾ switch" : "▾ change"}</Text>
               </View>
             </TouchableOpacity>
             <Text style={[styles.radiusLabel, { color: T.mutedL }]}>

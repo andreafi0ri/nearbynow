@@ -2,10 +2,10 @@
 // v2 Mix feed card components: TicketCard, ListRow, SectionHeader + shared helpers.
 // Also exports: ctaFor (source-to-CTA helper), SourceBadge, ActionCTA.
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View, Text, TouchableOpacity, Linking, Platform, Modal, Pressable,
-  StyleSheet, ViewStyle, TextStyle,
+  Image, StyleSheet, ViewStyle, TextStyle,
 } from "react-native";
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
@@ -270,7 +270,10 @@ export function TicketCard({
   saved: boolean;
   onSave: () => void;
 }) {
-  const [calOpen, setCalOpen] = useState(false);
+  const [calOpen,  setCalOpen]  = useState(false);
+  const [imgError, setImgError] = useState(false);
+  useEffect(() => { setImgError(false); }, [item.id]);
+
   const tone = item.catColor || T.red;
   const cta  = ctaFor(item.source);
   const { label: dayLabel, num: dayNum } = getDayStub(item);
@@ -285,6 +288,21 @@ export function TicketCard({
 
         {/* Card */}
         <View style={[tcStyles.card, { backgroundColor: T.bgCard, borderColor: T.border }]}>
+          {/* Hero image — spans full card width above the stub row */}
+          {item.imageUrl && !imgError && (
+            <View style={tcStyles.imageWrap}>
+              <Image
+                source={{ uri: item.imageUrl }}
+                style={tcStyles.heroImage as any}
+                resizeMode="cover"
+                onError={() => setImgError(true)}
+              />
+              <View style={[tcStyles.imageAccent, { backgroundColor: tone }]} />
+            </View>
+          )}
+
+          {/* Stub row */}
+          <View style={tcStyles.stubRow}>
           {/* Stub */}
           <View style={[tcStyles.stub, { backgroundColor: tone }]}>
             <Text style={[tcStyles.stubDayLabel, { fontSize: dayLabel.length > 4 ? 9 : 11 }]}>
@@ -344,6 +362,7 @@ export function TicketCard({
               </View>
             </View>
           </View>
+          </View>{/* end stubRow */}
         </View>
       </View>
 
@@ -355,7 +374,13 @@ export function TicketCard({
 const tcStyles = StyleSheet.create({
   outer:       { position: "relative" } as ViewStyle,
   circle:      { position: "absolute", width: 14, height: 12, borderRadius: 6, zIndex: 10 } as ViewStyle,
-  card:        { flexDirection: "row", alignItems: "stretch", borderRadius: 14, borderWidth: 1, overflow: "hidden" } as ViewStyle,
+  card:        { flexDirection: "column", alignItems: "stretch", borderRadius: 14, borderWidth: 1, overflow: "hidden" } as ViewStyle,
+  // Hero image — sits above the stub row when imageUrl is present
+  imageWrap:   { width: "100%", height: 130, overflow: "hidden", position: "relative" } as ViewStyle,
+  heroImage:   { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, width: "100%", height: 130 } as any,
+  imageAccent: { position: "absolute", top: 0, left: 0, right: 0, height: 3 } as ViewStyle,
+  // Stub row — existing horizontal layout unchanged
+  stubRow:     { flexDirection: "row", alignItems: "stretch" } as ViewStyle,
   stub:        { width: 68, paddingVertical: 14, paddingHorizontal: 8, alignItems: "center", justifyContent: "center", gap: 4 } as ViewStyle,
   stubDayLabel:{ fontFamily: "PlayfairDisplay_500Medium_Italic", letterSpacing: 1.4, color: "#fff" } as TextStyle,
   stubDayNum:  { fontFamily: "PlayfairDisplay_800ExtraBold", fontSize: 28, color: "#fff", letterSpacing: -0.5, lineHeight: 30 } as TextStyle,

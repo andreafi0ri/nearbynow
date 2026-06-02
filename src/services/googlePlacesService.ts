@@ -54,6 +54,8 @@ type GpOpeningHours = {
   weekdayDescriptions?: string[];
 };
 
+type GpPhoto = { name: string; widthPx?: number; heightPx?: number };
+
 type GpPlace = {
   id: string;
   displayName?: { text: string; languageCode?: string };
@@ -64,6 +66,7 @@ type GpPlace = {
   types?: string[];
   location?: { latitude: number; longitude: number };
   currentOpeningHours?: GpOpeningHours;
+  photos?: GpPhoto[];
   websiteUri?: string;
   nationalPhoneNumber?: string;
   editorialSummary?: { text: string; languageCode?: string };
@@ -285,6 +288,15 @@ function stableId(s: string): number {
 
 // ─── Place → EventItem ────────────────────────────────────────────────────────
 
+function buildGpPhotoUrl(place: GpPlace): string | undefined {
+  const photo = place.photos?.[0];
+  if (!photo?.name) return undefined;
+  const key = process.env.EXPO_PUBLIC_GOOGLE_PLACES_KEY;
+  if (!key) return undefined;
+  // GP Photos (New) URL — no extra API call, loads as a redirect to CDN
+  return `https://places.googleapis.com/v1/${photo.name}/media?maxWidthPx=800&key=${key}`;
+}
+
 function toEventItem(place: GpPlace): EventItem {
   const category = mapPlaceTypeToCategory(place.types ?? []);
   const [catColor, catDot] = catColors(category);
@@ -313,6 +325,7 @@ function toEventItem(place: GpPlace): EventItem {
     rating:    place.rating,
     reviews:   place.userRatingCount,
     tags:      buildTags(place),
+    imageUrl:  buildGpPhotoUrl(place),
   };
 }
 

@@ -34,6 +34,8 @@ type TwDateDetail = {
   localTime?: string;
 };
 
+type TwImage = { url: string; width?: number; ratio?: string; fallback?: boolean };
+
 type TwEvent = {
   id:              string;
   name:            string;
@@ -43,6 +45,7 @@ type TwEvent = {
   dates:           { start: TwDateDetail };
   classifications?: TwClassification[];
   _embedded?:      { venues?: TwVenue[] };
+  images?:         TwImage[];
 };
 
 type TwResponse = {
@@ -51,6 +54,13 @@ type TwResponse = {
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function pickImage(images?: TwImage[]): string | undefined {
+  if (!images?.length) return undefined;
+  const preferred = images.find(i => i.ratio === "16_9" && (i.width ?? 0) >= 500 && !i.fallback);
+  const any169    = images.find(i => i.ratio === "16_9" && !i.fallback);
+  return (preferred ?? any169 ?? images.find(i => !i.fallback))?.url;
+}
 
 function hashId(str: string): number {
   let n = 0;
@@ -121,6 +131,7 @@ function toEventItem(ev: TwEvent, area: string): EventItem {
     lng:       isNaN(lng) ? undefined : lng,
     booking:   { label: "Get Tickets", url: ev.url, affiliate: true },
     tags,
+    imageUrl:  pickImage(ev.images),
   };
 }
 

@@ -7,7 +7,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useTheme } from "../../src/hooks/useTheme";
-import { TicketCard, ListRow, SectionHeader } from "../../src/components/FeedCards";
+import { TicketCard, ListRow, WideImageCard, SectionHeader } from "../../src/components/FeedCards";
 import { BottomSheet } from "../../src/components/BottomSheet";
 import { useSavedEvents } from "../../src/hooks/useSavedEvents";
 import { useSavedAreas } from "../../src/context/SavedAreasContext";
@@ -288,6 +288,10 @@ export default function FeedScreen() {
   // True when we should render the sectioned Mix layout
   const isMixLayout = activeFilter === "All" && !showSaved;
 
+  // "See all" overlay state — null = closed, set to show full vertical list
+  type SeeAllState = { title: string; sub: string; items: EventItem[]; kind: "event" | "community" };
+  const [seeAll, setSeeAll] = React.useState<SeeAllState | null>(null);
+
   const dateLabel  = datePreset === "Custom" && customFrom && customTo
     ? `${customFrom.slice(5)} – ${customTo.slice(5)}` : datePreset ?? "Anytime";
   const dateActive = !!datePreset;
@@ -320,7 +324,20 @@ export default function FeedScreen() {
               onPress={() => areas.length > 1 ? setAreaSwitcherOpen(o => !o) : router.replace("/location")}
               style={styles.areaBtn}
             >
-              <Text style={[styles.areaText, { color: T.text }]} numberOfLines={1}>{area || "…"}</Text>
+              {/* City in Playfair ExtraBold, state/region part in italic gold */}
+              {(() => {
+                const parts = (area || "…").split(",");
+                const city  = parts[0]?.trim() || "…";
+                const state = parts[1]?.trim();
+                return (
+                  <Text style={[styles.areaText, { color: T.text }]} numberOfLines={1}>
+                    {city}
+                    {state ? (
+                      <Text style={{ fontFamily: "PlayfairDisplay_500Medium_Italic", color: T.gold }}>{", " + state}</Text>
+                    ) : null}
+                  </Text>
+                );
+              })()}
               <View style={[styles.changePill, { backgroundColor: T.goldLight, borderColor: T.gold }]}>
                 <Text style={[styles.changeText, { color: T.goldBri }]}>{areas.length > 1 ? "▾ switch" : "▾ change"}</Text>
               </View>
@@ -547,45 +564,43 @@ export default function FeedScreen() {
           </Text>
         )}
 
-        {/* Happening near you — Meetup events */}
+        {/* ── Block 1 · Happening near you — horizontal WideImageCard carousel ── */}
         {happeningItems.length > 0 && (
           <>
-            {showSectionHeaders && (
-              <View style={[styles.sectionHeader, { borderBottomColor: T.borderSub }]}>
-                <View style={styles.sectionHeaderInner}>
-                  <Text style={styles.sectionEmoji}>📍</Text>
-                  <Text style={[styles.sectionLabel, { color: T.text }]}>Happening near you</Text>
-                  <Text style={[styles.sectionCount, { color: T.muted }]}>
-                    {sectionableItems.length} result{sectionableItems.length !== 1 ? "s" : ""}
-                  </Text>
-                </View>
-                <View style={[styles.sectionLine, { backgroundColor: T.borderSub }]} />
-              </View>
-            )}
-            <View style={{ paddingHorizontal: 16 }}>
+            <SectionHeader
+              label="Happening near you"
+              sub="Events from Meetup, starting soon"
+              count={showSectionHeaders ? `${sectionableItems.length} result${sectionableItems.length !== 1 ? "s" : ""}` : undefined}
+              onSeeAll={() => setSeeAll({ title: "Happening near you", sub: "Events from Meetup, starting soon", items: happeningItems, kind: "event" })}
+              T={T}
+            />
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 22, gap: 12 }}
+              decelerationRate="fast"
+            >
               {happeningItems.map(item => (
-                <TicketCard
+                <WideImageCard
                   key={item.id} item={item} T={T}
                   saved={saved.has(item.id)}
                   onSave={() => handleToggle(item.id)}
                 />
               ))}
-            </View>
+            </ScrollView>
           </>
         )}
 
-        {/* From the community — RSS, Reddit, Google Events, Visit Lancaster, etc. */}
+        {/* ── Block 2 · From the community — vertical ListRow list ── */}
         {communityItems.length > 0 && (
           <>
-            {showSectionHeaders && (
-              <View style={[styles.sectionHeader, { borderBottomColor: T.borderSub }]}>
-                <View style={styles.sectionHeaderInner}>
-                  <Text style={styles.sectionEmoji}>🤝</Text>
-                  <Text style={[styles.sectionLabel, { color: T.text }]}>From the community</Text>
-                </View>
-                <View style={[styles.sectionLine, { backgroundColor: T.borderSub }]} />
-              </View>
-            )}
+            <View style={[styles.sectionDivider, { backgroundColor: T.border, marginHorizontal: 18 }]} />
+            <SectionHeader
+              label="From the community"
+              sub="Reddit & local sites"
+              onSeeAll={() => setSeeAll({ title: "From the community", sub: "Reddit & local sites", items: communityItems, kind: "community" })}
+              T={T}
+            />
             <View style={{ paddingHorizontal: 22 }}>
               {communityItems.map((item, i) => (
                 <ListRow
@@ -599,27 +614,30 @@ export default function FeedScreen() {
           </>
         )}
 
-        {/* Ticketed events — Ticketmaster, AMC, Viator, Eventbrite, etc. */}
+        {/* ── Block 3 · Ticketed events — horizontal WideImageCard carousel ── */}
         {ticketedItems.length > 0 && (
           <>
-            {showSectionHeaders && (
-              <View style={[styles.sectionHeader, { borderBottomColor: T.borderSub }]}>
-                <View style={styles.sectionHeaderInner}>
-                  <Text style={styles.sectionEmoji}>🎟️</Text>
-                  <Text style={[styles.sectionLabel, { color: T.text }]}>Ticketed events</Text>
-                </View>
-                <View style={[styles.sectionLine, { backgroundColor: T.borderSub }]} />
-              </View>
-            )}
-            <View style={{ paddingHorizontal: 16 }}>
+            <View style={[styles.sectionDivider, { backgroundColor: T.border, marginHorizontal: 18, marginTop: 18 }]} />
+            <SectionHeader
+              label="Ticketed events"
+              sub="Ticketmaster · Viator · Eventbrite"
+              onSeeAll={() => setSeeAll({ title: "Ticketed events", sub: "Ticketmaster · Viator · Eventbrite", items: ticketedItems, kind: "event" })}
+              T={T}
+            />
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 22, gap: 12 }}
+              decelerationRate="fast"
+            >
               {ticketedItems.map(item => (
-                <TicketCard
+                <WideImageCard
                   key={item.id} item={item} T={T}
                   saved={saved.has(item.id)}
                   onSave={() => handleToggle(item.id)}
                 />
               ))}
-            </View>
+            </ScrollView>
           </>
         )}
 
@@ -761,6 +779,52 @@ export default function FeedScreen() {
         }
       />
       )}
+
+      {/* ── "See all" full-screen overlay ─────────────────────────────────── */}
+      {seeAll && (
+        <View style={[styles.seeAllOverlay, { backgroundColor: T.bg }]}>
+          {/* Header */}
+          <View style={[styles.seeAllHeader, { borderBottomColor: T.border, backgroundColor: T.bg }]}>
+            <TouchableOpacity
+              onPress={() => setSeeAll(null)}
+              style={[styles.seeAllBack, { backgroundColor: T.surface, borderColor: T.border }]}
+            >
+              <Text style={{ color: T.text, fontSize: 18 }}>‹</Text>
+            </TouchableOpacity>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.seeAllTitle, { color: T.text }]}>{seeAll.title}</Text>
+            </View>
+            <Text style={[styles.seeAllCount, { color: T.muted }]}>
+              {seeAll.items.length} result{seeAll.items.length !== 1 ? "s" : ""}
+            </Text>
+          </View>
+          {/* Content */}
+          <ScrollView
+            contentContainerStyle={{ padding: 14, paddingBottom: 110 }}
+            showsVerticalScrollIndicator={false}
+          >
+            {seeAll.kind === "community"
+              ? seeAll.items.map((item, i) => (
+                  <View key={item.id} style={{ paddingHorizontal: 8 }}>
+                    <ListRow
+                      item={item} T={T}
+                      saved={saved.has(item.id)}
+                      onSave={() => handleToggle(item.id)}
+                      isLast={i === seeAll.items.length - 1}
+                    />
+                  </View>
+                ))
+              : seeAll.items.map(item => (
+                  <TicketCard
+                    key={item.id} item={item} T={T}
+                    saved={saved.has(item.id)}
+                    onSave={() => handleToggle(item.id)}
+                  />
+                ))
+            }
+          </ScrollView>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -812,13 +876,14 @@ const styles = StyleSheet.create({
   applyText:      { fontSize: 13, fontWeight: "700", fontFamily: "DMSans_700Bold" } as TextStyle,
   feed:           { padding: 14, paddingBottom: 40 } as ViewStyle,
   resultCount:    { fontSize: 11, fontFamily: "DMSans_700Bold", fontWeight: "700", letterSpacing: 0.6, textTransform: "uppercase", paddingBottom: 10 } as TextStyle,
-  // ── Section headers (three-section All view) ────────────────────────────
-  sectionHeader:      { marginTop: 20, marginBottom: 4, paddingBottom: 10, paddingHorizontal: 16 } as ViewStyle,
-  sectionHeaderInner: { flexDirection: "row", alignItems: "center", gap: 7, marginBottom: 8 } as ViewStyle,
-  sectionEmoji:       { fontSize: 13 } as TextStyle,
-  sectionLabel:       { fontSize: 11, fontWeight: "700", fontFamily: "DMSans_700Bold", letterSpacing: 0.8, textTransform: "uppercase" } as TextStyle,
-  sectionCount:       { fontSize: 10, fontFamily: "Inter_500Medium", letterSpacing: 1.2, textTransform: "uppercase", marginLeft: "auto" } as TextStyle,
-  sectionLine:        { height: 1.5, width: "100%" } as ViewStyle,
+  // ── Section dividers (hairlines between blocks) ──────────────────────────
+  sectionDivider:     { height: 1 } as ViewStyle,
+  // ── See all overlay ───────────────────────────────────────────────────────
+  seeAllOverlay:      { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 50 } as ViewStyle,
+  seeAllHeader:       { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 18, paddingVertical: 14, borderBottomWidth: 1 } as ViewStyle,
+  seeAllBack:         { width: 36, height: 36, borderRadius: 18, borderWidth: 1, alignItems: "center", justifyContent: "center" } as ViewStyle,
+  seeAllTitle:        { fontFamily: "PlayfairDisplay_700Bold", fontSize: 20, letterSpacing: -0.2 } as TextStyle,
+  seeAllCount:        { fontSize: 11, fontFamily: "Inter_500Medium", letterSpacing: 1.4, textTransform: "uppercase" } as TextStyle,
   recDivider:     { flexDirection: "row", alignItems: "center", gap: 8, marginVertical: 14 } as ViewStyle,
   dividerLine:    { flex: 1, height: 2 } as ViewStyle,
   dividerText:    { fontSize: 11, fontWeight: "700", fontFamily: "DMSans_700Bold", letterSpacing: 0.6, textTransform: "uppercase" } as TextStyle,

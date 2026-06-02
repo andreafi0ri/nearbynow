@@ -102,24 +102,44 @@ const ctaStyles = StyleSheet.create({
 });
 
 // ── SectionHeader ─────────────────────────────────────────────────────────────
-/** Playfair Display label + small uppercase count + hairline to end of row. */
-export function SectionHeader({ label, count, T }: { label: string; count?: string; T: Theme }) {
+/**
+ * Playfair Display section label, optional subtitle below, optional "See all →"
+ * aligned to the right. Used for all three feed blocks.
+ */
+export function SectionHeader({
+  label, sub, count, onSeeAll, T,
+}: {
+  label: string;
+  sub?: string;
+  count?: string;
+  onSeeAll?: () => void;
+  T: Theme;
+}) {
   return (
-    <View style={[shStyles.row, { paddingTop: 18, paddingBottom: 10, paddingHorizontal: 22 }]}>
-      <Text style={[shStyles.label, { color: T.text }]} numberOfLines={1}>{label}</Text>
+    <View style={[shStyles.wrap, { paddingHorizontal: 18 }]}>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={[shStyles.label, { color: T.text }]} numberOfLines={1}>{label}</Text>
+        {sub && <Text style={[shStyles.sub, { color: T.muted }]}>{sub}</Text>}
+      </View>
       {count != null && (
         <Text style={[shStyles.count, { color: T.muted }]} numberOfLines={1}>{count}</Text>
       )}
-      <View style={[shStyles.line, { backgroundColor: T.borderSub }]} />
+      {onSeeAll && (
+        <TouchableOpacity onPress={onSeeAll} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+          <Text style={[shStyles.seeAll, { color: T.goldBri }]}>See all →</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
 
 const shStyles = StyleSheet.create({
-  row:   { flexDirection: "row", alignItems: "center", gap: 10 } as ViewStyle,
-  label: { fontFamily: "PlayfairDisplay_700Bold", fontSize: 18, letterSpacing: -0.2, flexShrink: 0 } as TextStyle,
-  count: { fontFamily: "Inter_500Medium", fontSize: 10, letterSpacing: 1.6, textTransform: "uppercase", flexShrink: 0 } as TextStyle,
-  line:  { flex: 1, height: 1, minWidth: 8 } as ViewStyle,
+  wrap:   { flexDirection: "row", alignItems: "baseline", gap: 10, paddingTop: 18, paddingBottom: 11 } as ViewStyle,
+  label:  { fontFamily: "PlayfairDisplay_700Bold", fontSize: 19, letterSpacing: -0.2, flexShrink: 0, whiteSpace: "nowrap" as any } as TextStyle,
+  sub:    { fontSize: 11.5, fontFamily: "Inter_400Regular", marginTop: 2 } as TextStyle,
+  count:  { fontFamily: "Inter_500Medium", fontSize: 10, letterSpacing: 1.6, textTransform: "uppercase", flexShrink: 0 } as TextStyle,
+  seeAll: { fontSize: 12.5, fontWeight: "600", fontFamily: "Inter_700Bold", flexShrink: 0 } as TextStyle,
+  line:   { flex: 1, height: 1, minWidth: 8 } as ViewStyle,
 });
 
 // ── Calendar helpers (shared with EventCard) ──────────────────────────────────
@@ -400,6 +420,100 @@ const tcStyles = StyleSheet.create({
   footerRight: { flexDirection: "row", alignItems: "center", gap: 6, flexShrink: 0 } as ViewStyle,
   saves:       { fontSize: 11, fontFamily: "Inter_400Regular" } as TextStyle,
   calBtn:      { width: 30, height: 30, borderRadius: 15, borderWidth: 1, alignItems: "center", justifyContent: "center" } as ViewStyle,
+});
+
+// ── WideImageCard ─────────────────────────────────────────────────────────────
+/**
+ * 248px-wide horizontal-carousel card. Photo banner on top (130px), solid
+ * surface below: category eyebrow · 2-line title · time · source badge + CTA.
+ * Text lives on the solid surface — never overlaid on the photo (per spec §11).
+ */
+export function WideImageCard({
+  item, T, saved, onSave,
+}: {
+  item: EventItem;
+  T: Theme;
+  saved: boolean;
+  onSave: () => void;
+}) {
+  const [imgError, setImgError] = useState(false);
+  useEffect(() => { setImgError(false); }, [item.id]);
+
+  const tone = item.catColor || T.red;
+  const cta  = ctaFor(item.source);
+  const { label: dayLabel, num: dayNum } = getDayStub(item);
+
+  return (
+    <View style={[wcStyles.card, { backgroundColor: T.bgCard, borderColor: T.border }]}>
+      {/* Photo banner */}
+      <View style={wcStyles.banner}>
+        {item.imageUrl && !imgError ? (
+          <Image
+            source={{ uri: item.imageUrl }}
+            style={wcStyles.bannerImg as any}
+            resizeMode="cover"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <View style={[wcStyles.bannerPlaceholder, { backgroundColor: tone + "55" }]}>
+            <Text style={wcStyles.bannerPlaceholderEmoji}>{item.img}</Text>
+          </View>
+        )}
+        {/* Day badge — top-left */}
+        <View style={[wcStyles.dayBadge, { backgroundColor: tone }]}>
+          <Text style={wcStyles.dayBadgeLabel}>{dayLabel}</Text>
+          <Text style={wcStyles.dayBadgeNum}>{dayNum}</Text>
+        </View>
+        {/* Heart — top-right */}
+        <TouchableOpacity
+          onPress={onSave}
+          style={wcStyles.heartBtn}
+          hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+        >
+          <Text style={{ fontSize: 14, color: saved ? tone : "#111" }}>
+            {saved ? "♥" : "♡"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Text surface — below image */}
+      <View style={wcStyles.body}>
+        <Text style={[wcStyles.cat, { color: tone }]}>{item.category.toUpperCase()}</Text>
+        <Text style={[wcStyles.title, { color: T.text }]} numberOfLines={2}>{item.title}</Text>
+        <Text style={[wcStyles.meta, { color: T.muted }]} numberOfLines={1}>
+          🕐 {item.time}
+        </Text>
+        <View style={wcStyles.footer}>
+          <SourceBadge cta={cta} />
+          <TouchableOpacity
+            onPress={() => { const url = item.booking?.url ?? item.sourceUrl; if (url) Linking.openURL(url); }}
+            style={[wcStyles.cta, { backgroundColor: T.text }]}
+          >
+            <Text style={[wcStyles.ctaText, { color: T.goldBri }]}>{cta.action}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const wcStyles = StyleSheet.create({
+  card:                 { width: 248, borderRadius: 16, borderWidth: 1, overflow: "hidden", flexShrink: 0 } as ViewStyle,
+  banner:               { width: 248, height: 130, position: "relative", backgroundColor: "#DDD" } as ViewStyle,
+  bannerImg:            { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, width: 248, height: 130 } as any,
+  bannerPlaceholder:    { flex: 1, alignItems: "center", justifyContent: "center" } as ViewStyle,
+  bannerPlaceholderEmoji: { fontSize: 40 } as TextStyle,
+  dayBadge:             { position: "absolute", top: 8, left: 8, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, alignItems: "center" } as ViewStyle,
+  dayBadgeLabel:        { fontFamily: "PlayfairDisplay_500Medium_Italic", fontSize: 8, letterSpacing: 1, color: "#fff" } as TextStyle,
+  dayBadgeNum:          { fontFamily: "PlayfairDisplay_800ExtraBold", fontSize: 15, color: "#fff", lineHeight: 18 } as TextStyle,
+  heartBtn:             { position: "absolute", top: 8, right: 8, width: 30, height: 30, borderRadius: 15, backgroundColor: "rgba(255,255,255,0.92)", alignItems: "center", justifyContent: "center" } as ViewStyle,
+  body:                 { padding: 11 } as ViewStyle,
+  cat:                  { fontSize: 9.5, fontWeight: "700", fontFamily: "Inter_700Bold", letterSpacing: 1.6, textTransform: "uppercase", marginBottom: 4 } as TextStyle,
+  title:                { fontSize: 14, fontWeight: "700", fontFamily: "Inter_700Bold", lineHeight: 19, marginBottom: 6 } as TextStyle,
+  meta:                 { fontSize: 11.5, fontFamily: "Inter_400Regular", marginBottom: 10 } as TextStyle,
+  footer:               { flexDirection: "row", alignItems: "center", justifyContent: "space-between" } as ViewStyle,
+  cta:                  { height: 30, paddingHorizontal: 12, borderRadius: 999, alignItems: "center", justifyContent: "center" } as ViewStyle,
+  ctaText:              { fontSize: 12, fontWeight: "700", fontFamily: "Inter_700Bold" } as TextStyle,
 });
 
 // ── ListRow ───────────────────────────────────────────────────────────────────

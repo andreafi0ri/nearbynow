@@ -14,7 +14,7 @@
 // After the exchange the screen listens for any of INITIAL_SESSION / SIGNED_IN /
 // TOKEN_REFRESHED, then routes to /feed (area saved) or /location.
 import React, { useEffect, useState } from "react";
-import { View, Text, ActivityIndicator, Platform } from "react-native";
+import { View, Text, ActivityIndicator, TouchableOpacity, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import * as Linking from "expo-linking";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -24,6 +24,24 @@ import { loadProfile } from "../../src/services/profileService";
 import { useTheme } from "../../src/hooks/useTheme";
 
 const TIMEOUT_MS = 15_000;
+
+/**
+ * True when the app is running as an installed PWA (launched from the home
+ * screen in standalone display mode) rather than inside a browser tab.
+ *
+ * Magic links always open in the system browser (Chrome/Safari), never in the
+ * installed PWA — so a browser-context callback must NOT silently route to the
+ * feed (a different storage context where there's no session yet). Instead it
+ * shows a "return to app" screen.
+ */
+function isInstalledPWA(): boolean {
+  if (Platform.OS !== "web" || typeof window === "undefined") return false;
+  return (
+    window.matchMedia?.("(display-mode: standalone)").matches === true ||
+    // iOS Safari home-screen apps
+    (window.navigator as any)?.standalone === true
+  );
+}
 
 // ─── URL param helpers ────────────────────────────────────────────────────────
 
@@ -85,6 +103,7 @@ export default function AuthCallback() {
   const router = useRouter();
   const { theme: T } = useTheme();
   const [timedOut, setTimedOut] = useState(false);
+  const [authDone, setAuthDone] = useState(false); // true → show return-to-app screen (browser context)
 
   useEffect(() => {
     let done = false;
@@ -97,7 +116,18 @@ export default function AuthCallback() {
       // even on a new device or after reinstall.
       await loadProfile().catch(() => {});
       const area = await AsyncStorage.getItem("hearby_area").catch(() => null);
-      router.replace(area ? "/feed" : "/location");
+
+      if (isInstalledPWA()) {
+        // Inside the installed PWA — normal routing.
+        router.replace(area ? "/feed" : "/location");
+      } else {
+        // In the system browser after tapping the magic link. Auth succeeded
+        // here, but the session lives in the browser's storage — the PWA on the
+        // home screen has its own context. Don't route to the feed (it would
+        // show signed-in only in this throwaway browser tab). Show a clear
+        // "return to the app" screen instead.
+        setAuthDone(true);
+      }
     };
 
     const init = async () => {
@@ -157,6 +187,61 @@ export default function AuthCallback() {
       clearTimeout(timer);
     };
   }, []);
+
+  // ── Return-to-app screen (browser context after successful auth) ──────────
+  if (authDone) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#FAF7F3", padding: 32 }}>
+        <View style={{
+          backgroundColor: "#FFF8E1", borderColor: "#B8920A", borderWidth: 2,
+          borderRadius: 50, width: 80, height: 80,
+          alignItems: "center", justifyContent: "center", marginBottom: 24,
+        }}>
+          <Text style={{ fontSize: 36, color: "#B8920A" }}>✓</Text>
+        </View>
+
+        <Text style={{
+          fontSize: 24, fontWeight: "800", fontFamily: "PlayfairDisplay_800ExtraBold",
+          color: "#111111", textAlign: "center", marginBottom: 12, letterSpacing: -0.5,
+        }}>
+          You're signed in
+        </Text>
+
+        <Text style={{
+          fontSize: 15, color: "#777788", textAlign: "center",
+          lineHeight: 22, marginBottom: 32, fontFamily: "DMSans_400Regular",
+        }}>
+          Return to the Nearby &amp; Now app{"\n"}on your home screen to continue.
+        </Text>
+
+        <TouchableOpacity
+          onPress={() => {
+            if (Platform.OS === "web") {
+              // Android Chrome (with manifest handle_links) may open the installed
+              // PWA directly; on iOS the user taps the home-screen icon manually.
+              window.location.href = "https://www.nearbyandnow.com/?source=pwa";
+            }
+          }}
+          style={{
+            backgroundColor: "#111111", borderRadius: 14,
+            paddingVertical: 14, paddingHorizontal: 28,
+            width: "100%", maxWidth: 320, alignItems: "center", marginBottom: 14,
+          }}
+        >
+          <Text style={{ color: "#D4A80C", fontWeight: "700", fontSize: 15, fontFamily: "DMSans_700Bold" }}>
+            Open Nearby &amp; Now →
+          </Text>
+        </TouchableOpacity>
+
+        <Text style={{
+          fontSize: 12, color: "#AAAABC", textAlign: "center",
+          lineHeight: 18, fontFamily: "DMSans_400Regular",
+        }}>
+          On iPhone: tap the Nearby &amp; Now icon{"\n"}on your home screen to open the app.
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <View

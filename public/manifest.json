@@ -4,6 +4,8 @@
   "description": "Discover local events, news and recommendations happening near you.",
   "start_url": "/?source=pwa",
   "scope": "/",
+  "id": "/",
+  "handle_links": "preferred",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#FAF7F3",

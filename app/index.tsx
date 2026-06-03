@@ -2,9 +2,10 @@
 import { useEffect } from "react";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { View, ActivityIndicator } from "react-native";
+import { View, ActivityIndicator, Platform } from "react-native";
 import { useTheme } from "../src/hooks/useTheme";
 import { supabase } from "../src/lib/supabase";
+import { loadProfile } from "../src/services/profileService";
 
 export default function Index() {
   const router = useRouter();
@@ -12,25 +13,40 @@ export default function Index() {
 
   useEffect(() => {
     (async () => {
-      // Primary: live Supabase session is the source of truth.
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        const area = await AsyncStorage.getItem("hearby_area");
-        router.replace(area ? "/feed" : "/location");
-        return;
-      }
+      try {
+        // On web, give Supabase (detectSessionInUrl: true) a moment to parse any
+        // auth tokens present in the URL before we read the session — e.g. when the
+        // PWA is opened right after completing a magic link, or on a callback load.
+        if (Platform.OS === "web") {
+          await new Promise(r => setTimeout(r, 500));
+        }
 
-      // Fallback: no Supabase session yet — use AsyncStorage state.
-      const [area, email] = await Promise.all([
-        AsyncStorage.getItem("hearby_area"),    // written by SavedAreasContext
-        AsyncStorage.getItem("nearbynow_email"), // written by email.tsx on submit
-      ]);
-      if (area && email) {
-        router.replace("/feed");
-      } else if (area && !email) {
-        // Has an area but hasn't completed sign-in yet
-        router.replace("/email");
-      } else {
+        // Primary: live Supabase session is the source of truth.
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const email = session.user.email ?? "";
+          if (email) await AsyncStorage.setItem("nearbynow_email", email);
+          await loadProfile().catch(() => {});
+          const area = await AsyncStorage.getItem("hearby_area");
+          router.replace(area ? "/feed" : "/location");
+          return;
+        }
+
+        // Fallback: no Supabase session yet — use AsyncStorage state.
+        const [area, email] = await Promise.all([
+          AsyncStorage.getItem("hearby_area"),    // written by SavedAreasContext
+          AsyncStorage.getItem("nearbynow_email"), // written by email.tsx on submit
+        ]);
+        if (area && email) {
+          router.replace("/feed");
+        } else if (area && !email) {
+          // Has an area but hasn't completed sign-in yet
+          router.replace("/email");
+        } else {
+          router.replace("/location");
+        }
+      } catch (err) {
+        console.error("[Index] routing error:", err);
         router.replace("/location");
       }
     })();

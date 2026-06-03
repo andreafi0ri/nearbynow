@@ -19,7 +19,10 @@ import { supabase } from "../src/lib/supabase";
 import { loadProfile } from "../src/services/profileService";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const CODE_RE  = /^\d{6}$/;
+// Supabase OTP length is configurable (6–10 digits) — accept the full range
+// so the field works regardless of the project's "Email OTP Length" setting.
+const CODE_RE  = /^\d{6,10}$/;
+const CODE_MAX = 10;
 
 // ─── Helper: open URL in new tab on web, in-app browser on native ────────────
 function openLegal(url: string) {
@@ -255,13 +258,13 @@ export default function EmailScreen() {
               {/* ── 6-digit code entry — the reliable path on iOS PWAs ── */}
               <TextInput
                 value={code}
-                onChangeText={t => { setCode(t.replace(/\D/g, "").slice(0, 6)); setError(""); }}
+                onChangeText={t => { setCode(t.replace(/\D/g, "").slice(0, CODE_MAX)); setError(""); }}
                 onSubmitEditing={handleVerifyCode}
-                placeholder="000000"
+                placeholder="Enter code"
                 placeholderTextColor={T.muted}
                 keyboardType="number-pad"
                 returnKeyType="go"
-                maxLength={6}
+                maxLength={CODE_MAX}
                 style={[
                   s.input,
                   {

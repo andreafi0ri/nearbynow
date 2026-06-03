@@ -135,6 +135,15 @@ function buildFSQDesc(venue: FSQVenue): string {
   ].filter(Boolean).join(" · ").slice(0, 200);
 }
 
+/** Builds a Foursquare category-icon URL (Pro/free) — a flat pictogram.
+ *  Format: {prefix}{size}{suffix}, e.g. .../plaza_120.png. Rendered centered
+ *  on a tinted card background (it's an icon, not a venue photo). */
+function buildFSQIconUrl(categories: FSQCategory[]): string | undefined {
+  const icon = categories?.[0]?.icon;
+  if (!icon?.prefix || !icon?.suffix) return undefined;
+  return `${icon.prefix}120${icon.suffix}`;
+}
+
 function buildFSQTags(venue: FSQVenue): string[] {
   return [
     venue.categories?.[0]?.name ?? null,
@@ -170,6 +179,7 @@ function mapFSQVenue(venue: FSQVenue): EventItem | null {
     catDot:    mapFSQCatDot(category),
     saves:     0,
     img:       mapFSQEmoji(venue.categories),
+    imageUrl:  buildFSQIconUrl(venue.categories), // category pictogram — rendered contained, not cover
     booking:   { label: "View details", url, affiliate: false },
     rating:    undefined,  // Premium field — not requested
     reviews:   undefined,  // Premium field — not requested

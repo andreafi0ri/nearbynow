@@ -445,15 +445,27 @@ export function WideImageCard({
 
   return (
     <View style={[wcStyles.card, { backgroundColor: T.bgCard, borderColor: T.border }]}>
-      {/* Photo banner */}
+      {/* Photo banner — Foursquare uses a category pictogram (icon) rendered
+          centered on a tint; real photo sources use a full-bleed cover image. */}
       <View style={wcStyles.banner}>
         {item.imageUrl && !imgError ? (
-          <Image
-            source={{ uri: item.imageUrl }}
-            style={wcStyles.bannerImg as any}
-            resizeMode="cover"
-            onError={() => setImgError(true)}
-          />
+          item.source === "Foursquare" ? (
+            <View style={[wcStyles.bannerPlaceholder, { backgroundColor: tone + "22" }]}>
+              <Image
+                source={{ uri: item.imageUrl }}
+                style={wcStyles.iconImg as any}
+                resizeMode="contain"
+                onError={() => setImgError(true)}
+              />
+            </View>
+          ) : (
+            <Image
+              source={{ uri: item.imageUrl }}
+              style={wcStyles.bannerImg as any}
+              resizeMode="cover"
+              onError={() => setImgError(true)}
+            />
+          )
         ) : (
           <View style={[wcStyles.bannerPlaceholder, { backgroundColor: tone + "55" }]}>
             <Text style={wcStyles.bannerPlaceholderEmoji}>{item.img}</Text>
@@ -503,6 +515,7 @@ const wcStyles = StyleSheet.create({
   bannerImg:            { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, width: 248, height: 130 } as any,
   bannerPlaceholder:    { flex: 1, alignItems: "center", justifyContent: "center" } as ViewStyle,
   bannerPlaceholderEmoji: { fontSize: 40 } as TextStyle,
+  iconImg:              { width: 64, height: 64 } as any,
   dayBadge:             { position: "absolute", top: 8, left: 8, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, alignItems: "center" } as ViewStyle,
   dayBadgeLabel:        { fontFamily: "PlayfairDisplay_500Medium_Italic", fontSize: 8, letterSpacing: 1, color: "#fff" } as TextStyle,
   dayBadgeNum:          { fontFamily: "PlayfairDisplay_800ExtraBold", fontSize: 15, color: "#fff", lineHeight: 18 } as TextStyle,

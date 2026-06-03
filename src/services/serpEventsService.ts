@@ -29,6 +29,7 @@
 
 import { Platform } from "react-native";
 import { EventItem } from "../data/mockEvents";
+import { SERP_KEYWORD_QUERY } from "../config/keywordSearchConfig";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -368,6 +369,67 @@ export async function searchSerpEvents(
     } else {
       console.warn("[SerpAPI] Fetch failed:", err.message);
     }
+    return [];
+  }
+}
+
+// ─── Keyword-based event search ────────────────────────────────────────────────
+// Supplements searchSerpEvents() with a single compound OR query for specific
+// activity types (karaoke, trivia, yoga, DJ nights, rooftop, happy hour,
+// festivals). Keyword list lives in src/config/keywordSearchConfig.ts.
+//
+// Quota: ONE extra SerpAPI credit per area per hour. Gate behind the same
+// sparse-area threshold as searchSerpEvents (see feedService) so it never
+// fires in event-rich cities. 1-hour cache — activity types don't change
+// hourly. Reuses mapSerpEvent() — no mapping duplication.
+
+const serpKeywordCache = new Map<string, { data: EventItem[]; expiresAt: number }>();
+const KEYWORD_CACHE_TTL = 60 * 60 * 1_000; // 1 hour
+
+/**
+ * Searches Google Events via SerpAPI for activity-keyword events using one
+ * compound OR query: "(karaoke night OR live band OR ...) in {city}".
+ *
+ * @param area Human-readable area name e.g. "Lancaster, PA"
+ */
+export async function searchSerpKeywords(area: string): Promise<EventItem[]> {
+  const cacheKey = `serp-kw-${area.toLowerCase().trim()}-${new Date().toISOString().split("T")[0]}`;
+  const cached = serpKeywordCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    console.log(`[SerpAPI keywords] cache hit for "${area}" — ${cached.data.length} results`);
+    return cached.data;
+  }
+
+  const city   = area.replace(/,\s*/g, " ").trim();
+  const q      = `(${SERP_KEYWORD_QUERY}) in ${city}`;
+  const params = new URLSearchParams({ q, gl: "us", hl: "en" });
+  const url    = `${PROXY_BASE}/api/serp-events?${params}`;
+
+  const controller = new AbortController();
+  const timeout    = setTimeout(() => controller.abort(), 8_000);
+
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeout);
+    if (!res.ok) {
+      console.warn(`[SerpAPI keywords] proxy returned ${res.status}`);
+      return [];
+    }
+
+    const data: SerpResponse = await res.json();
+    const events = data.events_results ?? [];
+
+    const items = events
+      .map(e => mapSerpEvent(e, area))
+      .filter((i): i is EventItem => i !== null);
+
+    serpKeywordCache.set(cacheKey, { data: items, expiresAt: Date.now() + KEYWORD_CACHE_TTL });
+    console.log(`[SerpAPI keywords] ${items.length} results for "${area}" (compound query)`);
+    return items;
+  } catch (err: any) {
+    clearTimeout(timeout);
+    if (err.name === "AbortError") console.warn("[SerpAPI keywords] timed out after 8s");
+    else console.warn("[SerpAPI keywords] fetch failed:", err.message);
     return [];
   }
 }

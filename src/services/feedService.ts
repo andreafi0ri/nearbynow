@@ -1,5 +1,5 @@
 import { EventItem, MOCK_EVENTS } from "../data/mockEvents";
-import { fetchRedditPosts, getLocalSubreddits } from "./redditService";
+import { fetchRedditPosts, getLocalSubreddits, searchRedditKeywords } from "./redditService";
 import { fetchRSSFeeds } from "./rssService";
 import { searchEventbrite } from "./eventbriteService";
 import { searchMeetup } from "./meetupService";
@@ -14,7 +14,7 @@ import { searchViatorExperiences } from "./viatorService";
 import { searchNearbyPlaces, searchPlacesByText, fetchCinemas } from "./googlePlacesService";
 import { getShowtimes } from "./showtimesService";
 import { getNearbyActivities, getWellnessVenues } from "./activitiesService";
-import { searchSerpEvents } from "./serpEventsService";
+import { searchSerpEvents, searchSerpKeywords } from "./serpEventsService";
 import { getNightlife } from "./nightlifeService";
 import { getParksAndOutdoors } from "./parksService";
 import { SEARCH_CONFIG, shouldFetchGooglePlaces, metresToMiles } from "../config/searchConfig";
@@ -109,6 +109,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
   // them from the "All" view while surfacing them in their dedicated filter.
   const [
     redditResult,
+    redditKeywordsResult,
     rssResult,
     eventbriteResult,
     meetupResult,
@@ -125,6 +126,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
     wellnessResult,
   ] = await Promise.allSettled([
     Promise.all(subreddits.map(sub => fetchRedditPosts(sub, SEARCH_CONFIG.REDDIT_MAX_RESULTS))).then(r => r.flat()),
+    searchRedditKeywords(area),   // keyword search — free, no quota
     fetchRSSFeeds(area),
     searchEventbrite(area),
     searchMeetup(area),
@@ -149,6 +151,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
 
   const live: EventItem[] = [
     ...extract(redditResult),
+    ...extract(redditKeywordsResult),   // keyword-matched Reddit posts → community
     ...extract(rssResult),
     ...extract(eventbriteResult),
     ...extract(meetupResult),
@@ -188,19 +191,28 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
   });
   googlePlacesItems = gpResult;
 
-  // SerpAPI gap-fill — only when events are sparse
+  // SerpAPI gap-fill + keyword search — only when events are sparse.
+  // Both gated by the same threshold to conserve the free tier quota.
+  let serpKeywordItems: EventItem[] = [];
   if (shouldFetch) {
-    const serpResult = await searchSerpEvents(area, resolvedCoords).catch(() => [] as EventItem[]);
-    serpItems = serpResult;
+    const [serpResult, serpKwResult] = await Promise.allSettled([
+      searchSerpEvents(area, resolvedCoords),
+      searchSerpKeywords(area),
+    ]);
+    serpItems        = serpResult.status   === "fulfilled" ? serpResult.value   : [];
+    serpKeywordItems = serpKwResult.status === "fulfilled" ? serpKwResult.value : [];
     if (serpItems.length > 0) {
       console.log(`[Feed] Google Events gap-fill: ${serpItems.length} new-source events`);
+    }
+    if (serpKeywordItems.length > 0) {
+      console.log(`[Feed] Google Events keywords: ${serpKeywordItems.length} activity events`);
     }
   }
 
   // ── Step 3: Merge, deduplicate, sort ─────────────────────────────────────
   // SerpAPI items before GP recommendations — curated event listings rank higher
   // than venue recommendations in the feed.
-  const allItems = [...allRaw, ...serpItems, ...googlePlacesItems];
+  const allItems = [...allRaw, ...serpItems, ...serpKeywordItems, ...googlePlacesItems];
   const { events: deduplicated, stats } = deduplicateFeed(allItems);
   const items = sortByDate(deduplicated);
 
@@ -209,6 +221,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
   console.log(`Area: ${area} | Coords: ${resolvedCoords ? `${resolvedCoords.lat.toFixed(4)}, ${resolvedCoords.lng.toFixed(4)}` : "none (geocoding failed)"}`);
   console.log("Results per source:");
   console.log(`  Reddit:           ${extract(redditResult).length}`);
+  console.log(`  Reddit keywords:  ${extract(redditKeywordsResult).length}`);
   console.log(`  RSS:              ${extract(rssResult).length}`);
   console.log(`  Eventbrite:       ${extract(eventbriteResult).length}`);
   console.log(`  Meetup:           ${extract(meetupResult).length}`);
@@ -224,6 +237,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
   console.log(`  Activities:       ${extract(activitiesResult).length} (always-on, shown in All)`);
   console.log(`  Wellness:         ${extract(wellnessResult).length} (always-on, filter-only)`);
   console.log(`  Google Events:    ${serpItems.length} (gap-fill, new sources only)`);
+  console.log(`  SerpAPI keywords: ${serpKeywordItems.length} (activity keywords)`);
   console.log(`  GP Recs:          ${googlePlacesItems.length} (recommendations footer)`);
   console.log("Deduplication stats:");
   console.log(`  Input:                 ${stats.inputCount} items`);

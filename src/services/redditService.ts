@@ -1,5 +1,6 @@
 import { EventItem } from "../data/mockEvents";
 import { SEARCH_CONFIG } from "../config/searchConfig";
+import { REDDIT_KEYWORD_QUERY, ALL_KEYWORDS_FLAT } from "../config/keywordSearchConfig";
 
 const REDDIT_COLOR = "#FF4500";
 const REDDIT_DOT   = "#FF6B35";
@@ -265,4 +266,136 @@ export async function fetchRedditPosts(subreddit: string, limit = SEARCH_CONFIG.
   }
 
   return combined.map(p => toEventItem(p, subreddit));
+}
+
+// ─── Keyword-based event search ────────────────────────────────────────────────
+// Supplements the top-posts fetch above by searching local subreddits for
+// specific activity keywords (karaoke, trivia, yoga, festivals, etc.).
+// Free — Reddit's public JSON search has no quota concerns at this volume.
+// Keyword list lives in src/config/keywordSearchConfig.ts (single source).
+
+const KEYWORD_NEWS_RE = /breaking|police|crime|arrested|shooting|accident|weather|traffic/i;
+
+function isKeywordNewsPost(title: string): boolean {
+  return KEYWORD_NEWS_RE.test(title);
+}
+
+function mapKeywordEmoji(title: string): string {
+  const t = title.toLowerCase();
+  if (/karaoke/.test(t))               return "🎤";
+  if (/trivia|quiz/.test(t))           return "🎯";
+  if (/yoga|pilates/.test(t))          return "🧘";
+  if (/\bdj\b|dance/.test(t))          return "🎧";
+  if (/rooftop/.test(t))               return "🥂";
+  if (/happy hour/.test(t))            return "🍻";
+  if (/festival|fest|fair/.test(t))    return "🎪";
+  if (/live band|live music/.test(t))  return "🎸";
+  return "📍";
+}
+
+function buildKeywordTags(title: string): string[] {
+  const t = title.toLowerCase();
+  const tags: string[] = [];
+  if (/karaoke/.test(t))       tags.push("Karaoke");
+  if (/trivia/.test(t))        tags.push("Trivia Night");
+  if (/yoga/.test(t))          tags.push("Yoga");
+  if (/\bdj\b/.test(t))        tags.push("DJ Night");
+  if (/rooftop/.test(t))       tags.push("Rooftop");
+  if (/happy hour/.test(t))    tags.push("Happy Hour");
+  if (/festival|fest/.test(t)) tags.push("Festival");
+  if (/live band/.test(t))     tags.push("Live Band");
+  return tags.slice(0, 3);
+}
+
+function mapRedditKeywordPost(post: RedditPost, area: string): EventItem | null {
+  if (!post?.title) return null;
+
+  const title = post.title.slice(0, 80);
+  const url = post.url?.startsWith("http")
+    ? post.url
+    : `https://reddit.com${post.permalink}`;
+
+  const t = title.toLowerCase();
+  const category =
+    /yoga|pilates|wellness/.test(t)                          ? "Wellness"  :
+    /karaoke|trivia|quiz|happy hour|\bdj\b|rooftop|dance/.test(t) ? "Nightlife" :
+    /festival|fest|fair|carnival/.test(t)                    ? "Events"    :
+    /live band|live music|concert/.test(t)                   ? "Music"     :
+    "Events";
+
+  return {
+    id:        toNumericId("rk" + post.id),
+    type:      "event",
+    title,
+    desc:      (post.selftext?.slice(0, 200)) || title,
+    longDesc:  post.selftext?.slice(0, 600) || title,
+    time:      formatRelativeTime(post.created_utc),
+    date:      isoDate(post.created_utc),
+    location:  area,
+    lat:       undefined,
+    lng:       undefined,
+    source:    "Reddit",
+    category,
+    catColor:  REDDIT_COLOR,
+    catDot:    REDDIT_DOT,
+    saves:     0,
+    img:       mapKeywordEmoji(title),
+    booking:   { label: "View on Reddit", url, affiliate: false },
+    tags:      buildKeywordTags(title),
+    isCanceled: false,
+  };
+}
+
+/**
+ * Searches the most-relevant local subreddit for event keywords
+ * (karaoke, trivia, yoga, DJ nights, rooftop, happy hour, festivals).
+ * Free, no quota. Returns posts from the past week that mention a target
+ * keyword and aren't news/crime posts.
+ *
+ * @param area Human-readable area string e.g. "Lancaster, PA"
+ */
+export async function searchRedditKeywords(area: string): Promise<EventItem[]> {
+  const subreddits = getLocalSubreddits(area);
+  if (subreddits.length === 0) return [];
+
+  const sub = subreddits[0]; // most-relevant subreddit
+  const params = new URLSearchParams({
+    q:           REDDIT_KEYWORD_QUERY,
+    sort:        "new",
+    t:           "week",
+    limit:       "15",
+    restrict_sr: "1",
+    raw_json:    "1",
+  });
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 6_000);
+
+  try {
+    const res = await fetch(
+      `https://www.reddit.com/r/${sub}/search.json?${params}`,
+      { headers: { "User-Agent": "NearbyAndNow/1.0" }, signal: controller.signal },
+    );
+    clearTimeout(timeout);
+    if (!res.ok) return [];
+
+    const data = await res.json();
+    const posts: { data: RedditPost }[] = data?.data?.children ?? [];
+
+    const items = posts
+      .map(p => p.data)
+      .filter(d => {
+        const title = (d?.title ?? "").toLowerCase();
+        return ALL_KEYWORDS_FLAT.some(kw => title.includes(kw.toLowerCase()))
+          && !isKeywordNewsPost(title);
+      })
+      .map(d => mapRedditKeywordPost(d, area))
+      .filter((x): x is EventItem => x !== null);
+
+    console.log(`[Reddit keywords] ${items.length} posts from r/${sub} for "${area}"`);
+    return items;
+  } catch {
+    clearTimeout(timeout);
+    return [];
+  }
 }

@@ -16,8 +16,10 @@ import { useTheme } from "../src/hooks/useTheme";
 import { MapBackground } from "../src/components/MapBackground";
 import { Pin } from "../src/components/Pin";
 import { supabase } from "../src/lib/supabase";
+import { loadProfile } from "../src/services/profileService";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const CODE_RE  = /^\d{6}$/;
 
 // ─── Helper: open URL in new tab on web, in-app browser on native ────────────
 function openLegal(url: string) {
@@ -79,8 +81,11 @@ export default function EmailScreen() {
   const [error,      setError]      = useState("");
   const [agreed,     setAgreed]     = useState(false);
   const [agreeError, setAgreeError] = useState(false);
+  const [code,       setCode]       = useState("");     // 6-digit OTP entered in-app
+  const [verifying,  setVerifying]  = useState(false);  // verifyOtp in-flight
 
-  const valid = EMAIL_RE.test(email);
+  const valid     = EMAIL_RE.test(email);
+  const codeValid = CODE_RE.test(code);
 
   // Pre-fill from AsyncStorage if the app remembers the address
   useEffect(() => {
@@ -129,13 +134,48 @@ export default function EmailScreen() {
       }
 
       await AsyncStorage.setItem("nearbynow_email", email);
-      // Show "check your inbox" screen — do NOT auto-navigate to /feed.
-      // The user must click the magic link; the /auth/callback screen handles routing.
+      // Show "check your inbox" screen with a 6-digit code field. The magic link
+      // still works (desktop/Android), but the in-app code is the reliable path
+      // on iOS PWAs — verifyOtp creates the session in THIS storage context, so
+      // there's no Safari→PWA context gap.
       setSent(true);
     } catch (e: any) {
       setError(e.message ?? "Something went wrong — please try again.");
     } finally {
       setSending(false);
+    }
+  };
+
+  /**
+   * Verifies the 6-digit code from the email, creating the session directly in
+   * the current storage context (the PWA itself — not Safari). This sidesteps
+   * the iOS PWA magic-link problem entirely. Routes to feed/location on success.
+   */
+  const handleVerifyCode = async () => {
+    if (!codeValid || verifying) return;
+    setError("");
+    setVerifying(true);
+    try {
+      const { data, error: vErr } = await supabase.auth.verifyOtp({
+        email,
+        token: code.trim(),
+        type: "email",
+      });
+
+      if (vErr || !data.session) {
+        setError(vErr?.message ?? "That code didn't work. Check it and try again.");
+        setVerifying(false);
+        return;
+      }
+
+      // Session is now stored in this context — sync profile + route.
+      await AsyncStorage.setItem("nearbynow_email", email);
+      await loadProfile().catch(() => {});
+      const area = await AsyncStorage.getItem("hearby_area").catch(() => null);
+      router.replace(area ? "/feed" : "/location");
+    } catch (e: any) {
+      setError(e.message ?? "Couldn't verify the code — please try again.");
+      setVerifying(false);
     }
   };
 
@@ -205,31 +245,77 @@ export default function EmailScreen() {
               </View>
 
               <Text style={[s.body, { color: T.textSub }]}>
-                {isLogin ? "We sent a magic link to" : "We sent a sign-up link to"}
+                We sent a 6-digit code to
                 {"\n"}
                 <Text style={{ color: T.text, fontFamily: "Inter_600SemiBold" }}>{email}</Text>
-                {"\n\n"}
-                <Text style={{ color: T.muted, fontSize: 13 }}>
-                  Tap the link in your email to sign in.{"\n"}It expires in 1 hour.
-                </Text>
               </Text>
 
               <View style={s.flex055} />
 
-              {/* "Wrong email?" lets the user go back and re-enter */}
+              {/* ── 6-digit code entry — the reliable path on iOS PWAs ── */}
+              <TextInput
+                value={code}
+                onChangeText={t => { setCode(t.replace(/\D/g, "").slice(0, 6)); setError(""); }}
+                onSubmitEditing={handleVerifyCode}
+                placeholder="000000"
+                placeholderTextColor={T.muted}
+                keyboardType="number-pad"
+                returnKeyType="go"
+                maxLength={6}
+                style={[
+                  s.input,
+                  {
+                    backgroundColor: T.surface,
+                    color:           T.text,
+                    borderColor:     codeValid ? T.gold : T.border,
+                    textAlign:       "center",
+                    letterSpacing:   8,
+                    fontSize:        24,
+                    fontFamily:      "Inter_700Bold",
+                    paddingRight:    18,
+                  },
+                ]}
+              />
+
+              {!!error && (
+                <Text style={[s.errorText, { color: T.red }]}>{error}</Text>
+              )}
+
+              <View style={s.gap12} />
+
               <TouchableOpacity
-                onPress={() => { setSent(false); setSending(false); setError(""); }}
-                style={[s.primaryBtn, { backgroundColor: "transparent", borderWidth: 1.5, borderColor: T.border }]}
-                activeOpacity={0.7}
+                onPress={handleVerifyCode}
+                disabled={!codeValid || verifying}
+                style={[s.primaryBtn, { backgroundColor: codeValid ? T.text : (isDark ? "#3A372E" : "#A8A29A") }]}
+                activeOpacity={0.85}
               >
-                <Text style={[s.primaryBtnText, { color: T.muted, fontWeight: "400" }]}>
-                  Wrong email? Start over
-                </Text>
+                {verifying ? (
+                  <>
+                    <Spinner color={codeValid ? T.bg : T.muted} />
+                    <Text style={[s.primaryBtnText, { color: codeValid ? T.bg : T.muted }]}>Verifying…</Text>
+                  </>
+                ) : (
+                  <Text style={[s.primaryBtnText, { color: codeValid ? T.bg : (isDark ? "#6B6760" : "#F2EFE9") }]}>
+                    Verify code →
+                  </Text>
+                )}
               </TouchableOpacity>
 
               <Text style={[s.privacy, { color: T.muted }]}>
-                Didn't get it? Check your spam folder or tap above to try a different address.
+                Enter the code from your email — or tap the magic link inside it.{"\n"}
+                The code expires in 1 hour.
               </Text>
+
+              {/* "Wrong email?" lets the user go back and re-enter */}
+              <TouchableOpacity
+                onPress={() => { setSent(false); setSending(false); setCode(""); setError(""); }}
+                style={{ marginTop: 16, padding: 4 }}
+                activeOpacity={0.7}
+              >
+                <Text style={{ fontSize: 13, textAlign: "center", color: T.muted, fontFamily: "DMSans_400Regular" }}>
+                  Wrong email? Start over
+                </Text>
+              </TouchableOpacity>
             </>
           ) : (
             /* ── Sign-in form ─────────────────────────────────────────── */

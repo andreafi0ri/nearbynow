@@ -515,13 +515,15 @@ export const RSS_SOURCES: RSSSource[] = [
   },
 
   // ─── Lancaster, PA ────────────────────────────────────────────────────────
-  // Note: visitlancastercity.com/events/ is scraped directly by visitLancasterService.ts
   // Verified working (via codetabs proxy) as of 2026-06:
   //   ✅ LancasterPA.com         — 100 items, 28 events
   //   ✅ LancasterHistory.org    — 10 items, 10 events
+  //   ✅ Tellus360               — 10 items, live-music/venue events (The Events
+  //                                Calendar RSS; event date in pubDate)
   // Removed:
-  //   ❌ WITF Public Radio — 90% news/politics, only 2-3 real events per 50 items,
-  //                          no events-only category feed available
+  //   ❌ WITF Public Radio — 90% news/politics, only 2-3 real events per 50 items
+  //   ❌ visitlancastercity.com — entire site now behind a Cloudflare JS challenge
+  //                               (blocks scraping/proxy); replaced by Tellus360
   {
     url:      "https://www.lancasterpa.com/feed/",
     name:     "LancasterPA.com",
@@ -538,6 +540,15 @@ export const RSS_SOURCES: RSSSource[] = [
     catColor: "#8B2131", catDot: "#BF3050",
     img:      "🏛️", type: "auto",
     tags:     ["Lancaster", "Heritage", "History"],
+  },
+  {
+    url:      "https://www.tellus360.com/events/feed/",
+    name:     "Tellus360",
+    area:     "lancaster",
+    category: "Music",
+    catColor: "#7B5CE0", catDot: "#A688FF",
+    img:      "🎸", type: "event",  // dedicated events venue — every item is an event
+    tags:     ["Lancaster", "Live Music", "Nightlife"],
   },
 
   // ─── Global fallback — always included ───────────────────────────────────

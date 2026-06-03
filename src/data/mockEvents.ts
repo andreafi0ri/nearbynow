@@ -362,6 +362,45 @@ export const MOCK_EVENTS: EventItem[] = [
     tags: ["NFL", "Football", "From $120"],
   },
 
+  {
+    id: 26, type: "recommendation",
+    title: "Nitehawk Cinema",
+    desc: "Cinema · Williamsburg · 0.8km away",
+    longDesc: "Brooklyn's beloved dine-in cinema. First-run and independent films with food and cocktails served at your seat.",
+    time: "Open nearby",
+    location: "136 Metropolitan Ave, Williamsburg, Brooklyn",
+    lat: 40.7157, lng: -73.9625,
+    date: fmt(today),
+    source: "Foursquare", category: "Culture",
+    catColor: "#B8920A", catDot: "#D4A80C",
+    saves: 0, img: "🎬",
+    booking: {
+      label: "View details",
+      url: "https://foursquare.com/v/nitehawk-cinema",
+      affiliate: false,
+    },
+    tags: ["Cinema", "Williamsburg"],
+  },
+  {
+    id: 27, type: "recommendation",
+    title: "Smorgasburg",
+    desc: "Food Market · DUMBO · 0.3km away",
+    longDesc: "America's largest weekly open-air food market. 100+ local vendors every Saturday in Williamsburg and Sunday in DUMBO.",
+    time: "Open nearby",
+    location: "Brooklyn Bridge Park, DUMBO, Brooklyn",
+    lat: 40.7024, lng: -73.9875,
+    date: fmt(today),
+    source: "Foursquare", category: "Food & Drink",
+    catColor: "#D43030", catDot: "#FF6B6B",
+    saves: 0, img: "🍽️",
+    booking: {
+      label: "View details",
+      url: "https://foursquare.com/v/smorgasburg",
+      affiliate: false,
+    },
+    tags: ["Food Market", "DUMBO"],
+  },
+
   // ── Deduplication test data ────────────────────────────────────────────────
   // id:8 should merge with id:1 (hard merge — same event, two sources)
   // id:9 should NOT merge with id:2 (fuzzy match — different location string)
@@ -429,6 +468,7 @@ export const SOURCE_COLORS: Record<string, string> = {
   "Lititz PA":          "#E67E22",
   "Mickey's Black Box": "#7B5CE0",
   "SeatGeek":           "#F05537",
+  "Foursquare":         "#F94877",
   "Activities":         "#1A9E98",
   "Wellness":           "#C25F8F",
   "Nightlife":          "#4A1570",

@@ -235,4 +235,10 @@ export const SOURCE_FILTERS: FilterOption[] = [
     icon: "🎟️",
     matchFn: item => item.source === "SeatGeek",
   },
+  {
+    id: "src_foursquare",
+    label: "Foursquare",
+    icon: "⭐",
+    matchFn: item => item.source === "Foursquare",
+  },
 ];

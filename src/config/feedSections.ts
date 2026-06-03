@@ -7,6 +7,7 @@ export type FeedSection =
   | "happening"       // Happening near you  (Meetup)
   | "community"       // From the community  (RSS, Reddit, Google Events, etc.)
   | "ticketed"        // Ticketed events     (Ticketmaster, AMC, Viator, Eventbrite)
+  | "spots"           // Top nearby spots    (Foursquare venues)
   | "recommendation"; // Google Places recs  — stays in existing footer, never sectioned
 
 export const SOURCE_SECTION: Record<string, FeedSection> = {
@@ -23,6 +24,9 @@ export const SOURCE_SECTION: Record<string, FeedSection> = {
   "TicketWeb":        "ticketed",
   "Fever":            "ticketed",
   "StubHub":          "ticketed",
+
+  // ── Top nearby spots ──────────────────────────────────────────────────
+  "Foursquare":       "spots",
 
   // ── Google Places recs (footer only) ─────────────────────────────────
   "Google Places":    "recommendation",
@@ -64,4 +68,5 @@ export const FEED_SECTION_CONFIG: SectionConfig[] = [
   { key: "happening",  label: "Happening near you",  emoji: "📍" },
   { key: "community",  label: "From the community",  emoji: "🤝" },
   { key: "ticketed",   label: "Ticketed events",     emoji: "🎟️" },
+  { key: "spots",      label: "Top nearby spots for you", emoji: "⭐" },
 ];

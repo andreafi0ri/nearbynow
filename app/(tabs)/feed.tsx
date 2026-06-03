@@ -263,25 +263,34 @@ export default function FeedScreen() {
   const sectionableItems = filtered.filter(
     i => i.type === "event" ||
          i.source === "Viator" ||
+         i.source === "Foursquare" ||   // recs, but shown in "Top nearby spots"
          i.category === "Activities"
   );
 
   const happeningItems = sectionableItems.filter(i => getSectionForItem(i) === "happening");
   const communityItems = sectionableItems.filter(i => getSectionForItem(i) === "community");
   const ticketedItems  = sectionableItems.filter(i => getSectionForItem(i) === "ticketed");
+  const spotsItems     = sectionableItems.filter(i => getSectionForItem(i) === "spots");
 
-  // Remaining recs (GP recommendations) → "You might also like" footer
+  // Remaining recs (GP recommendations) → "You might also like" footer.
+  // Foursquare is excluded — it has its own "Top nearby spots" section.
   const mixRecItems = filtered.filter(
     i => i.type === "recommendation"
       && i.source !== "Viator"
+      && i.source !== "Foursquare"
       && i.category !== "Activities"
       && !FILTER_ONLY_SOURCES.has(i.source ?? "")
   );
 
   // Only show section headers when 2+ sections have content.
   // Single section → flat list without headers (no orphaned heading).
+  const sectionCountByKey = (key: string) =>
+    key === "happening" ? happeningItems
+    : key === "ticketed" ? ticketedItems
+    : key === "spots"    ? spotsItems
+    : communityItems;
   const nonEmptySectionCount = FEED_SECTION_CONFIG.filter(
-    s => (s.key === "happening" ? happeningItems : s.key === "ticketed" ? ticketedItems : communityItems).length > 0
+    s => sectionCountByKey(s.key).length > 0
   ).length;
   const showSectionHeaders = nonEmptySectionCount >= 2;
 
@@ -631,6 +640,33 @@ export default function FeedScreen() {
               decelerationRate="fast"
             >
               {ticketedItems.map(item => (
+                <WideImageCard
+                  key={item.id} item={item} T={T}
+                  saved={saved.has(item.id)}
+                  onSave={() => handleToggle(item.id)}
+                />
+              ))}
+            </ScrollView>
+          </>
+        )}
+
+        {/* ── Block 4 · Top nearby spots — Foursquare venues (horizontal carousel) ── */}
+        {spotsItems.length > 0 && (
+          <>
+            <View style={[styles.sectionDivider, { backgroundColor: T.border, marginHorizontal: 18, marginTop: 18 }]} />
+            <SectionHeader
+              label="Top nearby spots for you"
+              sub="Popular places around you"
+              onSeeAll={() => setSeeAll({ title: "Top nearby spots for you", sub: "Popular places around you", items: spotsItems, kind: "event" })}
+              T={T}
+            />
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 22, gap: 12 }}
+              decelerationRate="fast"
+            >
+              {spotsItems.map(item => (
                 <WideImageCard
                   key={item.id} item={item} T={T}
                   saved={saved.has(item.id)}

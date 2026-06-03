@@ -340,6 +340,28 @@ export const MOCK_EVENTS: EventItem[] = [
     tags: ["Free", "Farmers Market", "Lancaster"],
   },
 
+  {
+    id: 25, type: "event",
+    title: "Philadelphia Eagles vs. Dallas Cowboys",
+    desc: "NFL Football · Lincoln Financial Field · From $120",
+    longDesc: "Philadelphia Eagles host the Dallas Cowboys at Lincoln Financial Field. Tickets available via SeatGeek with all-in pricing — no hidden fees.",
+    time: "Sun 4:25 PM",
+    location: "Lincoln Financial Field, Philadelphia, PA",
+    lat: 39.9008, lng: -75.1675,
+    date: nextWeekday(0),
+    startIso: nextWeekday(0) + "T16:25:00",
+    endIso:   nextWeekday(0) + "T19:30:00",
+    source: "SeatGeek", category: "Sport",
+    catColor: "#1A9E98", catDot: "#3ABFB8",
+    saves: 203, img: "🏈",
+    booking: {
+      label: "Buy Tickets · From $120",
+      url: "https://seatgeek.com/philadelphia-eagles-tickets",
+      affiliate: true,
+    },
+    tags: ["NFL", "Football", "From $120"],
+  },
+
   // ── Deduplication test data ────────────────────────────────────────────────
   // id:8 should merge with id:1 (hard merge — same event, two sources)
   // id:9 should NOT merge with id:2 (fuzzy match — different location string)
@@ -406,6 +428,7 @@ export const SOURCE_COLORS: Record<string, string> = {
   "Google Events":      "#4285F4",
   "Lititz PA":          "#E67E22",
   "Mickey's Black Box": "#7B5CE0",
+  "SeatGeek":           "#F05537",
   "Activities":         "#1A9E98",
   "Wellness":           "#C25F8F",
   "Nightlife":          "#4A1570",

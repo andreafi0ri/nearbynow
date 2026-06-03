@@ -110,6 +110,8 @@ export const FILTERS: FilterOption[] = [
     icon: "🏃",
     matchFn: item =>
       item.category === "Sport" ||
+      item.source === "SeatGeek" ||
+      item.source === "StubHub" ||
       // Catch TM events whose segment resolved to Sport but category might differ,
       // or general-fetch TM items with explicit sport genre tags.
       (item.source === "Ticketmaster" &&
@@ -226,5 +228,11 @@ export const SOURCE_FILTERS: FilterOption[] = [
     label: "Viator",
     icon: "🗺️",
     matchFn: item => item.source === "Viator",
+  },
+  {
+    id: "src_seatgeek",
+    label: "SeatGeek",
+    icon: "🎟️",
+    matchFn: item => item.source === "SeatGeek",
   },
 ];

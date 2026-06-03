@@ -4,6 +4,7 @@ import { fetchRSSFeeds } from "./rssService";
 import { searchEventbrite } from "./eventbriteService";
 import { searchMeetup } from "./meetupService";
 import { searchTicketmaster, searchTicketmasterSports } from "./ticketmasterService";
+import { searchSeatGeekEvents } from "./seatGeekService";
 // Note: visitLancasterService removed — visitlancastercity.com is now behind a
 // Cloudflare JS challenge that blocks all scraping. Lancaster events now come
 // from RSS (LancasterPA.com, LancasterHistory.org, Tellus360) + Meetup/TM/Serp.
@@ -115,6 +116,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
     meetupResult,
     ticketmasterResult,
     sportsResult,
+    seatGeekResult,
     lititzResult,
     foodPlacesResult,
     cinemaResult,
@@ -132,6 +134,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
     searchMeetup(area),
     searchTicketmaster(area),
     searchTicketmasterSports(area, resolvedCoords), // sports-only, 25-mile radius, 1-hr cache
+    searchSeatGeekEvents(area, resolvedCoords),     // concerts/sports/theater — $11 avg/sale
     isLititz    ? fetchLititzEvents()         : Promise.resolve([]),
     fetchFoodPlaces(area, resolvedCoords),       // always-on → Food & Drink filter
     fetchCinemas(area, resolvedCoords),          // always-on → Cinema filter
@@ -157,6 +160,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
     ...extract(meetupResult),
     ...extract(ticketmasterResult),
     ...extract(sportsResult),        // Sports-only TM fetch (25-mile radius, dedup handles overlap)
+    ...extract(seatGeekResult),      // SeatGeek concerts/sports/theater → ticketed (dedup handles TM overlap)
     ...extract(lititzResult),
     ...extract(foodPlacesResult),
     ...extract(cinemaResult),
@@ -227,6 +231,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
   console.log(`  Meetup:           ${extract(meetupResult).length}`);
   console.log(`  Ticketmaster:     ${extract(ticketmasterResult).length}`);
   console.log(`  TM Sports:        ${extract(sportsResult).length} (sports-only, 25mi radius)`);
+  console.log(`  SeatGeek:         ${extract(seatGeekResult).length} (concerts/sports/theater)`);
   console.log(`  Lititz PA:        ${extract(lititzResult).length}`);
   console.log(`  Food Places:      ${extract(foodPlacesResult).length} (always-on, filter-only)`);
   console.log(`  Cinemas:          ${extract(cinemaResult).length} (always-on)`);

@@ -15,6 +15,7 @@ export const SOURCE_SECTION: Record<string, FeedSection> = {
 
   // ── Ticketed events ───────────────────────────────────────────────────
   "Ticketmaster":     "ticketed",
+  "SeatGeek":         "ticketed",
   "AMC Theatres":     "ticketed",
   "Showtimes":        "ticketed",
   "Viator":           "ticketed",

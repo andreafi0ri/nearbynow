@@ -321,7 +321,7 @@ export default function FeedScreen() {
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={[styles.browsingLabel, { color: T.mutedL }]}>NOW BROWSING</Text>
             <TouchableOpacity
-              onPress={() => router.push("/location?switch=1")}
+              onPress={() => setAreaSwitcherOpen(o => !o)}
               style={styles.areaBtn}
             >
               {/* City in Playfair ExtraBold, state/region part in italic gold */}
@@ -539,7 +539,7 @@ export default function FeedScreen() {
               {a === area && <Text style={{ color: T.gold, fontSize: 12, marginLeft: "auto" }}>✓</Text>}
             </TouchableOpacity>
           ))}
-          <TouchableOpacity onPress={() => { setAreaSwitcherOpen(false); router.replace("/location"); }}
+          <TouchableOpacity onPress={() => { setAreaSwitcherOpen(false); router.push("/location?switch=1"); }}
             style={[styles.areaSwitcherRow, { borderBottomWidth: 0 }]}>
             <Text style={{ fontSize: 13, marginRight: 6 }}>＋</Text>
             <Text style={[styles.areaSwitcherText, { color: T.gold }]}>Add new area</Text>

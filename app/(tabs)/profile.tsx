@@ -278,7 +278,7 @@ export default function ProfileScreen() {
 
           <View style={styles.areaHeaderRow}>
             <Text style={[styles.areaLabel, { color: T.muted }]}>YOUR AREAS</Text>
-            <TouchableOpacity onPress={() => router.replace("/location")}
+            <TouchableOpacity onPress={() => router.push("/location?switch=1")}
               style={[styles.changeBtn, { backgroundColor: T.text, borderColor: T.text, shadowColor: T.goldDim }]}>
               <Text style={[styles.changeBtnText, { color: T.goldBri }]}>＋ Add</Text>
             </TouchableOpacity>

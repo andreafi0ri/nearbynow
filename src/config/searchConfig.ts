@@ -22,9 +22,9 @@ export const SEARCH_CONFIG = {
   // ── Per-service radius overrides ────────────────────
   GOOGLE_PLACES_RADIUS_METRES: 5000,    // ~3 miles — intentionally narrower (place density)
   FACEBOOK_EVENTS_RADIUS_METRES: 16000, // ~10 miles
-  EVENTBRITE_RADIUS_KM: 16,             // ~10 miles
-  MEETUP_RADIUS_KM: 16,                 // ~10 miles
-  TICKETMASTER_RADIUS_KM: 16,           // ~10 miles
+  EVENTBRITE_RADIUS_KM: 32,             // ~20 miles
+  MEETUP_RADIUS_KM: 32,                 // ~20 miles
+  TICKETMASTER_RADIUS_KM: 32,           // ~20 miles
 
   // ── Google Places threshold ──────────────────────────
   // Google Places recommendations are fetched when the total

@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Defs, RadialGradient, Stop, Ellipse, Circle as SvgCircle } from "react-native-svg";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import * as Location from "expo-location";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "../src/hooks/useTheme";
@@ -39,6 +39,7 @@ const CHIPS = [
 export default function LocationScreen() {
   const { theme: T, isDark } = useTheme();
   const router  = useRouter();
+  const { switch: switchMode } = useLocalSearchParams<{ switch?: string }>();
   const { addArea } = useSavedAreas();
   const insets = useSafeAreaInsets();
 
@@ -83,8 +84,10 @@ export default function LocationScreen() {
 
       setIsSignedIn(signedIn);
 
-      // Fully authenticated with a saved area — route to feed immediately
-      if (area && signedIn) {
+      // Fully authenticated with a saved area — route to feed immediately,
+      // UNLESS the user explicitly came here to switch/add an area (?switch=1).
+      // Without this guard the Switch button would bounce straight back to feed.
+      if (area && signedIn && switchMode !== "1") {
         router.replace("/feed");
         return;
       }

@@ -321,7 +321,7 @@ export default function FeedScreen() {
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={[styles.browsingLabel, { color: T.mutedL }]}>NOW BROWSING</Text>
             <TouchableOpacity
-              onPress={() => setAreaSwitcherOpen(o => !o)}
+              onPress={() => router.push("/location?switch=1")}
               style={styles.areaBtn}
             >
               {/* City in Playfair ExtraBold, state/region part in italic gold */}

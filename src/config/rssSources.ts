@@ -520,6 +520,8 @@ export const RSS_SOURCES: RSSSource[] = [
   //   ✅ LancasterHistory.org    — 10 items, 10 events
   //   ✅ Tellus360               — 10 items, live-music/venue events (The Events
   //                                Calendar RSS; event date in pubDate)
+  //   ✅ Mickey's Black Box      — 10 items, all upcoming live-music/tribute shows
+  //                                (regional venue at The Wilbur, Lititz)
   // Removed:
   //   ❌ WITF Public Radio — 90% news/politics, only 2-3 real events per 50 items
   //   ❌ visitlancastercity.com — entire site now behind a Cloudflare JS challenge
@@ -549,6 +551,15 @@ export const RSS_SOURCES: RSSSource[] = [
     catColor: "#7B5CE0", catDot: "#A688FF",
     img:      "🎸", type: "event",  // dedicated events venue — every item is an event
     tags:     ["Lancaster", "Live Music", "Nightlife"],
+  },
+  {
+    url:      "https://www.mickeysblackbox.com/events/feed/",
+    name:     "Mickey's Black Box",
+    area:     "lancaster",
+    category: "Music",
+    catColor: "#7B5CE0", catDot: "#A688FF",
+    img:      "🎸", type: "event",  // live-music venue — every item is a dated show
+    tags:     ["Lancaster", "Live Music", "Concerts"],
   },
 
   // ─── Global fallback — always included ───────────────────────────────────

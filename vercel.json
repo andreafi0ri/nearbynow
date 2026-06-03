@@ -7,7 +7,8 @@
     "api/viator-products.js":    { "memory": 128, "maxDuration": 15 },
     "api/facebook-events.js":    { "memory": 128, "maxDuration": 20 },
     "api/meetup-search.js":      { "maxDuration": 10 },
-    "api/serp-events.js":        { "maxDuration": 10 }
+    "api/serp-events.js":        { "maxDuration": 10 },
+    "api/lititz-events.js":      { "maxDuration": 10 }
   },
   "rewrites": [
     { "source": "/privacy",      "destination": "/privacy/index.html" },

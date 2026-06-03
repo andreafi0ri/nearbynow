@@ -5,6 +5,7 @@ import { searchEventbrite } from "./eventbriteService";
 import { searchMeetup } from "./meetupService";
 import { searchTicketmaster, searchTicketmasterSports } from "./ticketmasterService";
 import { fetchVisitLancasterEvents } from "./visitLancasterService";
+import { fetchLititzEvents } from "./lititzEventsService";
 import { deduplicateFeed, MultiSourceEvent } from "./deduplicationService";
 import { getRecommendations, type FeedResult } from "./recommendationEngine";
 import { searchViatorExperiences } from "./viatorService";
@@ -29,6 +30,7 @@ function sortByDate(items: MultiSourceEvent[]): MultiSourceEvent[] {
 
 const BRIXTON_KEYWORDS   = ["brixton", "lambeth", "sw9", "sw2", "clapham", "streatham", "stockwell"];
 const LANCASTER_KEYWORDS = ["lancaster", "lancaster city", "lancaster pa"];
+const LITITZ_KEYWORDS    = ["lititz"];
 
 function mockEventsForArea(area: string): EventItem[] {
   const lower = area.toLowerCase();
@@ -86,6 +88,7 @@ async function fetchFoodPlaces(area: string, coords?: Coords): Promise<EventItem
 export async function getFeed(area: string, coords?: Coords): Promise<FeedResult> {
   const subreddits  = getLocalSubreddits(area);
   const isLancaster = LANCASTER_KEYWORDS.some(kw => area.toLowerCase().includes(kw));
+  const isLititz    = LITITZ_KEYWORDS.some(kw => area.toLowerCase().includes(kw));
 
   // ── Resolve coordinates ────────────────────────────────────────────────────
   // feed.tsx passes coords only when they're already cached for this exact area.
@@ -112,6 +115,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
     ticketmasterResult,
     sportsResult,
     visitLancasterResult,
+    lititzResult,
     foodPlacesResult,
     cinemaResult,
     viatorAlwaysResult,
@@ -128,6 +132,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
     searchTicketmaster(area),
     searchTicketmasterSports(area, resolvedCoords), // sports-only, 25-mile radius, 1-hr cache
     isLancaster ? fetchVisitLancasterEvents() : Promise.resolve([]),
+    isLititz    ? fetchLititzEvents()         : Promise.resolve([]),
     fetchFoodPlaces(area, resolvedCoords),       // always-on → Food & Drink filter
     fetchCinemas(area, resolvedCoords),          // always-on → Cinema filter
     searchViatorExperiences(area, resolvedCoords), // always-on → Viator/Nearby
@@ -152,6 +157,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
     ...extract(ticketmasterResult),
     ...extract(sportsResult),        // Sports-only TM fetch (25-mile radius, dedup handles overlap)
     ...extract(visitLancasterResult),
+    ...extract(lititzResult),
     ...extract(foodPlacesResult),
     ...extract(cinemaResult),
     ...showtimeItems,
@@ -212,6 +218,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
   console.log(`  Ticketmaster:     ${extract(ticketmasterResult).length}`);
   console.log(`  TM Sports:        ${extract(sportsResult).length} (sports-only, 25mi radius)`);
   console.log(`  Visit Lancaster:  ${extract(visitLancasterResult).length}`);
+  console.log(`  Lititz PA:        ${extract(lititzResult).length}`);
   console.log(`  Food Places:      ${extract(foodPlacesResult).length} (always-on, filter-only)`);
   console.log(`  Cinemas:          ${extract(cinemaResult).length} (always-on)`);
   console.log(`  AMC Showtimes:    ${showtimeItems.length} cards`);

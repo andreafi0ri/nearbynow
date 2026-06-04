@@ -282,18 +282,6 @@ export default function FeedScreen() {
       && !FILTER_ONLY_SOURCES.has(i.source ?? "")
   );
 
-  // Only show section headers when 2+ sections have content.
-  // Single section → flat list without headers (no orphaned heading).
-  const sectionCountByKey = (key: string) =>
-    key === "happening" ? happeningItems
-    : key === "ticketed" ? ticketedItems
-    : key === "spots"    ? spotsItems
-    : communityItems;
-  const nonEmptySectionCount = FEED_SECTION_CONFIG.filter(
-    s => sectionCountByKey(s.key).length > 0
-  ).length;
-  const showSectionHeaders = nonEmptySectionCount >= 2;
-
   // True when we should render the sectioned Mix layout
   const isMixLayout = activeFilter === "All" && !showSaved;
 
@@ -579,7 +567,6 @@ export default function FeedScreen() {
             <SectionHeader
               label="Happening near you"
               sub="Events from Meetup, starting soon"
-              count={showSectionHeaders ? `${sectionableItems.length} result${sectionableItems.length !== 1 ? "s" : ""}` : undefined}
               onSeeAll={() => setSeeAll({ title: "Happening near you", sub: "Events from Meetup, starting soon", items: happeningItems, kind: "event" })}
               T={T}
             />

@@ -10,6 +10,7 @@ import { searchFoursquareVenues } from "./foursquareService";
 // Cloudflare JS challenge that blocks all scraping. Lancaster events now come
 // from RSS (LancasterPA.com, LancasterHistory.org, Tellus360) + Meetup/TM/Serp.
 import { fetchLititzEvents } from "./lititzEventsService";
+import { fetchFigLancasterEvents } from "./figLancasterService";
 import { deduplicateFeed, MultiSourceEvent } from "./deduplicationService";
 import { getRecommendations, type FeedResult } from "./recommendationEngine";
 import { searchViatorExperiences } from "./viatorService";
@@ -33,6 +34,7 @@ function sortByDate(items: MultiSourceEvent[]): MultiSourceEvent[] {
 // ─── Mock seed ────────────────────────────────────────────────────────────────
 
 const BRIXTON_KEYWORDS   = ["brixton", "lambeth", "sw9", "sw2", "clapham", "streatham", "stockwell"];
+const LANCASTER_KEYWORDS = ["lancaster"];
 const LITITZ_KEYWORDS    = ["lititz"];
 
 function mockEventsForArea(area: string): EventItem[] {
@@ -91,6 +93,7 @@ async function fetchFoodPlaces(area: string, coords?: Coords): Promise<EventItem
 export async function getFeed(area: string, coords?: Coords): Promise<FeedResult> {
   const subreddits  = getLocalSubreddits(area);
   const isLititz    = LITITZ_KEYWORDS.some(kw => area.toLowerCase().includes(kw));
+  const isLancaster = LANCASTER_KEYWORDS.some(kw => area.toLowerCase().includes(kw));
 
   // ── Resolve coordinates ────────────────────────────────────────────────────
   // feed.tsx passes coords only when they're already cached for this exact area.
@@ -120,6 +123,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
     seatGeekResult,
     foursquareResult,
     lititzResult,
+    figResult,
     foodPlacesResult,
     cinemaResult,
     viatorAlwaysResult,
@@ -139,6 +143,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
     searchSeatGeekEvents(area, resolvedCoords),     // concerts/sports/theater — $11 avg/sale
     searchFoursquareVenues(area, resolvedCoords),   // top nearby spots — 24h cache, Pro-tier only
     isLititz    ? fetchLititzEvents()         : Promise.resolve([]),
+    isLancaster ? fetchFigLancasterEvents()   : Promise.resolve([]),
     fetchFoodPlaces(area, resolvedCoords),       // always-on → Food & Drink filter
     fetchCinemas(area, resolvedCoords),          // always-on → Cinema filter
     searchViatorExperiences(area, resolvedCoords), // always-on → Viator/Nearby
@@ -166,6 +171,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
     ...extract(seatGeekResult),      // SeatGeek concerts/sports/theater → ticketed (dedup handles TM overlap)
     ...extract(foursquareResult),    // Foursquare venues → "Top nearby spots" section
     ...extract(lititzResult),
+    ...extract(figResult),           // FIG Lancaster (The Events Calendar) → community
     ...extract(foodPlacesResult),
     ...extract(cinemaResult),
     ...showtimeItems,
@@ -238,6 +244,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
   console.log(`  SeatGeek:         ${extract(seatGeekResult).length} (concerts/sports/theater)`);
   console.log(`  Foursquare:       ${extract(foursquareResult).length} (top nearby spots)`);
   console.log(`  Lititz PA:        ${extract(lititzResult).length}`);
+  console.log(`  FIG Lancaster:    ${extract(figResult).length}`);
   console.log(`  Food Places:      ${extract(foodPlacesResult).length} (always-on, filter-only)`);
   console.log(`  Cinemas:          ${extract(cinemaResult).length} (always-on)`);
   console.log(`  AMC Showtimes:    ${showtimeItems.length} cards`);

@@ -466,6 +466,7 @@ export const SOURCE_COLORS: Record<string, string> = {
   "AMC Theatres":       "#CC0000",
   "Google Events":      "#4285F4",
   "Lititz PA":          "#E67E22",
+  "FIG Lancaster":      "#2D8A6E",
   "Mickey's Black Box": "#7B5CE0",
   "SeatGeek":           "#F05537",
   "Foursquare":         "#F94877",

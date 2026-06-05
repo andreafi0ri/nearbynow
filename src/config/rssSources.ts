@@ -535,7 +535,6 @@ export const RSS_SOURCES: RSSSource[] = [
     url:      "https://www.lancasterpa.com/feed/",
     name:     "LancasterPA.com",
     area:     "lancaster",
-    lat: 40.0379, lng: -76.3055,
     category: "Events",
     img:      "📰", type: "auto",
     tags:     ["Lancaster"],
@@ -544,7 +543,6 @@ export const RSS_SOURCES: RSSSource[] = [
     url:      "https://www.lancasterhistory.org/feed/",
     name:     "LancasterHistory.org",
     area:     "lancaster",
-    lat: 40.0379, lng: -76.3055,
     category: "Culture",
     catColor: "#8B2131", catDot: "#BF3050",
     img:      "🏛️", type: "auto",
@@ -554,7 +552,6 @@ export const RSS_SOURCES: RSSSource[] = [
     url:      "https://www.tellus360.com/events/feed/",
     name:     "Tellus360",
     area:     "lancaster",
-    lat: 40.0379, lng: -76.3055,
     category: "Music",
     catColor: "#7B5CE0", catDot: "#A688FF",
     img:      "🎸", type: "event",  // dedicated events venue — every item is an event

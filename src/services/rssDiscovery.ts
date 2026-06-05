@@ -159,6 +159,30 @@ const extraSources: RSSSource[] = [];
 // Radius (miles) within which a coord-anchored source is treated as local.
 const RSS_RADIUS_MILES = 20;
 
+// Centroid coordinates per area keyword. A source inherits its area's centroid
+// for proximity matching unless it carries its own lat/lng (which wins — e.g. a
+// venue feed anchored to a specific town). Add a keyword here to make every
+// source with that `area` radius-aware at once.
+const AREA_COORDS: Record<string, { lat: number; lng: number }> = {
+  "brixton":       { lat: 51.4613, lng: -0.1156 },
+  "london":        { lat: 51.5074, lng: -0.1278 },
+  "brooklyn":      { lat: 40.6782, lng: -73.9442 },
+  "nyc":           { lat: 40.7128, lng: -74.0060 },
+  "chicago":       { lat: 41.8781, lng: -87.6298 },
+  "los angeles":   { lat: 34.0522, lng: -118.2437 },
+  "portland":      { lat: 45.5152, lng: -122.6784 },
+  "seattle":       { lat: 47.6062, lng: -122.3321 },
+  "san francisco": { lat: 37.7749, lng: -122.4194 },
+  "denver":        { lat: 39.7392, lng: -104.9903 },
+  "austin":        { lat: 30.2672, lng: -97.7431 },
+  "nashville":     { lat: 36.1627, lng: -86.7816 },
+  "boston":        { lat: 42.3601, lng: -71.0589 },
+  "philadelphia":  { lat: 39.9526, lng: -75.1652 },
+  "miami":         { lat: 25.7617, lng: -80.1918 },
+  "washington":    { lat: 38.9072, lng: -77.0369 },
+  "lancaster":     { lat: 40.0379, lng: -76.3055 },
+};
+
 /** Great-circle distance in miles. */
 function distanceMiles(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 3_958.8;
@@ -195,10 +219,14 @@ export function getRSSSourcesForArea(
 
   const scored: ScoredSource[] = [...RSS_SOURCES, ...extraSources].map(source => {
     let score = 0;
+    // Anchor = source's own coords (override) or its area centroid.
+    const anchor =
+      source.lat != null && source.lng != null
+        ? { lat: source.lat, lng: source.lng }
+        : AREA_COORDS[source.area];
     const withinRadius =
-      coords != null &&
-      source.lat != null && source.lng != null &&
-      distanceMiles(coords.lat, coords.lng, source.lat, source.lng) <= RSS_RADIUS_MILES;
+      coords != null && anchor != null &&
+      distanceMiles(coords.lat, coords.lng, anchor.lat, anchor.lng) <= RSS_RADIUS_MILES;
     if (source.area === "global") {
       score = 1;
     } else if (tokens.includes(source.area) || withinRadius) {

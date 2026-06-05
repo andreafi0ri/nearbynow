@@ -234,11 +234,10 @@ export default function LocationScreen() {
             <Pin size={82} T={T} />
           </View>
 
-          {/* ── Wordmark (44 px, prototype-exact) ────────────────────────── */}
+          {/* ── Stacked wordmark (rebrand) — italic-red "NEARBY &" over heavy "NOW" ── */}
           <View style={s.wordmarkRow}>
-            <Text style={[s.wordmarkNearby, { color: T.text }]}>Nearby </Text>
-            <Text style={[s.wordmarkAmp,    { color: T.gold }]}>&amp;</Text>
-            <Text style={[s.wordmarkNow,    { color: T.gold }]}> Now</Text>
+            <Text style={[s.wordmarkKicker, { color: T.gold }]} numberOfLines={1}>NEARBY &amp;</Text>
+            <Text style={[s.wordmarkNow,    { color: T.text }]} numberOfLines={1}>NOW</Text>
           </View>
 
           {/* ── Tagline ───────────────────────────────────────────────────── */}
@@ -453,37 +452,29 @@ const s = StyleSheet.create({
     opacity: 0.75,
   } as ViewStyle,
 
-  // ── Wordmark ─────────────────────────────────────────────────────────────
+  // ── Stacked wordmark (rebrand) ───────────────────────────────────────────
   wordmarkRow:   {
-    flexDirection: "row",
-    alignItems: "baseline",
+    flexDirection: "column",
+    alignItems: "center",
     marginTop: 18,
-    flexWrap: "nowrap",
   } as ViewStyle,
 
-  wordmarkNearby: {
-    fontFamily: "PlayfairDisplay_800ExtraBold",
-    fontWeight: "800",
-    fontSize: 44,
-    letterSpacing: -0.88,
-    lineHeight: 48,
-  } as TextStyle,
-
-  wordmarkAmp:   {
-    fontFamily: "PlayfairDisplay_500Medium_Italic",
-    fontWeight: "500",
+  wordmarkKicker: {
+    fontFamily: "Inter_600SemiBold_Italic",
     fontStyle: "italic",
-    fontSize: 44,
-    letterSpacing: -0.88,
-    lineHeight: 48,
+    fontWeight: "600",
+    fontSize: 23,            // ~0.4 × NOW
+    letterSpacing: 3,        // ~0.13em
+    textTransform: "uppercase",
+    marginBottom: 1,
   } as TextStyle,
 
   wordmarkNow:   {
-    fontFamily: "PlayfairDisplay_800ExtraBold",
-    fontWeight: "800",
-    fontSize: 44,
-    letterSpacing: -0.88,
-    lineHeight: 48,
+    fontFamily: "Inter_900Black",
+    fontWeight: "900",
+    fontSize: 58,
+    letterSpacing: 0.6,      // ~0.01em
+    lineHeight: 56,          // 0.82 of size → tight hero
   } as TextStyle,
 
   // ── Tagline ───────────────────────────────────────────────────────────────

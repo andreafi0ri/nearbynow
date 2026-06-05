@@ -208,9 +208,8 @@ export default function EmailScreen() {
           <View style={s.brandBar}>
             <Pin size={22} T={T} />
             <View style={s.wordmarkRow}>
-              <Text style={[s.wNearby, { color: T.text }]}>Nearby </Text>
-              <Text style={[s.wAmp,    { color: T.gold }]}>&amp;</Text>
-              <Text style={[s.wNow,    { color: T.gold }]}> Now</Text>
+              <Text style={[s.wKicker, { color: T.gold }]} numberOfLines={1}>NEARBY &amp;</Text>
+              <Text style={[s.wNow,    { color: T.text }]} numberOfLines={1}>NOW</Text>
             </View>
           </View>
 
@@ -508,14 +507,12 @@ const s = StyleSheet.create({
   } as ViewStyle,
 
   wordmarkRow: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    flexWrap: "nowrap",
+    flexDirection: "column",
+    alignItems: "flex-start",
   } as ViewStyle,
 
-  wNearby:    { fontFamily: "PlayfairDisplay_800ExtraBold", fontSize: 18, letterSpacing: -0.27 } as TextStyle,
-  wAmp:       { fontFamily: "PlayfairDisplay_500Medium_Italic", fontStyle: "italic", fontSize: 18, letterSpacing: -0.27 } as TextStyle,
-  wNow:       { fontFamily: "PlayfairDisplay_800ExtraBold", fontSize: 18, letterSpacing: -0.27 } as TextStyle,
+  wKicker:    { fontFamily: "Inter_600SemiBold_Italic", fontStyle: "italic", fontWeight: "600", fontSize: 9, letterSpacing: 1.2, textTransform: "uppercase" } as TextStyle,
+  wNow:       { fontFamily: "Inter_900Black", fontWeight: "900", fontSize: 22, letterSpacing: 0.2, lineHeight: 22 } as TextStyle,
 
   // ── Hero ────────────────────────────────────────────────────────────────
   heroWrap:   {

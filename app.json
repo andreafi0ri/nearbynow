@@ -25,8 +25,8 @@
       "name": "Nearby & Now",
       "shortName": "Nearby & Now",
       "description": "Discover what's happening near you — local events, things to do, and recommendations all in one feed.",
-      "backgroundColor": "#FFFFFF",
-      "themeColor": "#B8920A"
+      "backgroundColor": "#F5F0E6",
+      "themeColor": "#F5F0E6"
     },
     "plugins": [
       "expo-router",
@@ -40,7 +40,7 @@
         "expo-notifications",
         {
           "icon": "./assets/nearbynow-app-icon.png",
-          "color": "#B8920A",
+          "color": "#E0392A",
           "sounds": [],
           "androidMode": "default",
           "androidCollapsedTitle": "Nearby & Now"

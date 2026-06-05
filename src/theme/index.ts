@@ -4,28 +4,28 @@
 
 export const LIGHT = {
   // ── Backgrounds ───────────────────────────────────────────────────────────
-  bg:        "#FAF7F3",   // p.bg (cream paper)
-  bgSub:     "#F2EDE3",   // p.bg2
+  bg:        "#F5F0E6",   // p.bg (warm cream — rebrand)
+  bgSub:     "#EDE7DA",   // p.bg2
   bgCard:    "#FFFFFF",   // p.surface / p.cardBg
-  bgCardHi:  "#F5F0E8",   // p.bg3 approx
+  bgCardHi:  "#E4DCCB",   // p.bg3
   surface:   "#FFFFFF",   // p.surface (explicit alias)
   // ── Borders ───────────────────────────────────────────────────────────────
-  border:    "#E5DECF",   // p.border (warm cream — NOT ink)
-  borderSub: "#EFE9DA",   // p.borderSoft
+  border:    "#E6DDCC",   // p.border
+  borderSub: "#EFE9DB",   // p.borderSoft
   // ── Text ──────────────────────────────────────────────────────────────────
-  text:      "#111111",   // p.ink
-  textSub:   "#3A3633",   // p.soft
-  muted:     "#7D786D",   // p.mute
-  mutedL:    "#A8A298",   // p.dim
-  // ── Gold ──────────────────────────────────────────────────────────────────
-  gold:      "#B8920A",   // p.gold / p.goldDeep (same in light)
-  goldBri:   "#B8920A",   // p.goldDeep
-  goldLight: "#E2C997",   // p.goldSoft
-  goldGlow:  "rgba(184,146,10,0.15)",  // p.haloOut
-  goldDim:   "#CFB55C",   // p.goldDim
+  text:      "#1A140C",   // p.ink (near-black — rebrand)
+  textSub:   "#423B32",   // p.soft
+  muted:     "#867F72",   // p.mute
+  mutedL:    "#ABA498",   // p.dim
+  // ── Accent (legacy "gold*" keys — values are now signature RED #E0392A) ────
+  gold:      "#E0392A",   // p.gold — signature red
+  goldBri:   "#C32A1D",   // p.goldDeep
+  goldLight: "#F2B6AC",   // p.goldSoft
+  goldGlow:  "rgba(224,57,42,0.12)",  // p.haloOut
+  goldDim:   "#C32A1D",   // deep red (no separate light goldDim in rebrand)
   // ── Halo (home + email hero) ───────────────────────────────────────────────
-  haloIn:    "rgba(184,146,10,0.32)",
-  haloOut:   "rgba(184,146,10,0.15)",
+  haloIn:    "rgba(224,57,42,0.26)",
+  haloOut:   "rgba(224,57,42,0.12)",
   // ── Semantic ──────────────────────────────────────────────────────────────
   red:       "#E0392A",
   green:     "#2EA864",
@@ -39,37 +39,37 @@ export const LIGHT = {
   toneArts:  "#D63A7E",
   toneSport: "#1F8A5B",
   // ── Map colours ───────────────────────────────────────────────────────────
-  mapStreets:     "#D7CFBE",
-  mapStreetsLine: "#C6BDA8",
-  mapBlocks:      "#E7DFC9",
-  mapWater:       "#DDE6EC",
-  mapDots:        "#D7CFBE",
+  mapStreets:     "#DCD3C1",
+  mapStreetsLine: "#CABFA9",
+  mapBlocks:      "#E9E1CD",
+  mapWater:       "#DCE6EC",
+  mapDots:        "#DAD1BF",
 };
 
 export const DARK = {
   // ── Backgrounds ───────────────────────────────────────────────────────────
-  bg:        "#0E0E10",
-  bgSub:     "#161617",   // p.bg2
-  bgCard:    "#161617",   // p.surface
-  bgCardHi:  "#1A1815",   // p.bg3
-  surface:   "#161617",
+  bg:        "#0E0C0A",
+  bgSub:     "#16130F",   // p.bg2
+  bgCard:    "#16130F",   // p.surface
+  bgCardHi:  "#1A1611",   // p.bg3
+  surface:   "#16130F",
   // ── Borders ───────────────────────────────────────────────────────────────
-  border:    "#2A2823",   // p.border (dark charcoal — NOT gold)
-  borderSub: "#1F1E1C",   // p.borderSoft
+  border:    "#2C2720",   // p.border
+  borderSub: "#201C16",   // p.borderSoft
   // ── Text ──────────────────────────────────────────────────────────────────
-  text:      "#F4F4F6",   // p.ink
-  textSub:   "#BFBCB1",   // p.soft
-  muted:     "#7E7B72",   // p.mute
-  mutedL:    "#525049",   // p.dim
-  // ── Gold ──────────────────────────────────────────────────────────────────
-  gold:      "#E2C997",   // p.gold (light cream gold in dark)
-  goldBri:   "#F0C96A",   // p.goldSoft
-  goldLight: "rgba(206,156,0,0.12)",
-  goldGlow:  "rgba(206,156,0,0.16)",  // p.haloOut
-  goldDim:   "#8B6A00",   // p.goldDim
+  text:      "#F4EFE6",   // p.ink
+  textSub:   "#C4BDB0",   // p.soft
+  muted:     "#8A8175",   // p.mute
+  mutedL:    "#56504A",   // p.dim
+  // ── Accent (legacy "gold*" keys — values are now RED in dark) ─────────────
+  gold:      "#FF6F62",   // p.gold (warm red in dark)
+  goldBri:   "#FF9C92",   // p.goldSoft
+  goldLight: "rgba(255,111,98,0.14)",
+  goldGlow:  "rgba(255,111,98,0.16)",  // p.haloOut
+  goldDim:   "#9B3B33",   // p.goldDim
   // ── Halo ──────────────────────────────────────────────────────────────────
-  haloIn:    "rgba(206,156,0,0.34)",
-  haloOut:   "rgba(206,156,0,0.16)",
+  haloIn:    "rgba(255,111,98,0.34)",
+  haloOut:   "rgba(255,111,98,0.16)",
   // ── Semantic ──────────────────────────────────────────────────────────────
   red:       "#FF6B5E",
   green:     "#3DBE7A",
@@ -83,11 +83,11 @@ export const DARK = {
   toneArts:  "#FF85B8",
   toneSport: "#7BE0B8",
   // ── Map colours ───────────────────────────────────────────────────────────
-  mapStreets:     "#1F1E1C",
-  mapStreetsLine: "#2D2A24",
-  mapBlocks:      "#1A1815",
-  mapWater:       "#13151A",
-  mapDots:        "#1C1A16",
+  mapStreets:     "#211C16",
+  mapStreetsLine: "#2E2820",
+  mapBlocks:      "#1A1611",
+  mapWater:       "#14161A",
+  mapDots:        "#1C1812",
 };
 
 export type Theme = typeof LIGHT;

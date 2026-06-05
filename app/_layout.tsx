@@ -29,7 +29,9 @@ import {
   Inter_400Regular,
   Inter_500Medium,
   Inter_600SemiBold,
+  Inter_600SemiBold_Italic,
   Inter_700Bold,
+  Inter_900Black,
 } from "@expo-google-fonts/inter";
 import * as SplashScreen from "expo-splash-screen";
 import { supabase } from "../src/lib/supabase";
@@ -70,7 +72,7 @@ class AppErrorBoundary extends React.Component<
             onPress={() => this.setState({ hasError: false })}
             style={{ backgroundColor: "#1C1A15", borderRadius: 12, padding: 14, paddingHorizontal: 28, borderWidth: 1.5, borderColor: "#3A3528" }}
           >
-            <Text style={{ color: "#D4A80C", fontWeight: "700" }}>Try again</Text>
+            <Text style={{ color: "#FF6F62", fontWeight: "700" }}>Try again</Text>
           </TouchableOpacity>
         </View>
       );
@@ -98,7 +100,9 @@ export default function RootLayout() {
     Inter_400Regular,
     Inter_500Medium,
     Inter_600SemiBold,
+    Inter_600SemiBold_Italic,
     Inter_700Bold,
+    Inter_900Black,
   });
 
   useEffect(() => {

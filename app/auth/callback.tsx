@@ -193,11 +193,11 @@ export default function AuthCallback() {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#FAF7F3", padding: 32 }}>
         <View style={{
-          backgroundColor: "#FFF8E1", borderColor: "#B8920A", borderWidth: 2,
+          backgroundColor: "#FDECEA", borderColor: "#E0392A", borderWidth: 2,
           borderRadius: 50, width: 80, height: 80,
           alignItems: "center", justifyContent: "center", marginBottom: 24,
         }}>
-          <Text style={{ fontSize: 36, color: "#B8920A" }}>✓</Text>
+          <Text style={{ fontSize: 36, color: "#E0392A" }}>✓</Text>
         </View>
 
         <Text style={{
@@ -228,7 +228,7 @@ export default function AuthCallback() {
             width: "100%", maxWidth: 320, alignItems: "center", marginBottom: 14,
           }}
         >
-          <Text style={{ color: "#D4A80C", fontWeight: "700", fontSize: 15, fontFamily: "DMSans_700Bold" }}>
+          <Text style={{ color: "#F5F0E6", fontWeight: "700", fontSize: 15, fontFamily: "DMSans_700Bold" }}>
             Open Nearby &amp; Now →
           </Text>
         </TouchableOpacity>

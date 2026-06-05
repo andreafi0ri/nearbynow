@@ -102,7 +102,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
         name:             "Nearby & Now",
         importance:       Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
-        lightColor:       "#B8920A",
+        lightColor:       "#E0392A",
       });
 
       await Notifications.setNotificationChannelAsync("breaking", {
@@ -115,7 +115,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
       await Notifications.setNotificationChannelAsync("events", {
         name:       "New events",
         importance: Notifications.AndroidImportance.DEFAULT,
-        lightColor: "#B8920A",
+        lightColor: "#E0392A",
       });
     }
 

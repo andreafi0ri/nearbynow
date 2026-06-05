@@ -14,7 +14,7 @@ html = html.replace(
 );
 
 // Replace the theme-color Expo injects from app.json (gold) with the correct cream.
-html = html.replace(/<meta name="theme-color"[^>]*>/, '<meta name="theme-color" content="#FAF7F3" />');
+html = html.replace(/<meta name="theme-color"[^>]*>/, '<meta name="theme-color" content="#F5F0E6" />');
 
 const tags = [
   `  <meta name="google-site-verification" content="m7iJAREJhSRrNVZ2UJbdNmzE9DXqijeOrqhEeXEsozI" />`,

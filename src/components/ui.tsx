@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
     letterSpacing: 0.6,
-    fontFamily: "DMSans_700Bold",
+    fontFamily: "Inter_700Bold",
   } as TextStyle,
   ghostBtn: {
     width: "100%",
@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
   ghostBtnText: {
     fontSize: 14,
     fontWeight: "500",
-    fontFamily: "DMSans_500Medium",
+    fontFamily: "Inter_500Medium",
   } as TextStyle,
   pill: {
     borderWidth: 1,
@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     letterSpacing: 0.6,
     textTransform: "uppercase",
-    fontFamily: "DMSans_600SemiBold",
+    fontFamily: "Inter_600SemiBold",
   } as TextStyle,
   divider: {
     height: 1.5,

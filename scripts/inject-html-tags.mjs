@@ -19,6 +19,8 @@ html = html.replace(/<meta name="theme-color"[^>]*>/, '<meta name="theme-color" 
 const tags = [
   `  <meta name="google-site-verification" content="m7iJAREJhSRrNVZ2UJbdNmzE9DXqijeOrqhEeXEsozI" />`,
   `  <link rel="manifest" href="/manifest.json" />`,
+  `  <link rel="icon" type="image/svg+xml" href="/nearbynow-icon.svg" />`,
+  `  <link rel="icon" type="image/png" sizes="192x192" href="/nearbynow-icon-192.png" />`,
   `  <link rel="apple-touch-icon" href="/nearbynow-apple-icon.png" />`,
   `  <script async src="https://www.googletagmanager.com/gtag/js?id=G-6ENK256D12"></script>`,
   `  <script>`,

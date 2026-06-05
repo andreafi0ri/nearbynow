@@ -619,14 +619,14 @@ const s = StyleSheet.create({
     fontSize: 10,
     fontWeight: "600",
     letterSpacing: 1.4,
-    fontFamily: "DMSans_700Bold",
+    fontFamily: "Inter_700Bold",
     textTransform: "uppercase",
   } as TextStyle,
 
   returningArea: {
     fontSize: 17,
     fontWeight: "700",
-    fontFamily: "PlayfairDisplay_700Bold",
+    fontFamily: "Inter_700Bold",
     marginBottom: 4,
   } as TextStyle,
 
@@ -643,7 +643,7 @@ const s = StyleSheet.create({
 
   orText: {
     fontSize: 12,
-    fontFamily: "DMSans_400Regular",
+    fontFamily: "Inter_400Regular",
   } as TextStyle,
 
   ghostRow: {
@@ -653,14 +653,14 @@ const s = StyleSheet.create({
 
   ghostText: {
     fontSize: 13,
-    fontFamily: "DMSans_400Regular",
+    fontFamily: "Inter_400Regular",
     textDecorationLine: "underline",
   } as TextStyle,
 
   // ── Sign-in link (new user footer) ────────────────────────────────────────
   signInLink: {
     fontSize: 13,
-    fontFamily: "DMSans_400Regular",
+    fontFamily: "Inter_400Regular",
     textAlign: "center",
   } as TextStyle,
 });

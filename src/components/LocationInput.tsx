@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
   backdrop:  { position: "absolute", top: -9999, left: -9999, right: -9999, bottom: -9999, zIndex: 98 } as ViewStyle,
   inputWrap: { flexDirection: "row", alignItems: "center", borderWidth: 2, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 2 } as ViewStyle,
   pin:       { fontSize: 15, marginRight: 8 } as TextStyle,
-  input:     { flex: 1, fontSize: 14, paddingVertical: 11, fontFamily: "DMSans_400Regular" } as TextStyle,
+  input:     { flex: 1, fontSize: 14, paddingVertical: 11, fontFamily: "Inter_400Regular" } as TextStyle,
   spinner:   { marginLeft: 8 } as ViewStyle,
   dropdown:  {
     position: "absolute",
@@ -129,6 +129,6 @@ const styles = StyleSheet.create({
     elevation: 99,
   } as ViewStyle,
   row:       { paddingHorizontal: 14, paddingVertical: 12 } as ViewStyle,
-  shortName: { fontSize: 14, fontFamily: "PlayfairDisplay_800ExtraBold", marginBottom: 2 } as TextStyle,
-  fullName:  { fontSize: 11, fontFamily: "DMSans_400Regular" } as TextStyle,
+  shortName: { fontSize: 14, fontFamily: "Inter_700Bold", marginBottom: 2 } as TextStyle,
+  fullName:  { fontSize: 11, fontFamily: "Inter_400Regular" } as TextStyle,
 });

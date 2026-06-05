@@ -135,7 +135,7 @@ const s = StyleSheet.create({
   label: {
     fontSize: 10,
     letterSpacing: 0.6,
-    fontFamily: "DMSans_700Bold",
+    fontFamily: "Inter_700Bold",
     textTransform: "uppercase",
   } as TextStyle,
 });

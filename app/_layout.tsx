@@ -16,16 +16,6 @@ import { SavedAreasProvider } from "../src/context/SavedAreasContext";
 import { ThemeProvider, useTheme } from "../src/context/ThemeContext";
 import {
   useFonts,
-  PlayfairDisplay_700Bold,
-  PlayfairDisplay_800ExtraBold,
-  PlayfairDisplay_500Medium_Italic,
-} from "@expo-google-fonts/playfair-display";
-import {
-  DMSans_400Regular,
-  DMSans_500Medium,
-  DMSans_700Bold,
-} from "@expo-google-fonts/dm-sans";
-import {
   Inter_400Regular,
   Inter_500Medium,
   Inter_600SemiBold,
@@ -91,12 +81,6 @@ export default function RootLayout() {
   const router = useRouter();
 
   const [fontsLoaded] = useFonts({
-    PlayfairDisplay_700Bold,
-    PlayfairDisplay_800ExtraBold,
-    PlayfairDisplay_500Medium_Italic,
-    DMSans_400Regular,
-    DMSans_500Medium,
-    DMSans_700Bold,
     Inter_400Regular,
     Inter_500Medium,
     Inter_600SemiBold,

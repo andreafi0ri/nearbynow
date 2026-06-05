@@ -314,7 +314,7 @@ export default function EmailScreen() {
                 style={{ marginTop: 16, padding: 4 }}
                 activeOpacity={0.7}
               >
-                <Text style={{ fontSize: 13, textAlign: "center", color: T.muted, fontFamily: "DMSans_400Regular" }}>
+                <Text style={{ fontSize: 13, textAlign: "center", color: T.muted, fontFamily: "Inter_400Regular" }}>
                   Wrong email? Start over
                 </Text>
               </TouchableOpacity>
@@ -561,7 +561,7 @@ const s = StyleSheet.create({
   } as ViewStyle,
 
   headlineBase: {
-    fontFamily: "PlayfairDisplay_800ExtraBold",
+    fontFamily: "Inter_700Bold",
     fontWeight: "800",
     fontSize: 34,
     letterSpacing: -0.68,
@@ -569,7 +569,7 @@ const s = StyleSheet.create({
   } as TextStyle,
 
   headlineItalic: {
-    fontFamily: "PlayfairDisplay_500Medium_Italic",
+    fontFamily: "Inter_600SemiBold_Italic",
     fontWeight: "500",
     fontStyle: "italic",
     fontSize: 34,
@@ -651,18 +651,18 @@ const s = StyleSheet.create({
   checkboxLabel: {
     flex: 1,
     fontSize: 13,
-    fontFamily: "DMSans_400Regular",
+    fontFamily: "Inter_400Regular",
     lineHeight: 20,
   } as TextStyle,
 
   checkboxLink: {
-    fontFamily: "DMSans_700Bold",
+    fontFamily: "Inter_700Bold",
     textDecorationLine: "underline",
   } as TextStyle,
 
   agreeError: {
     fontSize: 12,
-    fontFamily: "DMSans_400Regular",
+    fontFamily: "Inter_400Regular",
     marginTop: -10,
     marginBottom: 12,
     alignSelf: "flex-start",

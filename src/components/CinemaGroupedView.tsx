@@ -213,8 +213,8 @@ const styles = StyleSheet.create({
   // ── Empty state ─────────────────────────────────────────────────────────────
   empty:          { alignItems: "center", paddingTop: 80, paddingHorizontal: 24 } as ViewStyle,
   emptyIcon:      { fontSize: 36, marginBottom: 12 } as TextStyle,
-  emptyTitle:     { fontSize: 16, fontWeight: "700", fontFamily: "PlayfairDisplay_700Bold", marginBottom: 6 } as TextStyle,
-  emptySub:       { fontSize: 13, fontFamily: "DMSans_400Regular", textAlign: "center" } as TextStyle,
+  emptyTitle:     { fontSize: 16, fontWeight: "700", fontFamily: "Inter_700Bold", marginBottom: 6 } as TextStyle,
+  emptySub:       { fontSize: 13, fontFamily: "Inter_400Regular", textAlign: "center" } as TextStyle,
   // ── Theatre section ─────────────────────────────────────────────────────────
   theatreSection: { marginBottom: 20 } as ViewStyle,
   theatreHeader:  {
@@ -222,22 +222,22 @@ const styles = StyleSheet.create({
     borderWidth: 2, padding: 12, borderBottomWidth: 0,
   } as ViewStyle,
   theatreEmoji:   { fontSize: 20 } as TextStyle,
-  theatreName:    { fontSize: 14, fontWeight: "700", fontFamily: "DMSans_700Bold" } as TextStyle,
-  theatreAddress: { fontSize: 12, fontFamily: "DMSans_400Regular", marginTop: 1 } as TextStyle,
+  theatreName:    { fontSize: 14, fontWeight: "700", fontFamily: "Inter_700Bold" } as TextStyle,
+  theatreAddress: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 1 } as TextStyle,
   theatreBtn:     { borderWidth: 1.5, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 } as ViewStyle,
-  theatreBtnText: { fontSize: 11, fontFamily: "DMSans_700Bold" } as TextStyle,
+  theatreBtnText: { fontSize: 11, fontFamily: "Inter_700Bold" } as TextStyle,
   // ── Movie row ───────────────────────────────────────────────────────────────
   movieRow:       { borderWidth: 2, borderTopWidth: 0, padding: 14, gap: 10 } as ViewStyle,
   movieInfo:      { gap: 3 } as ViewStyle,
-  movieTitle:     { fontSize: 15, fontWeight: "800", fontFamily: "PlayfairDisplay_800ExtraBold" } as TextStyle,
-  movieMeta:      { fontSize: 12, fontFamily: "DMSans_400Regular" } as TextStyle,
-  movieSynopsis:  { fontSize: 12, fontFamily: "DMSans_400Regular", lineHeight: 18, marginTop: 2 } as TextStyle,
+  movieTitle:     { fontSize: 15, fontWeight: "800", fontFamily: "Inter_700Bold" } as TextStyle,
+  movieMeta:      { fontSize: 12, fontFamily: "Inter_400Regular" } as TextStyle,
+  movieSynopsis:  { fontSize: 12, fontFamily: "Inter_400Regular", lineHeight: 18, marginTop: 2 } as TextStyle,
   // ── Showtime pills ──────────────────────────────────────────────────────────
   pillsScroll:    { marginTop: 4 } as ViewStyle,
   pillsContent:   { flexDirection: "row", gap: 7 } as ViewStyle,
   pill:           { borderWidth: 1.5, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 } as ViewStyle,
-  pillText:       { fontSize: 12, fontWeight: "600", fontFamily: "DMSans_700Bold" } as TextStyle,
+  pillText:       { fontSize: 12, fontWeight: "600", fontFamily: "Inter_700Bold" } as TextStyle,
   // ── Ticket button ───────────────────────────────────────────────────────────
   ticketBtn:      { borderWidth: 2, borderRadius: 12, padding: 10, alignItems: "center", marginTop: 4 } as ViewStyle,
-  ticketBtnText:  { fontSize: 13, fontWeight: "700", fontFamily: "DMSans_700Bold" } as TextStyle,
+  ticketBtnText:  { fontSize: 13, fontWeight: "700", fontFamily: "Inter_700Bold" } as TextStyle,
 });

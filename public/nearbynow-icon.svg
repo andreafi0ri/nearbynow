@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="115" fill="#0E0C0A"/>
+  
+  <text x="256" y="184" text-anchor="middle"
+        font-family="Inter" font-weight="600" font-style="italic"
+        font-size="37" letter-spacing="4.4399999999999995" fill="#E0392A">NEARBY &amp;</text>
+  <text x="256" y="301" text-anchor="middle"
+        font-family="Inter" font-weight="900"
+        font-size="133" letter-spacing="1.33" fill="#F5F0E6">NOW</text>
+</svg>

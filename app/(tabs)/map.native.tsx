@@ -572,20 +572,20 @@ export default function MapScreen() {
                   {drawPoints.length >= 3 ? " — tap near first point to close" : ""}
                 </Text>
                 <TouchableOpacity onPress={() => setDrawPoints(p => p.slice(0, -1))} style={[styles.drawBtn, { borderColor: T.borderSub }]}>
-                  <Text style={{ fontSize: 12, fontWeight: "600", color: T.muted, fontFamily: "DMSans_700Bold" }}>Undo</Text>
+                  <Text style={{ fontSize: 12, fontWeight: "600", color: T.muted, fontFamily: "Inter_700Bold" }}>Undo</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => { setDrawPoints([]); setDrawClosed(false); }} style={[styles.drawBtn, { borderColor: T.red }]}>
-                  <Text style={{ fontSize: 12, fontWeight: "600", color: T.red, fontFamily: "DMSans_700Bold" }}>Clear</Text>
+                  <Text style={{ fontSize: 12, fontWeight: "600", color: T.red, fontFamily: "Inter_700Bold" }}>Clear</Text>
                 </TouchableOpacity>
               </>
             ) : (
               <>
                 <Text style={[styles.drawHint, { color: T.goldDim, flex: 1, fontWeight: "700" }]}>✦ Area selected</Text>
                 <TouchableOpacity onPress={() => { setDrawPoints([]); setDrawClosed(false); }} style={[styles.drawBtn, { borderColor: T.borderSub }]}>
-                  <Text style={{ fontSize: 12, color: T.muted, fontFamily: "DMSans_700Bold" }}>Clear</Text>
+                  <Text style={{ fontSize: 12, color: T.muted, fontFamily: "Inter_700Bold" }}>Clear</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => setDrawMode(false)} style={[styles.drawBtn, { borderColor: T.text, backgroundColor: T.text }]}>
-                  <Text style={{ fontSize: 12, fontWeight: "700", color: T.goldBri, fontFamily: "DMSans_700Bold" }}>Search area</Text>
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: T.goldBri, fontFamily: "Inter_700Bold" }}>Search area</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -692,60 +692,60 @@ const styles = StyleSheet.create({
   // ── 3-pill bar ──────────────────────────────────────────────────────────
   pillBar:        { flexDirection: "row", gap: 8, marginTop: 10 } as ViewStyle,
   pill:           { flex: 1, borderWidth: 1.5, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, flexDirection: "row", alignItems: "center", gap: 4 } as ViewStyle,
-  pillLabel:      { fontSize: 9, fontWeight: "700", letterSpacing: 0.18, textTransform: "uppercase", fontFamily: "DMSans_700Bold", lineHeight: 11 } as TextStyle,
-  pillValue:      { flex: 1, fontSize: 13, fontWeight: "600", fontFamily: "DMSans_700Bold", lineHeight: 16 } as TextStyle,
+  pillLabel:      { fontSize: 9, fontWeight: "700", letterSpacing: 0.18, textTransform: "uppercase", fontFamily: "Inter_700Bold", lineHeight: 11 } as TextStyle,
+  pillValue:      { flex: 1, fontSize: 13, fontWeight: "600", fontFamily: "Inter_700Bold", lineHeight: 16 } as TextStyle,
   pillChevron:    { fontSize: 9 } as TextStyle,
   drawPill:       { borderWidth: 1.5, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2, minWidth: 44 } as ViewStyle,
   radiusChip:     { borderWidth: 1.5, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5 } as ViewStyle,
-  radiusChipText: { fontSize: 12, fontWeight: "600", fontFamily: "DMSans_700Bold" } as TextStyle,
+  radiusChipText: { fontSize: 12, fontWeight: "600", fontFamily: "Inter_700Bold" } as TextStyle,
   // ── Sheet rows ───────────────────────────────────────────────────────────
   sheetRow:       { flexDirection: "row", alignItems: "center", padding: 14, borderRadius: 12, borderWidth: 1.5, marginBottom: 6 } as ViewStyle,
-  sheetRowLabel:  { fontSize: 15, fontWeight: "600", fontFamily: "DMSans_700Bold" } as TextStyle,
+  sheetRowLabel:  { fontSize: 15, fontWeight: "600", fontFamily: "Inter_700Bold" } as TextStyle,
   sheetRowSub:    { fontSize: 12.5, fontFamily: "Inter_400Regular", marginTop: 2 } as TextStyle,
   freeRow:        { flexDirection: "row", alignItems: "center", padding: 14, borderRadius: 12, borderWidth: 1.5, marginBottom: 4 } as ViewStyle,
   catGrid:        { flexDirection: "row", flexWrap: "wrap", gap: 8 } as ViewStyle,
   catCell:        { width: "30.5%", borderWidth: 1.5, borderRadius: 14, padding: 12, alignItems: "center", gap: 8, position: "relative" } as ViewStyle,
   catIcon:        { width: 44, height: 44, borderRadius: 12, borderWidth: 1, alignItems: "center", justifyContent: "center" } as ViewStyle,
-  catLabel:       { fontSize: 13, fontWeight: "600", fontFamily: "DMSans_700Bold", textAlign: "center" } as TextStyle,
+  catLabel:       { fontSize: 13, fontWeight: "600", fontFamily: "Inter_700Bold", textAlign: "center" } as TextStyle,
   catCheck:       { position: "absolute", top: 6, right: 6, width: 18, height: 18, borderRadius: 9, alignItems: "center", justifyContent: "center" } as ViewStyle,
   sheetActions:   { flexDirection: "row", gap: 10, marginTop: 20 } as ViewStyle,
   resetBtn:       { flex: 1, height: 48, borderRadius: 14, borderWidth: 1.5, alignItems: "center", justifyContent: "center" } as ViewStyle,
-  resetText:      { fontSize: 14, fontWeight: "600", fontFamily: "DMSans_700Bold" } as TextStyle,
+  resetText:      { fontSize: 14, fontWeight: "600", fontFamily: "Inter_700Bold" } as TextStyle,
   showBtn:        { flex: 2, height: 48, borderRadius: 14, alignItems: "center", justifyContent: "center" } as ViewStyle,
-  showText:       { fontSize: 14, fontWeight: "700", fontFamily: "DMSans_700Bold" } as TextStyle,
+  showText:       { fontSize: 14, fontWeight: "700", fontFamily: "Inter_700Bold" } as TextStyle,
   sourceRow:      { flexDirection: "row", alignItems: "center", gap: 14, padding: 12, borderRadius: 12, borderWidth: 1.5, marginBottom: 8 } as ViewStyle,
   sourceIcon:     { width: 36, height: 36, borderRadius: 10, borderWidth: 1, alignItems: "center", justifyContent: "center" } as ViewStyle,
   checkbox:       { width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, alignItems: "center", justifyContent: "center" } as ViewStyle,
   dateDivider:    { height: 1.5, marginBottom: 12 } as ViewStyle,
-  customLabel:    { fontSize: 10, fontWeight: "700", letterSpacing: 1, fontFamily: "DMSans_700Bold", marginBottom: 8 } as TextStyle,
+  customLabel:    { fontSize: 10, fontWeight: "700", letterSpacing: 1, fontFamily: "Inter_700Bold", marginBottom: 8 } as TextStyle,
   customRow:      { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 } as ViewStyle,
-  dateInput:      { flex: 1, borderWidth: 2, borderRadius: 10, fontSize: 12, padding: 8, fontFamily: "DMSans_400Regular" } as TextStyle,
-  toLabel:        { fontSize: 12, fontFamily: "DMSans_400Regular" } as TextStyle,
+  dateInput:      { flex: 1, borderWidth: 2, borderRadius: 10, fontSize: 12, padding: 8, fontFamily: "Inter_400Regular" } as TextStyle,
+  toLabel:        { fontSize: 12, fontFamily: "Inter_400Regular" } as TextStyle,
   applyBtn:       { borderRadius: 10, padding: 10, alignItems: "center" } as ViewStyle,
-  applyText:      { fontSize: 13, fontWeight: "700", fontFamily: "DMSans_700Bold" } as TextStyle,
+  applyText:      { fontSize: 13, fontWeight: "700", fontFamily: "Inter_700Bold" } as TextStyle,
   // ── Map & list ──────────────────────────────────────────────────────────
   countBar:       { paddingHorizontal: 16, paddingVertical: 8, borderBottomWidth: 1 } as ViewStyle,
-  countText:      { fontSize: 11, fontWeight: "700", letterSpacing: 0.8, textTransform: "uppercase", fontFamily: "DMSans_700Bold" } as TextStyle,
+  countText:      { fontSize: 11, fontWeight: "700", letterSpacing: 0.8, textTransform: "uppercase", fontFamily: "Inter_700Bold" } as TextStyle,
   mapWrap:        { margin: 12, borderRadius: 16, borderWidth: 2, overflow: "hidden", shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 0, elevation: 4, height: 320 } as ViewStyle,
   map:            { flex: 1 } as ViewStyle,
   pin:            { width: 36, height: 36, borderRadius: 18, borderWidth: 2, alignItems: "center", justifyContent: "center", shadowOffset: { width: 2, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 4 } as ViewStyle,
   drawBar:        { flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 12, borderWidth: 2, borderRadius: 14, padding: 10, marginBottom: 4 } as ViewStyle,
-  drawHint:       { fontSize: 12, fontFamily: "DMSans_400Regular" } as TextStyle,
+  drawHint:       { fontSize: 12, fontFamily: "Inter_400Regular" } as TextStyle,
   drawBtn:        { borderWidth: 2, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5 } as ViewStyle,
   callout:        { margin: 12, borderWidth: 2, borderRadius: 16, padding: 14, shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 0, elevation: 4 } as ViewStyle,
-  calloutTitle:   { fontSize: 16, fontWeight: "800", fontFamily: "PlayfairDisplay_800ExtraBold", marginBottom: 4 } as TextStyle,
-  calloutRating:  { fontSize: 13, fontFamily: "DMSans_600SemiBold", marginBottom: 4 } as TextStyle,
-  calloutSub:     { fontSize: 12, fontFamily: "DMSans_400Regular", marginBottom: 10 } as TextStyle,
+  calloutTitle:   { fontSize: 16, fontWeight: "800", fontFamily: "Inter_700Bold", marginBottom: 4 } as TextStyle,
+  calloutRating:  { fontSize: 13, fontFamily: "Inter_600SemiBold", marginBottom: 4 } as TextStyle,
+  calloutSub:     { fontSize: 12, fontFamily: "Inter_400Regular", marginBottom: 10 } as TextStyle,
   calloutActions: { flexDirection: "row", gap: 8, alignItems: "center" } as ViewStyle,
   calloutClose:   { borderWidth: 2, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 6 } as ViewStyle,
   calloutCTA:     { flex: 1, borderWidth: 2, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, alignItems: "center" } as ViewStyle,
-  calloutCTAText: { fontSize: 13, fontWeight: "700", fontFamily: "DMSans_700Bold" } as TextStyle,
+  calloutCTAText: { fontSize: 13, fontWeight: "700", fontFamily: "Inter_700Bold" } as TextStyle,
   listRow:        { flexDirection: "row", alignItems: "center", gap: 12, borderWidth: 2, borderRadius: 12, padding: 10, marginBottom: 8, shadowOffset: { width: 2, height: 2 }, shadowOpacity: 1, shadowRadius: 0, elevation: 2 } as ViewStyle,
   listIcon:       { width: 36, height: 36, borderRadius: 10, borderWidth: 1.5, alignItems: "center", justifyContent: "center" } as ViewStyle,
-  listTitle:      { fontSize: 13, fontWeight: "700", fontFamily: "DMSans_700Bold" } as TextStyle,
-  listSub:        { fontSize: 11, fontFamily: "DMSans_400Regular" } as TextStyle,
+  listTitle:      { fontSize: 13, fontWeight: "700", fontFamily: "Inter_700Bold" } as TextStyle,
+  listSub:        { fontSize: 11, fontFamily: "Inter_400Regular" } as TextStyle,
   empty:          { alignItems: "center", paddingTop: 60, paddingHorizontal: 24 } as ViewStyle,
   emptyIcon:      { fontSize: 36, marginBottom: 12 } as TextStyle,
-  emptyTitle:     { fontSize: 16, fontWeight: "700", fontFamily: "PlayfairDisplay_700Bold", marginBottom: 6 } as TextStyle,
-  emptySub:       { fontSize: 13, fontFamily: "DMSans_400Regular", textAlign: "center" } as TextStyle,
+  emptyTitle:     { fontSize: 16, fontWeight: "700", fontFamily: "Inter_700Bold", marginBottom: 6 } as TextStyle,
+  emptySub:       { fontSize: 13, fontFamily: "Inter_400Regular", textAlign: "center" } as TextStyle,
 });

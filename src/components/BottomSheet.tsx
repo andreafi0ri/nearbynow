@@ -65,7 +65,7 @@ export function BottomSheet({ open, onClose, title, T, children, maxHeightRatio 
         {/* Title row */}
         {title && (
           <View style={[s.titleRow, { borderBottomColor: T.borderSub }]}>
-            <Text style={[s.title, { color: T.text, fontFamily: "PlayfairDisplay_700Bold" }]}>{title}</Text>
+            <Text style={[s.title, { color: T.text, fontFamily: "Inter_700Bold" }]}>{title}</Text>
             <TouchableOpacity onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
               <Text style={[s.closeBtn, { color: T.muted }]}>Close ✕</Text>
             </TouchableOpacity>

@@ -201,7 +201,7 @@ export default function AuthCallback() {
         </View>
 
         <Text style={{
-          fontSize: 24, fontWeight: "800", fontFamily: "PlayfairDisplay_800ExtraBold",
+          fontSize: 24, fontWeight: "800", fontFamily: "Inter_700Bold",
           color: "#111111", textAlign: "center", marginBottom: 12, letterSpacing: -0.5,
         }}>
           You're signed in
@@ -209,7 +209,7 @@ export default function AuthCallback() {
 
         <Text style={{
           fontSize: 15, color: "#777788", textAlign: "center",
-          lineHeight: 22, marginBottom: 32, fontFamily: "DMSans_400Regular",
+          lineHeight: 22, marginBottom: 32, fontFamily: "Inter_400Regular",
         }}>
           Return to the Nearby &amp; Now app{"\n"}on your home screen to continue.
         </Text>
@@ -228,14 +228,14 @@ export default function AuthCallback() {
             width: "100%", maxWidth: 320, alignItems: "center", marginBottom: 14,
           }}
         >
-          <Text style={{ color: "#F5F0E6", fontWeight: "700", fontSize: 15, fontFamily: "DMSans_700Bold" }}>
+          <Text style={{ color: "#F5F0E6", fontWeight: "700", fontSize: 15, fontFamily: "Inter_700Bold" }}>
             Open Nearby &amp; Now →
           </Text>
         </TouchableOpacity>
 
         <Text style={{
           fontSize: 12, color: "#AAAABC", textAlign: "center",
-          lineHeight: 18, fontFamily: "DMSans_400Regular",
+          lineHeight: 18, fontFamily: "Inter_400Regular",
         }}>
           On iPhone: tap the Nearby &amp; Now icon{"\n"}on your home screen to open the app.
         </Text>

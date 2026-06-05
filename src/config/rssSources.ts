@@ -18,6 +18,11 @@ export type RSSSource = {
   type?:     "event" | "recommendation" | "auto";
   color?:    string;          // legacy tint (kept for backward compat)
   tags?:     string[];
+  // Optional anchor coordinates. When present, the source is also matched by
+  // proximity (within ~20mi of the user's resolved coords), so e.g. a Lititz
+  // feed surfaces for a Lancaster area 8mi away — not just on an exact name match.
+  lat?:      number;
+  lng?:      number;
 };
 
 export const RSS_SOURCES: RSSSource[] = [
@@ -530,6 +535,7 @@ export const RSS_SOURCES: RSSSource[] = [
     url:      "https://www.lancasterpa.com/feed/",
     name:     "LancasterPA.com",
     area:     "lancaster",
+    lat: 40.0379, lng: -76.3055,
     category: "Events",
     img:      "📰", type: "auto",
     tags:     ["Lancaster"],
@@ -538,6 +544,7 @@ export const RSS_SOURCES: RSSSource[] = [
     url:      "https://www.lancasterhistory.org/feed/",
     name:     "LancasterHistory.org",
     area:     "lancaster",
+    lat: 40.0379, lng: -76.3055,
     category: "Culture",
     catColor: "#8B2131", catDot: "#BF3050",
     img:      "🏛️", type: "auto",
@@ -547,6 +554,7 @@ export const RSS_SOURCES: RSSSource[] = [
     url:      "https://www.tellus360.com/events/feed/",
     name:     "Tellus360",
     area:     "lancaster",
+    lat: 40.0379, lng: -76.3055,
     category: "Music",
     catColor: "#7B5CE0", catDot: "#A688FF",
     img:      "🎸", type: "event",  // dedicated events venue — every item is an event
@@ -556,6 +564,7 @@ export const RSS_SOURCES: RSSSource[] = [
     url:      "https://www.mickeysblackbox.com/events/feed/",
     name:     "Mickey's Black Box",
     area:     "lancaster",
+    lat: 40.1559, lng: -76.3055,   // The Wilbur, Lititz
     category: "Music",
     catColor: "#7B5CE0", catDot: "#A688FF",
     img:      "🎸", type: "event",  // live-music venue — every item is a dated show

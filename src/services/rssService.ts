@@ -166,14 +166,19 @@ async function fetchSource(source: RSSSource): Promise<EventItem[]> {
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 
-export async function fetchRSSFeeds(area: string): Promise<EventItem[]> {
+export async function fetchRSSFeeds(
+  area: string,
+  coords?: { lat: number; lng: number },
+): Promise<EventItem[]> {
   // Only include "News" category sources when breaking local news is enabled.
   // Most of the new sources use "Events" / "Culture" / "Outdoors" and are
   // always included. This gate only affects legacy "News"-tagged sources.
   const breakingNewsEnabled =
     (await AsyncStorage.getItem("hearby_breaking_news")) === "true";
 
-  const sources = getRSSSourcesForArea(area)
+  // Pass coords so nearby (within ~20mi) coord-anchored feeds are included,
+  // not just exact name matches.
+  const sources = getRSSSourcesForArea(area, coords)
     .filter(s => s.category !== "News" || breakingNewsEnabled);
 
   if (sources.length === 0) return [];

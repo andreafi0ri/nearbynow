@@ -156,26 +156,52 @@ type ScoredSource = { source: RSSSource; score: number };
 
 const extraSources: RSSSource[] = [];
 
+// Radius (miles) within which a coord-anchored source is treated as local.
+const RSS_RADIUS_MILES = 20;
+
+/** Great-circle distance in miles. */
+function distanceMiles(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 3_958.8;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 /**
  * Returns up to 15 RSS sources for the given area, ranked by relevance.
  *
  * Scoring:
- *   3 — source.area exactly matches an expanded token
+ *   3 — source.area exactly matches an expanded token, OR (coords given) the
+ *       source's anchor lat/lng is within RSS_RADIUS_MILES of the user
  *   2 — source.area is a substring of a token, or vice-versa
  *   1 — source.area === "global" (always included as fallback)
  *   0 — no match → excluded
  *
- * At least 3 "global" sources are always included even if other area
- * sources fill the top slots.
+ * The radius match is why a Lititz feed surfaces for a Lancaster area ~8mi
+ * away even though the names don't match. At least 3 "global" sources are
+ * always included even if other area sources fill the top slots.
+ *
+ * @param coords Optional resolved coordinates — enables proximity matching.
  */
-export function getRSSSourcesForArea(area: string): RSSSource[] {
+export function getRSSSourcesForArea(
+  area: string,
+  coords?: { lat: number; lng: number },
+): RSSSource[] {
   const tokens = extractAreaTokens(area);
 
   const scored: ScoredSource[] = [...RSS_SOURCES, ...extraSources].map(source => {
     let score = 0;
+    const withinRadius =
+      coords != null &&
+      source.lat != null && source.lng != null &&
+      distanceMiles(coords.lat, coords.lng, source.lat, source.lng) <= RSS_RADIUS_MILES;
     if (source.area === "global") {
       score = 1;
-    } else if (tokens.includes(source.area)) {
+    } else if (tokens.includes(source.area) || withinRadius) {
       score = 3;
     } else if (tokens.some(t => t.includes(source.area) || source.area.includes(t))) {
       score = 2;

@@ -164,7 +164,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
   ] = await Promise.allSettled([
     Promise.all(subreddits.map(sub => fetchRedditPosts(sub, SEARCH_CONFIG.REDDIT_MAX_RESULTS))).then(r => r.flat()),
     searchRedditKeywords(area),   // keyword search — free, no quota
-    fetchRSSFeeds(area),
+    fetchRSSFeeds(area, resolvedCoords),
     searchEventbrite(area),
     searchMeetup(area),
     searchTicketmaster(area),

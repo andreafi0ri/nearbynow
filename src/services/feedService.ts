@@ -34,8 +34,26 @@ function sortByDate(items: MultiSourceEvent[]): MultiSourceEvent[] {
 // ─── Mock seed ────────────────────────────────────────────────────────────────
 
 const BRIXTON_KEYWORDS   = ["brixton", "lambeth", "sw9", "sw2", "clapham", "streatham", "stockwell"];
-const LANCASTER_KEYWORDS = ["lancaster"];
-const LITITZ_KEYWORDS    = ["lititz"];
+
+// ─── Local community-event sources — radius-gated ──────────────────────────────
+// "From the community" town sources are anchored to a town centre and fire when
+// the user's area is within LOCAL_RADIUS_MILES of that anchor (not just an exact
+// name match). So selecting Lancaster also surfaces Lititz events (~6mi away),
+// and vice-versa. General rule: add a source here with its anchor coords and it
+// participates automatically for any nearby area.
+const LOCAL_RADIUS_MILES = 20;
+
+/** Great-circle distance in miles. */
+function distanceMiles(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 3_958.8;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 function mockEventsForArea(area: string): EventItem[] {
   const lower = area.toLowerCase();
@@ -92,8 +110,6 @@ async function fetchFoodPlaces(area: string, coords?: Coords): Promise<EventItem
  */
 export async function getFeed(area: string, coords?: Coords): Promise<FeedResult> {
   const subreddits  = getLocalSubreddits(area);
-  const isLititz    = LITITZ_KEYWORDS.some(kw => area.toLowerCase().includes(kw));
-  const isLancaster = LANCASTER_KEYWORDS.some(kw => area.toLowerCase().includes(kw));
 
   // ── Resolve coordinates ────────────────────────────────────────────────────
   // feed.tsx passes coords only when they're already cached for this exact area.
@@ -104,6 +120,19 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
   // repeat calls within the same session are free.
   const resolvedCoords: Coords | undefined =
     coords ?? (await geocodeArea(area).catch(() => null)) ?? undefined;
+
+  // ── Local community-event sources — name-match OR within 20-mile radius ────
+  // General rule: a town source fires when the area name contains its keyword
+  // OR the resolved coords are within LOCAL_RADIUS_MILES of its anchor. This is
+  // why Lancaster surfaces Lititz events (~6mi) and vice-versa.
+  const areaLower = area.toLowerCase();
+  const localGate = (keywords: string[], anchorLat: number, anchorLng: number): boolean =>
+    keywords.some(kw => areaLower.includes(kw)) ||
+    (!!resolvedCoords &&
+      distanceMiles(resolvedCoords.lat, resolvedCoords.lng, anchorLat, anchorLng) <= LOCAL_RADIUS_MILES);
+
+  const isLititz    = localGate(["lititz"],    40.1559, -76.3055); // Lititz, PA
+  const isLancaster = localGate(["lancaster"], 40.0379, -76.3055); // Lancaster, PA
 
   // ── Step 1: Fetch ALL sources in parallel — event sources + always-on GP filters
   //

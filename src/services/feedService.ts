@@ -11,6 +11,7 @@ import { searchFoursquareVenues } from "./foursquareService";
 // from RSS (LancasterPA.com, LancasterHistory.org, Tellus360) + Meetup/TM/Serp.
 import { fetchLititzEvents } from "./lititzEventsService";
 import { fetchFigLancasterEvents } from "./figLancasterService";
+import { fetchStructuredEvents } from "./structuredDataService";
 import { deduplicateFeed, MultiSourceEvent } from "./deduplicationService";
 import { getRecommendations, type FeedResult } from "./recommendationEngine";
 import { searchViatorExperiences } from "./viatorService";
@@ -153,6 +154,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
     foursquareResult,
     lititzResult,
     figResult,
+    structuredResult,
     foodPlacesResult,
     cinemaResult,
     viatorAlwaysResult,
@@ -173,6 +175,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
     searchFoursquareVenues(area, resolvedCoords),   // top nearby spots — 24h cache, Pro-tier only
     isLititz    ? fetchLititzEvents()         : Promise.resolve([]),
     isLancaster ? fetchFigLancasterEvents()   : Promise.resolve([]),
+    fetchStructuredEvents(area, resolvedCoords),  // schema.org JSON-LD (Tellús360 etc.) — name OR 20mi
     fetchFoodPlaces(area, resolvedCoords),       // always-on → Food & Drink filter
     fetchCinemas(area, resolvedCoords),          // always-on → Cinema filter
     searchViatorExperiences(area, resolvedCoords), // always-on → Viator/Nearby
@@ -193,6 +196,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
     ...extract(redditResult),
     ...extract(redditKeywordsResult),   // keyword-matched Reddit posts → community
     ...extract(rssResult),
+    ...extract(structuredResult),       // schema.org JSON-LD venue events → community
     ...extract(eventbriteResult),
     ...extract(meetupResult),
     ...extract(ticketmasterResult),
@@ -274,6 +278,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
   console.log(`  Foursquare:       ${extract(foursquareResult).length} (top nearby spots)`);
   console.log(`  Lititz PA:        ${extract(lititzResult).length}`);
   console.log(`  FIG Lancaster:    ${extract(figResult).length}`);
+  console.log(`  Structured JSON-LD: ${extract(structuredResult).length} events`);
   console.log(`  Food Places:      ${extract(foodPlacesResult).length} (always-on, filter-only)`);
   console.log(`  Cinemas:          ${extract(cinemaResult).length} (always-on)`);
   console.log(`  AMC Showtimes:    ${showtimeItems.length} cards`);

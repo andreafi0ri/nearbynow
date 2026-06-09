@@ -9,7 +9,8 @@
     "api/meetup-search.js":      { "maxDuration": 10 },
     "api/serp-events.js":        { "maxDuration": 10 },
     "api/lititz-events.js":      { "maxDuration": 10 },
-    "api/foursquare-search.js":  { "maxDuration": 10 }
+    "api/foursquare-search.js":  { "maxDuration": 10 },
+    "api/fetch-page.js":         { "maxDuration": 10 }
   },
   "rewrites": [
     { "source": "/privacy",      "destination": "/privacy/index.html" },

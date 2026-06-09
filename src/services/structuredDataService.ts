@@ -12,15 +12,15 @@
 // schema.org/Event fields used: name, startDate, endDate, location{name,address,geo},
 // description, image, url, offers.
 
+import { Platform } from "react-native";
 import { EventItem } from "../data/mockEvents";
 import { STRUCTURED_SOURCES, StructuredSource } from "../config/structuredDataSources";
 
-// ─── Proxy chain (HTML-accepting; mirrors rssService's list) ────────────────────
-const CORS_PROXIES = [
-  "https://api.codetabs.com/v1/proxy?quest=",
-  "https://api.allorigins.win/raw?url=",
-  "https://thingproxy.freeboard.io/fetch/",
-];
+// Venue event pages are fetched through our own server-side proxy (api/fetch-page):
+// many send no CORS header and are too large for the public proxy chain. The
+// proxy fetches server-side (no CORS, no size cap) and host-allowlists targets.
+// Web resolves the relative path; native uses the absolute production URL.
+const PROXY_BASE = Platform.OS === "web" ? "" : "https://www.nearbyandnow.com";
 
 // Markers that indicate bot protection — if seen, the page is SKIPPED.
 const BLOCK_MARKERS = [
@@ -221,23 +221,21 @@ function formatTime(iso: string): string {
   return `${day} ${time}`;
 }
 
-// ─── Proxy fetch with blocked-page guard ────────────────────────────────────────
+// ─── Server-side page fetch (via our own proxy) with blocked-page guard ─────────
 async function fetchPage(url: string): Promise<FetchResult> {
-  for (const proxy of CORS_PROXIES) {
-    try {
-      const res = await fetch(proxy + encodeURIComponent(url), {
-        headers: { Accept: "text/html,*/*" },
-        signal: AbortSignal.timeout(8_000),
-      });
-      const body = await res.text();
-      if (!body || body.length < 100) continue;
-      // Skip proxy's own error envelope
-      if (body.startsWith('{ "Error"') || body.includes('"contents":null')) continue;
-      if (isBlocked(res.status, body)) return { blocked: true };
-      if (res.ok) return { status: res.status, body };
-    } catch { /* try next proxy */ }
+  try {
+    const res = await fetch(`${PROXY_BASE}/api/fetch-page?url=${encodeURIComponent(url)}`, {
+      headers: { Accept: "text/html,*/*" },
+      signal: AbortSignal.timeout(10_000),
+    });
+    const body = await res.text();
+    // Upstream bot protection surfaces as 403/503 or a challenge body → SKIP.
+    if (isBlocked(res.status, body)) return { blocked: true };
+    if (!res.ok || !body || body.length < 100) return null;
+    return { status: res.status, body };
+  } catch {
+    return null;
   }
-  return null;
 }
 
 // ─── Cache ──────────────────────────────────────────────────────────────────────

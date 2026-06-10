@@ -2,10 +2,12 @@
 // Fetches RSS feeds for an area using react-native-rss-parser.
 // Sources are resolved via rssDiscovery → rssSources config.
 //
-// All fetches go through a CORS proxy chain (fetchWithProxy) that tries
-// three public proxies in order — this fixes the silent failures that happen
-// when news sites block direct cross-origin requests from React Native.
+// All fetches go through fetchWithProxy: our own server-side proxy
+// (api/fetch-page, host-allowlisted) first — the public CORS proxies
+// (codetabs/allorigins/thingproxy) became unreliable in 2026-06 and are
+// kept only as a fallback chain.
 
+import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as rssParser from "react-native-rss-parser";
 import type { RSSItem } from "react-native-rss-parser";
@@ -111,7 +113,27 @@ function markProxy(proxy: string, healthy: boolean): void {
  *
  * @throws Error when all available proxies fail or return invalid XML.
  */
+// Our own Vercel proxy — server-side fetch, no CORS issues, no size cap,
+// no public-proxy rate limits. Host-allowlisted in api/fetch-page.js.
+const OWN_PROXY_BASE = Platform.OS === "web" ? "" : "https://www.nearbyandnow.com";
+
 async function fetchWithProxy(url: string): Promise<string> {
+  // 1. Try our own server proxy first (reliable path).
+  try {
+    const res = await fetch(
+      `${OWN_PROXY_BASE}/api/fetch-page?url=${encodeURIComponent(url)}`,
+      { headers: { Accept: "application/rss+xml, application/xml, text/xml, */*" },
+        signal: AbortSignal.timeout(8_000) },
+    );
+    if (res.ok) {
+      const text = await res.text();
+      if (text.includes("<rss") || text.includes("<feed") || text.includes("<channel")) {
+        return text;
+      }
+    }
+  } catch { /* fall through to public chain */ }
+
+  // 2. Fallback: public CORS proxy chain.
   const available = CORS_PROXIES.filter(isProxyAvailable);
   const toTry = available.length > 0 ? available : CORS_PROXIES;
 

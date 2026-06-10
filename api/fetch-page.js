@@ -11,10 +11,28 @@
 //
 // SSRF guard: only hosts on ALLOWED_HOSTS may be fetched (not an open proxy).
 
+// Hosts the proxy may fetch: JSON-LD venue pages + every RSS feed host in
+// src/config/rssSources.ts. The public CORS-proxy chain (codetabs/allorigins/
+// thingproxy) became unreliable, so RSS also routes through here.
+// KEEP IN SYNC: adding a source to rssSources.ts or structuredDataSources.ts
+// means adding its hostname here, or the proxy will refuse it (403).
 const ALLOWED_HOSTS = new Set([
-  "www.tellus360.com",
-  "tellus360.com",
-  // Add a host here when adding a JSON-LD source to structuredDataSources.ts
+  // JSON-LD venue pages (structuredDataSources.ts)
+  "www.tellus360.com", "tellus360.com",
+  // RSS feed hosts (rssSources.ts)
+  "austinmonitor.com", "billypenn.com", "bklyner.com", "blockclubchicago.org",
+  "brixtonblog.com", "brixtonvillage.com", "chicagoreader.com", "crosscut.com",
+  "dcist.com", "denverite.com", "gothamist.com", "laist.com", "londonist.com",
+  "miamiherald.com", "nashvillepost.com", "secretboston.com", "secretchicago.com",
+  "secretldn.com", "secretlosangeles.com", "secretnyc.co", "secretsanfrancisco.com",
+  "sfstandard.com", "wbur.org", "www.austinchronicle.com", "www.barbican.org.uk",
+  "www.bfi.org.uk", "www.brixtonbuzz.com", "www.brooklynartscouncil.org",
+  "www.brooklynmuseum.org", "www.brownstoner.com", "www.chicagoparkdistrict.com",
+  "www.eventbrite.com", "www.lancasterhistory.org", "www.lancasterpa.com",
+  "www.london.gov.uk", "www.mickeysblackbox.com", "www.mylondon.news",
+  "www.nationaltrust.org.uk", "www.nycgovparks.org", "www.prospectpark.org",
+  "www.royalparks.org.uk", "www.southbankcentre.co.uk", "www.timeout.com",
+  "www.visitlondon.com", "www.wweek.com",
 ]);
 
 module.exports = async function handler(req, res) {

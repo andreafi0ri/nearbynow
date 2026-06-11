@@ -181,7 +181,7 @@ function isRecent(p: RedditPost): boolean {
 // ─── Fetch helpers ────────────────────────────────────────────────────────────
 
 async function fetchPosts(url: string): Promise<RedditPost[]> {
-  const res = await fetch(url);
+  const res = await fetch(url, { headers: { "User-Agent": "NearbyAndNow/1.0" } });
   if (!res.ok) throw new Error(`Reddit ${res.status}: ${url}`);
   const json = await res.json();
   return (json.data?.children ?? []).map((c: { data: RedditPost }) => c.data);
@@ -307,13 +307,14 @@ function buildKeywordTags(title: string): string[] {
   return tags.slice(0, 3);
 }
 
-function mapRedditKeywordPost(post: RedditPost, area: string): EventItem | null {
+function mapRedditKeywordPost(post: RedditPost, area: string, subreddit: string): EventItem | null {
   if (!post?.title) return null;
 
   const title = post.title.slice(0, 80);
   const url = post.url?.startsWith("http")
     ? post.url
     : `https://reddit.com${post.permalink}`;
+  const redditUrl = `https://reddit.com${post.permalink}`;
 
   const t = title.toLowerCase();
   const category =
@@ -334,7 +335,8 @@ function mapRedditKeywordPost(post: RedditPost, area: string): EventItem | null 
     location:  area,
     lat:       undefined,
     lng:       undefined,
-    source:    "Reddit",
+    source:    `r/${subreddit}`,
+    sourceUrl: redditUrl,
     category,
     catColor:  REDDIT_COLOR,
     catDot:    REDDIT_DOT,
@@ -389,7 +391,7 @@ export async function searchRedditKeywords(area: string): Promise<EventItem[]> {
         return ALL_KEYWORDS_FLAT.some(kw => title.includes(kw.toLowerCase()))
           && !isKeywordNewsPost(title);
       })
-      .map(d => mapRedditKeywordPost(d, area))
+      .map(d => mapRedditKeywordPost(d, area, sub))
       .filter((x): x is EventItem => x !== null);
 
     console.log(`[Reddit keywords] ${items.length} posts from r/${sub} for "${area}"`);

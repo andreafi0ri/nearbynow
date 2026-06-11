@@ -33,7 +33,7 @@ export const STRUCTURED_SOURCES: StructuredSource[] = [
     url:         "https://www.tabernacleatl.com/shows",
     name:        "Tabernacle",
     area:        "atlanta",
-    sourceLabel: "Tabernacle",
+    sourceLabel: "Tabernacle ATL",
     tags:        ["Atlanta", "Live Music"],
     lat: 33.7624, lng: -84.3930,
   },
@@ -42,7 +42,7 @@ export const STRUCTURED_SOURCES: StructuredSource[] = [
     name:        "Kaseya Center",
     area:        "miami",
     sourceLabel: "Kaseya Center",
-    tags:        ["Miami"],
+    tags:        ["Miami", "Arena"],
     lat: 25.7814, lng: -80.1870,
   },
 ];

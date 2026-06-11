@@ -53,7 +53,11 @@ module.exports = async function handler(req, res) {
   try { host = new URL(String(url)).hostname; }
   catch { return res.status(400).json({ error: "Invalid url" }); }
 
-  if (!ALLOWED_HOSTS.has(host)) {
+  // TEMPORARY — remove after discovery run. Allows any hostname when the
+  // request carries x-discovery-test: 1. Widens SSRF surface for the test
+  // window — do NOT leave this in production.
+  const isDiscoveryTest = req.headers["x-discovery-test"] === "1";
+  if (!isDiscoveryTest && !ALLOWED_HOSTS.has(host)) {
     return res.status(403).json({ error: `Host not allowed: ${host}` });
   }
 

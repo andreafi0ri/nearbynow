@@ -322,6 +322,16 @@ export const RSS_SOURCES: RSSSource[] = [
     tags:     ["Chicago", "Parks", "Outdoors"],
   },
 
+  {
+    url:      "https://www.metrochicago.com/events/feed",
+    name:     "Metro Chicago",
+    area:     "chicago",
+    category: "Music",
+    catColor: "#7B5CE0", catDot: "#A688FF",
+    img:      "🎸", type: "auto",
+    tags:     ["Chicago", "Live Music"],
+  },
+
   // ─── Los Angeles ──────────────────────────────────────────────────────────
   {
     url:      "https://laist.com/feed",

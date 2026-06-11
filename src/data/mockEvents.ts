@@ -475,6 +475,7 @@ export const SOURCE_COLORS: Record<string, string> = {
   "Wellness":           "#C25F8F",
   "Nightlife":          "#4A1570",
   "Outdoors":           "#2D7A3A",
+  "Metro Chicago":      "#7B5CE0",
   "Tabernacle ATL":     "#C8472D",
   "Kaseya Center":      "#1D7DC4",
 };

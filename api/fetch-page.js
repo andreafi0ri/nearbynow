@@ -23,6 +23,7 @@ const ALLOWED_HOSTS = new Set([
   "www.kaseyacenter.com",
   // RSS feed hosts (rssSources.ts)
   "austinmonitor.com", "billypenn.com", "bklyner.com", "blockclubchicago.org",
+  "www.metrochicago.com",
   "brixtonblog.com", "brixtonvillage.com", "chicagoreader.com", "crosscut.com",
   "dcist.com", "denverite.com", "gothamist.com", "laist.com", "londonist.com",
   "miamiherald.com", "nashvillepost.com", "secretboston.com", "secretchicago.com",

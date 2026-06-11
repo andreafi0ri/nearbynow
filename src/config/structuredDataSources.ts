@@ -27,6 +27,22 @@ export const STRUCTURED_SOURCES: StructuredSource[] = [
     tags:        ["Lancaster", "Live Music"],
     lat: 40.0379, lng: -76.3055,
   },
-  // Step 1 re-probe (2026-06) found no other Lancaster venue publishing usable
-  // JSON-LD — the rest were bot-protected (skipped), dead domains, or JS-rendered.
+  // Phase 2 scan (2026-06, 111 US-city candidates via discoverStructuredData.mjs):
+  // only these two passed (status OK + jsonld > 0) through the public CORS proxies.
+  {
+    url:         "https://www.tabernacleatl.com/shows",
+    name:        "Tabernacle",
+    area:        "atlanta",
+    sourceLabel: "Tabernacle",
+    tags:        ["Atlanta", "Live Music"],
+    lat: 33.7624, lng: -84.3930,
+  },
+  {
+    url:         "https://www.kaseyacenter.com/events",
+    name:        "Kaseya Center",
+    area:        "miami",
+    sourceLabel: "Kaseya Center",
+    tags:        ["Miami"],
+    lat: 25.7814, lng: -80.1870,
+  },
 ];

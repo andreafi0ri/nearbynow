@@ -45,4 +45,12 @@ export const STRUCTURED_SOURCES: StructuredSource[] = [
     tags:        ["Miami", "Arena"],
     lat: 25.7814, lng: -80.1870,
   },
+  {
+    url:         "https://discovercolumbia.com/events/",
+    name:        "Discover Columbia",
+    area:        "columbia",
+    sourceLabel: "Discover Columbia",
+    tags:        ["Columbia", "Lancaster County"],
+    lat: 40.0340, lng: -76.5039,  // Columbia, PA — ~10mi from Lancaster, fires via radius too
+  },
 ];

@@ -35,7 +35,10 @@ const BLOCK_MARKERS = [
 
 function isBlocked(status: number, body: string): boolean {
   if (status === 403 || status === 503 || status === 429) return true;
-  const lower = body.toLowerCase();
+  // Scan only the first 4KB — bot challenges (Cloudflare, CAPTCHA walls) appear
+  // in <head> or early <body>. A "captcha" string mid-page is a contact-form
+  // widget, not a block (e.g. discovercolumbia.com reCAPTCHA field at char ~474K).
+  const lower = body.slice(0, 4096).toLowerCase();
   return BLOCK_MARKERS.some(m => lower.includes(m));
 }
 

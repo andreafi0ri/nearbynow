@@ -122,12 +122,14 @@ function parseEvents(html: string): EventItem[] {
     const ageGroup = ageGroupMatch?.[1]?.toLowerCase() ?? "";
     if (!ALLOWED_AGE_GROUPS.has(ageGroup)) continue;
 
-    // Title + URL
-    const linkMatch = art.match(/class="lc-event__link"[^>]*href="([^"]+)"[^>]*>([^<]+)/);
-    if (!linkMatch) continue;
-    const [, href, rawTitle] = linkMatch;
-    const title = decodeEntities(rawTitle).trim().slice(0, 80);
+    // Title + URL — href and class appear in any order, so match the full tag
+    const anchorMatch = art.match(/<a\s[^>]*lc-event__link[^>]*>([\s\S]*?)<\/a>/);
+    if (!anchorMatch) continue;
+    const title = decodeEntities(anchorMatch[1]).trim().replace(/\s+/g, " ").slice(0, 80);
     if (!title) continue;
+    const hrefMatch = anchorMatch[0].match(/href="([^"]+)"/);
+    if (!hrefMatch) continue;
+    const href = hrefMatch[1];
 
     const url = href.startsWith("http") ? href : `https://calendar.lancasterlibraries.org${href}`;
 

@@ -22,6 +22,7 @@ const ALLOWED_HOSTS = new Set([
   "www.tabernacleatl.com",
   "www.kaseyacenter.com",
   "discovercolumbia.com",
+  "amtshows.com",
   // RSS feed hosts (rssSources.ts)
   "austinmonitor.com", "billypenn.com", "bklyner.com", "blockclubchicago.org",
   "www.metrochicago.com",

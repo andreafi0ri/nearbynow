@@ -1,14 +1,14 @@
 // src/config/structuredDataSources.ts
 //
-// Sources whose event pages publish openly-available schema.org Event JSON-LD.
-// The parser (structuredDataService.ts) reads ONLY normally-loading pages and
-// skips anything bot-protected — it never bypasses protection.
+// Sources for schema.org Event JSON-LD pages and The Events Calendar REST API.
+// The parser (structuredDataService.ts) reads ONLY normally-loading pages/endpoints
+// and skips anything bot-protected — it never bypasses protection.
 //
-// Adding a venue later is a one-line entry here (confirm it publishes JSON-LD
-// via scripts/discoverStructuredData.mjs first).
+// parser: "json-ld"  (default) — HTML page with embedded schema.org Event JSON-LD.
+// parser: "tec-rest"           — The Events Calendar /wp-json/tribe/events/v1/events JSON.
 
 export type StructuredSource = {
-  url:         string;   // page that embeds the JSON-LD
+  url:         string;   // HTML page (json-ld) or REST endpoint URL (tec-rest)
   name:        string;   // internal name
   area:        string;   // lowercase area keyword (matches feedService gating)
   sourceLabel: string;   // shown as the source pill / used by feedSections + SOURCE_COLORS
@@ -16,6 +16,9 @@ export type StructuredSource = {
   // Optional anchor coords for radius matching (see rssDiscovery AREA_COORDS pattern).
   lat?:        number;
   lng?:        number;
+  // "json-ld"  (default): parse schema.org Event JSON-LD from the HTML response.
+  // "tec-rest": parse The Events Calendar REST API JSON response.
+  parser?:     "json-ld" | "tec-rest";
 };
 
 export const STRUCTURED_SOURCES: StructuredSource[] = [
@@ -52,5 +55,17 @@ export const STRUCTURED_SOURCES: StructuredSource[] = [
     sourceLabel: "Discover Columbia",
     tags:        ["Columbia", "Lancaster County"],
     lat: 40.0340, lng: -76.5039,  // Columbia, PA — ~10mi from Lancaster, fires via radius too
+  },
+  // Phase 3 scan (2026-06, Lancaster r/sidebar venues via discoverEventsCalendar.mjs):
+  // AMT confirmed TEC REST with 130 upcoming events. Fetched through fetch-page proxy
+  // so CORS is irrelevant; body is JSON parsed in mapTECEvent().
+  {
+    url:         "https://amtshows.com/wp-json/tribe/events/v1/events?per_page=50",
+    name:        "AMT",
+    area:        "lancaster",
+    sourceLabel: "American Music Theatre",
+    tags:        ["Lancaster", "Live Music", "Theater"],
+    lat: 40.0345, lng: -76.2484,
+    parser:      "tec-rest",
   },
 ];

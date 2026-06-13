@@ -60,6 +60,27 @@ type JsonLdNode = Record<string, any>;
 
 type FetchResult = { status: number; body: string } | { blocked: true } | null;
 
+// The Events Calendar REST API event shape (only fields we use)
+type TECEvent = {
+  id:          number;
+  title:       string;
+  description: string;
+  url:         string;
+  start_date:  string;   // "2026-06-13 19:30:00" local time
+  end_date?:   string;
+  cost?:       string;
+  image?:      { url: string };
+  venue?: {
+    venue?:   string;
+    address?: string;
+    city?:    string;
+    state?:   string;
+    geo_lat?: string | number;
+    geo_lng?: string | number;
+  };
+  categories?: Array<{ name: string }>;
+};
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function stripHTML(s: string): string {
   return (s || "")
@@ -224,6 +245,74 @@ function formatTime(iso: string): string {
   return `${day} ${time}`;
 }
 
+// ─── TEC REST event mapper ───────────────────────────────────────────────────────
+function mapTECEvent(ev: TECEvent, source: StructuredSource): EventItem | null {
+  const title = stripHTML(ev.title || "").slice(0, 80);
+  if (!title || !ev.start_date) return null;
+
+  // "2026-06-13 19:30:00" → date part only
+  const date = ev.start_date.split(" ")[0];
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  if (date < TODAY()) return null;
+
+  const startIso = ev.start_date.replace(" ", "T");
+  const endIso   = ev.end_date  ? ev.end_date.replace(" ", "T") : undefined;
+
+  const catNames = (ev.categories ?? []).map(c => c.name.toLowerCase());
+  const category =
+    catNames.some(c => /music|concert/.test(c))          ? "Music"  :
+    catNames.some(c => /theatre|theater|comedy/.test(c)) ? "Events" :
+    detectCategory([], title);
+  const palette = CAT_COLORS[category] ?? CAT_COLORS["Events"];
+
+  const desc     = stripHTML(ev.description || "").slice(0, 200) || `${category} at ${source.sourceLabel}`;
+  const longDesc = stripHTML(ev.description || "").slice(0, 600) || undefined;
+
+  const v = ev.venue;
+  const location = v
+    ? [v.venue, v.address, v.city].filter(Boolean).join(", ")
+    : source.sourceLabel;
+
+  // Prefer event-level geo; fall back to source anchor
+  const rawLat = v?.geo_lat != null ? Number(v.geo_lat) : NaN;
+  const rawLng = v?.geo_lng != null ? Number(v.geo_lng) : NaN;
+  const lat = !isNaN(rawLat) && rawLat !== 0 ? rawLat : source.lat;
+  const lng = !isNaN(rawLng) && rawLng !== 0 ? rawLng : source.lng;
+
+  const costStr = (ev.cost ?? "").trim();
+  const price   = costStr === "" || costStr === "0" ? null
+    : /free/i.test(costStr)                         ? "Free"
+    : costStr.slice(0, 20);
+
+  const tags = [...source.tags, price].filter((t): t is string => Boolean(t)).slice(0, 3);
+  const url  = ev.url || source.url;
+
+  return {
+    id:        hashString(`tec-${source.name}-${ev.id}`),
+    type:      "event",
+    title,
+    desc,
+    longDesc,
+    time:      formatTime(startIso),
+    date,
+    startIso,
+    endIso,
+    location:  location || source.sourceLabel,
+    lat, lng,
+    source:    source.sourceLabel,
+    sourceUrl: url,
+    category,
+    catColor:  palette.catColor,
+    catDot:    palette.catDot,
+    saves:     0,
+    img:       palette.img,
+    booking:   { label: "View event", url, affiliate: false },
+    tags:      tags.length > 0 ? tags : undefined,
+    imageUrl:  ev.image?.url,
+    isCanceled: false,
+  };
+}
+
 // ─── Server-side page fetch (via our own proxy) with blocked-page guard ─────────
 async function fetchPage(url: string): Promise<FetchResult> {
   try {
@@ -293,14 +382,25 @@ export async function fetchStructuredEvents(
         return [];
       }
 
-      const raw = extractEventsFromHtml(result.body);
-      const items = raw
-        .map(ev => mapJsonLdEvent(ev, source))
-        .filter((x): x is EventItem => x !== null)
-        .filter(e => e.date <= horizon);   // today..+60d (past already dropped in mapper)
+      let items: EventItem[];
+      if (source.parser === "tec-rest") {
+        let data: { events?: TECEvent[] };
+        try { data = JSON.parse(result.body); } catch { return []; }
+        items = (data.events ?? [])
+          .map(ev => mapTECEvent(ev, source))
+          .filter((x): x is EventItem => x !== null)
+          .filter(e => e.date <= horizon);
+        console.log(`[structuredData] ${source.name} — ${items.length} events from TEC REST`);
+      } else {
+        const raw = extractEventsFromHtml(result.body);
+        items = raw
+          .map(ev => mapJsonLdEvent(ev, source))
+          .filter((x): x is EventItem => x !== null)
+          .filter(e => e.date <= horizon);   // today..+60d (past already dropped in mapper)
+        console.log(`[structuredData] ${source.name} — ${items.length} events from JSON-LD`);
+      }
 
       cache.set(source.url, { data: items, expiresAt: Date.now() + CACHE_TTL });
-      console.log(`[structuredData] ${source.name} — ${items.length} events from JSON-LD`);
       return items;
     } catch (err: any) {
       console.warn(`[structuredData] ${source.name} error:`, err?.message);

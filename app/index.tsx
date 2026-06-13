@@ -37,11 +37,9 @@ export default function Index() {
           AsyncStorage.getItem("hearby_area"),    // written by SavedAreasContext
           AsyncStorage.getItem("nearbynow_email"), // written by email.tsx on submit
         ]);
-        if (area && email) {
+        if (area) {
+          // Area is set — go to feed regardless of email (signup is optional).
           router.replace("/feed");
-        } else if (area && !email) {
-          // Has an area but hasn't completed sign-in yet
-          router.replace("/email");
         } else {
           router.replace("/location");
         }

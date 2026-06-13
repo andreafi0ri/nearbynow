@@ -210,7 +210,49 @@ export default function ProfileScreen() {
 
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
 
-        {/* ── User card ── */}
+        {/* ── Sign-up prompt — signed-out users only ── */}
+        {!isSignedIn && (
+          <View style={[styles.card, { backgroundColor: T.bgCard, borderColor: T.border, shadowColor: T.border, marginBottom: 16 }]}>
+            <Text style={{ fontSize: 28, textAlign: "center", marginBottom: 6 }}>👤</Text>
+            <Text style={[styles.signupTitle, { color: T.text }]}>Sign in to unlock</Text>
+            {[
+              "Save events across devices",
+              "Get notified about events nearby",
+              "Sync your area preferences",
+            ].map(b => (
+              <View key={b} style={styles.benefitRow}>
+                <Text style={[styles.benefitDot, { color: T.gold }]}>•</Text>
+                <Text style={[styles.benefitText, { color: T.textSub }]}>{b}</Text>
+              </View>
+            ))}
+            <TouchableOpacity
+              onPress={() => router.push("/email?mode=signup")}
+              style={[styles.signupBtn, { backgroundColor: T.text }]}
+              activeOpacity={0.85}
+            >
+              <Text style={[styles.signupBtnText, { color: T.bg }]}>Sign in / Create account →</Text>
+            </TouchableOpacity>
+            {activeArea ? (
+              <>
+                <View style={[styles.divider, { backgroundColor: T.borderSub, marginTop: 16, marginBottom: 12 }]} />
+                <View style={styles.areaPromptRow}>
+                  <Text style={[styles.areaPromptLabel, { color: T.muted }]}>Your area: </Text>
+                  <Text style={[styles.areaPromptValue, { color: T.text }]} numberOfLines={1}>{activeArea}</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => router.push("/location?switch=1")}
+                  style={[styles.changeAreaBtn, { borderColor: T.border }]}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.changeAreaBtnText, { color: T.text }]}>Change area</Text>
+                </TouchableOpacity>
+              </>
+            ) : null}
+          </View>
+        )}
+
+        {/* ── User card — signed-in users only ── */}
+        {isSignedIn && (
         <View style={[styles.card, { backgroundColor: T.bgCard, borderColor: T.border, shadowColor: T.border }]}>
           <View style={styles.userRow}>
             <View style={{ position: "relative" }}>
@@ -310,6 +352,7 @@ export default function ProfileScreen() {
             ))
           )}
         </View>
+        )}
 
         {/* ── Appearance ── */}
         <Text style={[styles.sectionLabel, { color: T.muted, marginTop: 8 }]}>APPEARANCE</Text>
@@ -510,6 +553,17 @@ const styles = StyleSheet.create({
   accountRow:    { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingVertical: 14 } as ViewStyle,
   accountLabel:  { fontSize: 13, fontFamily: "Inter_400Regular" } as TextStyle,
   version:          { textAlign: "center", fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 24 } as TextStyle,
+  signupTitle:      { fontSize: 18, fontWeight: "700", fontFamily: "Inter_700Bold", textAlign: "center", marginBottom: 14 } as TextStyle,
+  benefitRow:       { flexDirection: "row", alignItems: "flex-start", gap: 8, marginBottom: 6 } as ViewStyle,
+  benefitDot:       { fontSize: 15, lineHeight: 20, fontWeight: "700" } as TextStyle,
+  benefitText:      { fontSize: 14, fontFamily: "Inter_400Regular", lineHeight: 20, flex: 1 } as TextStyle,
+  signupBtn:        { width: "100%", height: 52, borderRadius: 14, alignItems: "center", justifyContent: "center", marginTop: 16 } as ViewStyle,
+  signupBtnText:    { fontFamily: "Inter_700Bold", fontWeight: "700", fontSize: 15 } as TextStyle,
+  areaPromptRow:    { flexDirection: "row", alignItems: "center", flexWrap: "wrap" } as ViewStyle,
+  areaPromptLabel:  { fontSize: 13, fontFamily: "Inter_400Regular" } as TextStyle,
+  areaPromptValue:  { fontSize: 13, fontFamily: "Inter_700Bold", fontWeight: "700", flex: 1 } as TextStyle,
+  changeAreaBtn:    { borderWidth: 1.5, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, alignSelf: "flex-start", marginTop: 10 } as ViewStyle,
+  changeAreaBtnText:{ fontSize: 13, fontFamily: "Inter_500Medium", fontWeight: "500" } as TextStyle,
   debugBtn:         { borderWidth: 1, borderRadius: 10, padding: 12, alignItems: "center", marginTop: 8, marginBottom: 8 } as ViewStyle,
   debugBtnText:     { fontSize: 12, fontFamily: "Inter_400Regular" } as TextStyle,
   healthBox:        { borderWidth: 1.5, borderRadius: 10, padding: 10, marginTop: 8, marginBottom: 16, maxHeight: 200 } as ViewStyle,

@@ -101,13 +101,8 @@ export default function LocationScreen() {
   // ── Navigation helpers ────────────────────────────────────────────────────
   const saveAndProceed = async (areaName: string) => {
     await addArea(areaName);
-    // Skip the email/sign-in screen for users who are already authenticated.
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) {
-      router.replace("/feed");
-    } else {
-      router.replace("/email?mode=signup");
-    }
+    // Go directly to feed — email signup is optional (skipped users land here too).
+    router.replace("/feed");
   };
 
   const handleSignIn = () => {
@@ -319,7 +314,7 @@ export default function LocationScreen() {
 
               {/* Escape hatch — browse without signing in */}
               <TouchableOpacity
-                onPress={() => setHasArea(false)}
+                onPress={() => router.replace("/feed")}
                 style={s.ghostRow}
               >
                 <Text style={[s.ghostText, { color: T.muted }]}>
@@ -391,14 +386,14 @@ export default function LocationScreen() {
                 Your location is never stored or shared with third parties.
               </Text>
 
-              {/* ── Already have an account? — new user only ───────────── */}
+              {/* ── Sign in / create account — new user only ───────────── */}
               <TouchableOpacity
-                onPress={handleSignIn}
+                onPress={() => router.push("/email?mode=signup")}
                 style={{ marginTop: 20, padding: 4 }}
               >
                 <Text style={[s.signInLink, { color: T.muted }]}>
-                  Already have an account?{" "}
-                  <Text style={{ color: T.gold, fontWeight: "600" }}>Sign in</Text>
+                  Sign in / Create account{" "}
+                  <Text style={{ color: T.gold, fontWeight: "600" }}>→</Text>
                 </Text>
               </TouchableOpacity>
             </>

@@ -204,6 +204,15 @@ export default function EmailScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          {/* ── Back / dismiss button ─────────────────────────────────── */}
+          <TouchableOpacity
+            onPress={() => router.canGoBack() ? router.back() : router.replace("/feed")}
+            style={s.backBtn}
+            activeOpacity={0.7}
+          >
+            <Text style={[s.backBtnText, { color: T.muted }]}>← Back</Text>
+          </TouchableOpacity>
+
           {/* ── Compact brand bar ─────────────────────────────────────── */}
           <View style={s.brandBar}>
             <Pin size={22} T={T} />
@@ -473,7 +482,7 @@ export default function EmailScreen() {
               {/* ── Privacy line — signup only ────────────────────── */}
               {!isLogin && (
                 <Text style={[s.privacy, { color: T.muted }]}>
-                  Your email is required to access Nearby &amp; Now.{"\n"}Unsubscribe from the digest any time.
+                  Sign up to save events across devices and get your local digest.{"\n"}Unsubscribe any time.
                 </Text>
               )}
             </>
@@ -497,6 +506,18 @@ const s = StyleSheet.create({
     paddingTop: 48,
     paddingBottom: 32,
   } as ViewStyle,
+
+  backBtn:     {
+    alignSelf: "flex-start",
+    paddingVertical: 4,
+    paddingHorizontal: 2,
+    marginBottom: 8,
+  } as ViewStyle,
+
+  backBtnText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+  } as TextStyle,
 
   // ── Brand bar ───────────────────────────────────────────────────────────
   brandBar:   {

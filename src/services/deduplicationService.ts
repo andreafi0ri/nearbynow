@@ -255,14 +255,22 @@ function scoreItem(item: EventItem): number {
 
 // ─── Merge group ───────────────────────────────────────────────────────────────
 
+// Sources that own the physical venue and should always be the canonical
+// when present in a merge group — their URL goes directly to the venue's
+// own ticketing page, not a third-party platform.
+const VENUE_DIRECT_SOURCES = new Set(["American Music Theatre"]);
+
 /**
  * Merges 2+ items sharing the same merge key into one canonical MultiSourceEvent.
  * The richest item (highest score) is used as the base; remaining items donate
- * their best fields.
+ * their best fields. Venue-direct sources (VENUE_DIRECT_SOURCES) always win
+ * the canonical slot and the booking URL so the card links to the venue's
+ * own site, not a third-party aggregator.
  */
 function mergeGroup(items: EventItem[]): MultiSourceEvent {
-  // Pick canonical base (highest richness score)
-  const canonical = [...items].sort((a, b) => scoreItem(b) - scoreItem(a))[0];
+  // Venue-direct sources take the canonical slot unconditionally.
+  const venueItem = items.find(i => VENUE_DIRECT_SOURCES.has(i.source ?? ""));
+  const canonical = venueItem ?? [...items].sort((a, b) => scoreItem(b) - scoreItem(a))[0];
 
   // Best description = longest non-empty string
   const bestDesc = items
@@ -279,8 +287,10 @@ function mergeGroup(items: EventItem[]): MultiSourceEvent {
   const lat = items.find(i => i.lat != null)?.lat;
   const lng = items.find(i => i.lng != null)?.lng;
 
-  // Booking: affiliate first, then any non-null
+  // Booking: venue-direct sources own the link (their URL goes to the
+  // venue's own ticketing page). Affiliate links are only used as fallback.
   const booking =
+    items.find(i => VENUE_DIRECT_SOURCES.has(i.source ?? ""))?.booking ??
     items.find(i => i.booking?.affiliate)?.booking ??
     items.find(i => i.booking)?.booking ??
     null;

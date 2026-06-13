@@ -188,6 +188,8 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
 
   const seed = mockEventsForArea(area);
 
+  const structuredItems = extract(structuredResult);
+
   // Extract showtime groups for the Cinema grouped view; map to feed items for All
   const showtimeGroups = showtimesResult.status === "fulfilled" ? showtimesResult.value : [];
   const showtimeItems  = showtimeGroups.map(g => g.feedItem);
@@ -196,7 +198,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
     ...extract(redditResult),
     ...extract(redditKeywordsResult),   // keyword-matched Reddit posts → community
     ...extract(rssResult),
-    ...extract(structuredResult),       // schema.org JSON-LD venue events → community
+    ...structuredItems,                  // schema.org JSON-LD venue events → community
     ...extract(eventbriteResult),
     ...extract(meetupResult),
     ...extract(ticketmasterResult),

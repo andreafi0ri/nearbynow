@@ -313,6 +313,21 @@ function mapTECEvent(ev: TECEvent, source: StructuredSource): EventItem | null {
   };
 }
 
+// ─── Direct fetch for TEC REST endpoints (CORS-open JSON, no proxy needed) ───────
+async function fetchTECDirect(url: string): Promise<{ status: number; body: string } | null> {
+  try {
+    const res = await fetch(url, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(10_000),
+    });
+    const body = await res.text();
+    if (!res.ok || !body) return null;
+    return { status: res.status, body };
+  } catch {
+    return null;
+  }
+}
+
 // ─── Server-side page fetch (via our own proxy) with blocked-page guard ─────────
 async function fetchPage(url: string): Promise<FetchResult> {
   try {
@@ -372,18 +387,14 @@ export async function fetchStructuredEvents(
         return cached.data;
       }
 
-      const result = await fetchPage(source.url);
-      if (result === null) {
-        console.warn(`[structuredData] ${source.name} — all proxies failed, skipping`);
-        return [];
-      }
-      if ("blocked" in result) {
-        console.warn(`[structuredData] ${source.name} blocked — skipping (not bypassing)`);
-        return [];
-      }
-
       let items: EventItem[];
       if (source.parser === "tec-rest") {
+        // TEC REST endpoints are CORS-open JSON — call directly, no proxy needed.
+        const result = await fetchTECDirect(source.url);
+        if (result === null) {
+          console.warn(`[structuredData] ${source.name} — TEC fetch failed, skipping`);
+          return [];
+        }
         let data: { events?: TECEvent[] };
         try { data = JSON.parse(result.body); } catch { return []; }
         items = (data.events ?? [])
@@ -392,11 +403,20 @@ export async function fetchStructuredEvents(
           .filter(e => e.date <= horizon);
         console.log(`[structuredData] ${source.name} — ${items.length} events from TEC REST`);
       } else {
+        const result = await fetchPage(source.url);
+        if (result === null) {
+          console.warn(`[structuredData] ${source.name} — all proxies failed, skipping`);
+          return [];
+        }
+        if ("blocked" in result) {
+          console.warn(`[structuredData] ${source.name} blocked — skipping (not bypassing)`);
+          return [];
+        }
         const raw = extractEventsFromHtml(result.body);
         items = raw
           .map(ev => mapJsonLdEvent(ev, source))
           .filter((x): x is EventItem => x !== null)
-          .filter(e => e.date <= horizon);   // today..+60d (past already dropped in mapper)
+          .filter(e => e.date <= horizon);
         console.log(`[structuredData] ${source.name} — ${items.length} events from JSON-LD`);
       }
 

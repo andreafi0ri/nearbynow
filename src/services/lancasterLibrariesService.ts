@@ -9,7 +9,9 @@
 // the user wants: Teens, Adults, Seniors, Everyone.
 // Children / Babies / Toddlers / Tweens are excluded.
 //
-// The page returns up to 24 upcoming events (rolling window, no pagination).
+// The page returns 24 events per page. We fetch MAX_PAGES pages in parallel
+// to cover the full 60-day horizon (the library has ~20 events/day across
+// all 12 branches, so a single page captures only the next ~few hours).
 // Fetched through the server-side fetch-page proxy (no CORS header on the site).
 
 import { Platform } from "react-native";
@@ -17,13 +19,35 @@ import { EventItem } from "../data/mockEvents";
 
 const PROXY_BASE = Platform.OS === "web" ? "" : "https://www.nearbyandnow.com";
 const LIST_URL   = "https://calendar.lancasterlibraries.org/events/list";
+const MAX_PAGES  = 10; // 10 pages × ~8 adult events/page ≈ 80 events
 
 // Age groups to include (matched against CSS class on each card)
 const ALLOWED_AGE_GROUPS = new Set(["teens", "adults", "seniors", "everyone"]);
 
-// Lancaster Public Library system anchor coords (Central Lancaster)
-const LIB_LAT = 40.0379;
-const LIB_LNG = -76.3055;
+// Branch name → coordinates (substring match on location string)
+// Lancaster Public Library system has 12 branches across Lancaster County.
+const BRANCH_COORDS: Array<{ key: string; lat: number; lng: number }> = [
+  { key: "Lancaster",       lat: 40.0379, lng: -76.3055 }, // Central Lancaster
+  { key: "Lititz",          lat: 40.1559, lng: -76.3018 },
+  { key: "Manheim Township",lat: 40.0798, lng: -76.3701 },
+  { key: "Manheim Community",lat: 40.1647, lng: -76.4131 },
+  { key: "Mountville",      lat: 40.0336, lng: -76.4297 },
+  { key: "Columbia",        lat: 40.0358, lng: -76.5016 },
+  { key: "Ephrata",         lat: 40.1793, lng: -76.1791 },
+  { key: "Adamstown",       lat: 40.2368, lng: -76.0482 },
+  { key: "Quarryville",     lat: 39.8984, lng: -76.1636 },
+  { key: "Strasburg",       lat: 39.9855, lng: -76.1838 },
+  { key: "Milanof-Schock",  lat: 40.2334, lng: -76.1359 }, // Denver, PA
+  { key: "Eastern Lancaster County", lat: 40.1018, lng: -76.0869 }, // New Holland area
+];
+const DEFAULT_LAT = 40.0379;
+const DEFAULT_LNG = -76.3055;
+
+function branchCoords(location: string): { lat: number; lng: number } {
+  const lower = location.toLowerCase();
+  const match = BRANCH_COORDS.find(b => lower.includes(b.key.toLowerCase()));
+  return match ? { lat: match.lat, lng: match.lng } : { lat: DEFAULT_LAT, lng: DEFAULT_LNG };
+}
 
 const CACHE_TTL = 30 * 60 * 1_000; // 30 min
 let cache: { data: EventItem[]; expiresAt: number } | null = null;
@@ -120,6 +144,9 @@ function parseEvents(html: string): EventItem[] {
     const locMatch = art.match(/lc-list-event-location[^>]*>\s*([^<]+)/);
     const location = decodeEntities(locMatch?.[1]?.trim() ?? "Lancaster Library");
 
+    // Branch coordinates
+    const coords = branchCoords(location);
+
     // Description
     const descMatch = art.match(/lc-list-event-description[\s\S]{0,50}?<p[^>]*>([\s\S]{0,400}?)<\/p>/);
     const desc = stripTags(decodeEntities(descMatch?.[1] ?? "")).slice(0, 200)
@@ -137,8 +164,8 @@ function parseEvents(html: string): EventItem[] {
       date,
       startIso:   `${date}T00:00:00`,
       location,
-      lat:        LIB_LAT,
-      lng:        LIB_LNG,
+      lat:        coords.lat,
+      lng:        coords.lng,
       source:     "Lancaster Libraries",
       sourceUrl:  url,
       category:   "Events",
@@ -157,6 +184,24 @@ function parseEvents(html: string): EventItem[] {
 
 // ─── Fetch ──────────────────────────────────────────────────────────────────────
 
+async function fetchPage(pageIndex: number): Promise<EventItem[]> {
+  const url = pageIndex === 0
+    ? LIST_URL
+    : `${LIST_URL}?page=${pageIndex}`;
+  try {
+    const res = await fetch(
+      `${PROXY_BASE}/api/fetch-page?url=${encodeURIComponent(url)}`,
+      { headers: { Accept: "text/html,*/*" }, signal: AbortSignal.timeout(12_000) }
+    );
+    if (!res.ok) return [];
+    const html = await res.text();
+    if (!html || html.length < 200) return [];
+    return parseEvents(html);
+  } catch {
+    return [];
+  }
+}
+
 export async function fetchLancasterLibrariesEvents(): Promise<EventItem[]> {
   if (cache && cache.expiresAt > Date.now()) {
     console.log(`[LancasterLibraries] cache hit — ${cache.data.length} events`);
@@ -164,20 +209,29 @@ export async function fetchLancasterLibrariesEvents(): Promise<EventItem[]> {
   }
 
   try {
-    const res = await fetch(
-      `${PROXY_BASE}/api/fetch-page?url=${encodeURIComponent(LIST_URL)}`,
-      { headers: { Accept: "text/html,*/*" }, signal: AbortSignal.timeout(12_000) }
+    // Fetch all pages in parallel
+    const pageResults = await Promise.all(
+      Array.from({ length: MAX_PAGES }, (_, i) => fetchPage(i))
     );
-    if (!res.ok) {
-      console.warn(`[LancasterLibraries] proxy returned ${res.status}`);
-      return [];
-    }
-    const html = await res.text();
-    if (!html || html.length < 200) return [];
 
-    const items = parseEvents(html);
+    // Merge and deduplicate by ID (same event can appear on adjacent pages
+    // if events were added between fetches)
+    const seen = new Set<number>();
+    const items: EventItem[] = [];
+    for (const page of pageResults) {
+      for (const item of page) {
+        if (!seen.has(item.id)) {
+          seen.add(item.id);
+          items.push(item);
+        }
+      }
+    }
+
+    // Sort by date ascending
+    items.sort((a, b) => a.date.localeCompare(b.date));
+
     cache = { data: items, expiresAt: Date.now() + CACHE_TTL };
-    console.log(`[LancasterLibraries] ${items.length} events (teens/adults/seniors/everyone)`);
+    console.log(`[LancasterLibraries] ${items.length} events from ${MAX_PAGES} pages (teens/adults/seniors/everyone)`);
     return items;
   } catch (err: any) {
     console.warn("[LancasterLibraries] error:", err?.message);

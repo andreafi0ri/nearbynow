@@ -480,4 +480,5 @@ export const SOURCE_COLORS: Record<string, string> = {
   "Kaseya Center":           "#1D7DC4",
   "Discover Columbia":       "#3A7D44",
   "American Music Theatre":  "#B5451B",
+  "Lancaster Libraries":     "#1A6B3C",
 };

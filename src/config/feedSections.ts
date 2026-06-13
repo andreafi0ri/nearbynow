@@ -25,6 +25,7 @@ export const SOURCE_SECTION: Record<string, FeedSection> = {
   "Fever":                  "ticketed",
   "StubHub":                "ticketed",
   "American Music Theatre": "ticketed",
+  "Lancaster Libraries":    "community",
 
   // ── Top nearby spots ──────────────────────────────────────────────────
   "Foursquare":       "spots",

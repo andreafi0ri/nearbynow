@@ -268,7 +268,9 @@ export default function FeedScreen() {
   );
 
   const happeningItems = sectionableItems.filter(i => getSectionForItem(i) === "happening");
+  const venuesItems    = sectionableItems.filter(i => getSectionForItem(i) === "venues");
   const communityItems = sectionableItems.filter(i => getSectionForItem(i) === "community");
+  const libraryItems   = sectionableItems.filter(i => getSectionForItem(i) === "library");
   const ticketedItems  = sectionableItems.filter(i => getSectionForItem(i) === "ticketed");
   const spotsItems     = sectionableItems.filter(i => getSectionForItem(i) === "spots");
 
@@ -565,9 +567,9 @@ export default function FeedScreen() {
         {happeningItems.length > 0 && (
           <>
             <SectionHeader
-              label="Happening near you"
+              label="Meetups"
               sub="Events from Meetup, starting soon"
-              onSeeAll={() => setSeeAll({ title: "Happening near you", sub: "Events from Meetup, starting soon", items: happeningItems, kind: "event" })}
+              onSeeAll={() => setSeeAll({ title: "Meetups", sub: "Events from Meetup, starting soon", items: happeningItems, kind: "event" })}
               T={T}
             />
             <ScrollView
@@ -587,7 +589,34 @@ export default function FeedScreen() {
           </>
         )}
 
-        {/* ── Block 2 · From the community — vertical ListRow list ── */}
+        {/* ── Block 2 · Happening near you — local venues carousel ── */}
+        {venuesItems.length > 0 && (
+          <>
+            <View style={[styles.sectionDivider, { backgroundColor: T.border, marginHorizontal: 18, marginTop: 18 }]} />
+            <SectionHeader
+              label="Happening near you"
+              sub="Tellús360 · AMT · FIG Lancaster"
+              onSeeAll={() => setSeeAll({ title: "Happening near you", sub: "Tellús360 · AMT · FIG Lancaster", items: venuesItems, kind: "event" })}
+              T={T}
+            />
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 22, gap: 12 }}
+              decelerationRate="fast"
+            >
+              {venuesItems.map(item => (
+                <WideImageCard
+                  key={item.id} item={item} T={T}
+                  saved={saved.has(item.id)}
+                  onSave={() => handleToggle(item.id)}
+                />
+              ))}
+            </ScrollView>
+          </>
+        )}
+
+        {/* ── Block 3 · From the community — vertical ListRow list ── */}
         {communityItems.length > 0 && (
           <>
             <View style={[styles.sectionDivider, { backgroundColor: T.border, marginHorizontal: 18 }]} />
@@ -610,7 +639,34 @@ export default function FeedScreen() {
           </>
         )}
 
-        {/* ── Block 3 · Ticketed events — horizontal WideImageCard carousel ── */}
+        {/* ── Block 4 · At your library — horizontal WideImageCard carousel ── */}
+        {libraryItems.length > 0 && (
+          <>
+            <View style={[styles.sectionDivider, { backgroundColor: T.border, marginHorizontal: 18, marginTop: 18 }]} />
+            <SectionHeader
+              label="At your library"
+              sub="Lancaster Public Library system"
+              onSeeAll={() => setSeeAll({ title: "At your library", sub: "Lancaster Public Library system", items: libraryItems, kind: "event" })}
+              T={T}
+            />
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 22, gap: 12 }}
+              decelerationRate="fast"
+            >
+              {libraryItems.map(item => (
+                <WideImageCard
+                  key={item.id} item={item} T={T}
+                  saved={saved.has(item.id)}
+                  onSave={() => handleToggle(item.id)}
+                />
+              ))}
+            </ScrollView>
+          </>
+        )}
+
+        {/* ── Block 5 · Ticketed events — horizontal WideImageCard carousel ── */}
         {ticketedItems.length > 0 && (
           <>
             <View style={[styles.sectionDivider, { backgroundColor: T.border, marginHorizontal: 18, marginTop: 18 }]} />
@@ -642,9 +698,9 @@ export default function FeedScreen() {
           <>
             <View style={[styles.sectionDivider, { backgroundColor: T.border, marginHorizontal: 18, marginTop: 18 }]} />
             <SectionHeader
-              label="Top nearby spots for you"
+              label="Top nearby spots"
               sub="Popular places around you"
-              onSeeAll={() => setSeeAll({ title: "Top nearby spots for you", sub: "Popular places around you", items: spotsItems, kind: "event" })}
+              onSeeAll={() => setSeeAll({ title: "Top nearby spots", sub: "Popular places around you", items: spotsItems, kind: "event" })}
               T={T}
             />
             <ScrollView
@@ -695,7 +751,7 @@ export default function FeedScreen() {
         )}
 
         {/* Empty state */}
-        {!remoteLoading && happeningItems.length === 0 && communityItems.length === 0 && ticketedItems.length === 0 && mixRecItems.length === 0 && (
+        {!remoteLoading && happeningItems.length === 0 && venuesItems.length === 0 && communityItems.length === 0 && libraryItems.length === 0 && ticketedItems.length === 0 && mixRecItems.length === 0 && (
           <View style={styles.empty}>
             <Text style={styles.emptyIcon}>{noAreaData ? "🗺️" : "📅"}</Text>
             <Text style={[styles.emptyTitle, { color: T.text }]}>

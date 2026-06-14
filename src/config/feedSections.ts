@@ -4,59 +4,62 @@
 // Adding a new source = one line change here; feed.tsx needs no edits.
 
 export type FeedSection =
-  | "happening"       // Happening near you  (Meetup)
-  | "community"       // From the community  (RSS, Reddit, Google Events, etc.)
-  | "ticketed"        // Ticketed events     (Ticketmaster, AMC, Viator, Eventbrite)
-  | "spots"           // Top nearby spots    (Foursquare venues)
-  | "recommendation"; // Google Places recs  — stays in existing footer, never sectioned
+  | "happening"       // Meetups              (Meetup)
+  | "venues"          // Happening near you   (Tellús360, FIG Lancaster, AMT)
+  | "community"       // From the community   (RSS, Reddit, Google Events, etc.)
+  | "library"         // At your library      (Lancaster Libraries)
+  | "ticketed"        // Ticketed events      (Ticketmaster, AMC, Viator, Eventbrite)
+  | "spots"           // Top nearby spots     (Foursquare venues)
+  | "recommendation"; // Google Places recs   — stays in footer, never sectioned
 
 export const SOURCE_SECTION: Record<string, FeedSection> = {
-  // ── Happening near you ────────────────────────────────────────────────
-  "Meetup":           "happening",
+  // ── Meetups ───────────────────────────────────────────────────────────────
+  "Meetup":                 "happening",
 
-  // ── Ticketed events ───────────────────────────────────────────────────
-  "Ticketmaster":     "ticketed",
-  "SeatGeek":         "ticketed",
-  "AMC Theatres":     "ticketed",
-  "Showtimes":        "ticketed",
-  "Viator":           "ticketed",
-  "Eventbrite":       "ticketed",
+  // ── Local venues (carousel) ───────────────────────────────────────────────
+  "Tellús360":              "venues",
+  "FIG Lancaster":          "venues",
+  "American Music Theatre": "venues",
+
+  // ── At your library ──────────────────────────────────────────────────────
+  "Lancaster Libraries":    "library",
+
+  // ── Ticketed events ───────────────────────────────────────────────────────
+  "Ticketmaster":           "ticketed",
+  "SeatGeek":               "ticketed",
+  "AMC Theatres":           "ticketed",
+  "Showtimes":              "ticketed",
+  "Viator":                 "ticketed",
+  "Eventbrite":             "ticketed",
   "TicketWeb":              "ticketed",
   "Fever":                  "ticketed",
   "StubHub":                "ticketed",
-  "American Music Theatre": "ticketed",
-  "Lancaster Libraries":    "community",
 
-  // ── Top nearby spots ──────────────────────────────────────────────────
-  "Foursquare":       "spots",
+  // ── Top nearby spots ──────────────────────────────────────────────────────
+  "Foursquare":             "spots",
 
-  // ── Google Places recs (footer only) ─────────────────────────────────
-  "Google Places":    "recommendation",
-  "Activity Places":  "recommendation",
-  "Wellness Places":  "recommendation",
+  // ── Google Places recs (footer only) ─────────────────────────────────────
+  "Google Places":          "recommendation",
+  "Activity Places":        "recommendation",
+  "Wellness Places":        "recommendation",
 };
 
 /**
  * Returns the feed section for a given item.
  *
- * - type === "recommendation" always maps to "recommendation"
- *   regardless of source (stays in footer, never in sectioned list).
  * - Sources explicitly listed above use that mapping.
- * - Everything else (Reddit r/*, RSS sources, Google Events, Visit Lancaster,
- *   future sources) defaults to "community" so new sources automatically
- *   appear in the right bucket with no code change.
+ * - Unknown recommendation-type items (e.g. GP recs) go to footer.
+ * - Everything else (Reddit r/*, RSS sources, Google Events, etc.)
+ *   defaults to "community" so new sources appear in the right bucket
+ *   automatically with no code change.
  */
 export function getSectionForItem(item: {
   source?: string;
   type?: string;
 }): FeedSection {
-  // Check explicit source mapping first — Viator and Activities are
-  // type:"recommendation" but still have named sections (ticketed/community).
   const mapped = SOURCE_SECTION[item.source ?? ""];
   if (mapped) return mapped;
-  // Unknown recommendation-type items (e.g. GP recs) go to footer.
   if (item.type === "recommendation") return "recommendation";
-  // Everything else defaults to community.
   return "community";
 }
 
@@ -67,8 +70,10 @@ export type SectionConfig = {
 };
 
 export const FEED_SECTION_CONFIG: SectionConfig[] = [
-  { key: "happening",  label: "Happening near you",  emoji: "📍" },
-  { key: "community",  label: "From the community",  emoji: "🤝" },
-  { key: "ticketed",   label: "Ticketed events",     emoji: "🎟️" },
-  { key: "spots",      label: "Top nearby spots for you", emoji: "⭐" },
+  { key: "happening", label: "Meetups",              emoji: "📍" },
+  { key: "venues",    label: "Happening near you",   emoji: "🌆" },
+  { key: "community", label: "From the community",   emoji: "🤝" },
+  { key: "library",   label: "At your library",      emoji: "🏛️" },
+  { key: "ticketed",  label: "Ticketed events",      emoji: "🎟️" },
+  { key: "spots",     label: "Top nearby spots",     emoji: "⭐" },
 ];

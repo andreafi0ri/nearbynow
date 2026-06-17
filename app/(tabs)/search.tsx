@@ -12,6 +12,7 @@ import { EventCard } from "../../src/components/EventCard";
 import { EventItem } from "../../src/data/mockEvents";
 import { getFeed } from "../../src/services/feedService";
 import { Wordmark } from "../../src/components/Wordmark";
+import { injectEventSchema, removeEventSchema } from "../../src/utils/injectEventSchema";
 
 export default function SavedScreen() {
   const { theme: T } = useTheme();
@@ -21,6 +22,15 @@ export default function SavedScreen() {
   const [allItems, setAllItems] = useState<EventItem[]>([]);
   const [detailItem, setDetailItem] = useState<EventItem | null>(null);
   const [query, setQuery] = useState("");
+
+  function openDetail(item: EventItem) {
+    injectEventSchema(item);
+    setDetailItem(item);
+  }
+  function closeDetail() {
+    removeEventSchema();
+    closeDetail();
+  }
   const [searching, setSearching] = useState(false);
 
   useEffect(() => {
@@ -165,7 +175,7 @@ export default function SavedScreen() {
         renderItem={({ item }) => (
           isSearchMode ? (
             <TouchableOpacity
-              onPress={() => setDetailItem(item)}
+              onPress={() => openDetail(item)}
               style={[styles.row, { backgroundColor: T.bgCard, borderColor: T.border, shadowColor: T.border }]}
             >
               <View style={[styles.icon, { backgroundColor: item.catColor + "18", borderColor: item.catColor }]}>
@@ -186,7 +196,7 @@ export default function SavedScreen() {
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
-              onPress={() => setDetailItem(item)}
+              onPress={() => openDetail(item)}
               style={[styles.row, { backgroundColor: T.bgCard, borderColor: T.border, shadowColor: T.border }]}
             >
               <View style={[styles.icon, { backgroundColor: item.catColor + "18", borderColor: item.catColor }]}>
@@ -211,9 +221,9 @@ export default function SavedScreen() {
         visible={detailItem !== null}
         animationType="slide"
         transparent
-        onRequestClose={() => setDetailItem(null)}
+        onRequestClose={() => closeDetail()}
       >
-        <Pressable style={styles.overlay} onPress={() => setDetailItem(null)} />
+        <Pressable style={styles.overlay} onPress={() => closeDetail()} />
         <View style={[styles.sheet, { backgroundColor: T.bg, borderColor: T.border }]}>
           <View style={[styles.sheetHandle, { backgroundColor: T.borderSub }]} />
           <FlatList

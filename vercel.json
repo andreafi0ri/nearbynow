@@ -13,10 +13,15 @@
     "api/fetch-page.js":         { "maxDuration": 10 }
   },
   "rewrites": [
-    { "source": "/privacy",      "destination": "/privacy/index.html" },
-    { "source": "/terms",        "destination": "/terms/index.html" },
-    { "source": "/delete-data",  "destination": "/delete-data/index.html" },
-    { "source": "/auth/callback","destination": "/index.html" },
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    { "source": "/privacy",           "destination": "/privacy/index.html" },
+    { "source": "/terms",             "destination": "/terms/index.html" },
+    { "source": "/delete-data",       "destination": "/delete-data/index.html" },
+    { "source": "/auth/callback",     "destination": "/index.html" },
+    { "source": "/pa/lancaster",      "destination": "/pa/lancaster/index.html" },
+    { "source": "/pa/york",           "destination": "/pa/york/index.html" },
+    { "source": "/pa/harrisburg",     "destination": "/pa/harrisburg/index.html" },
+    { "source": "/pa/philadelphia",   "destination": "/pa/philadelphia/index.html" },
+    { "source": "/pa/pittsburgh",     "destination": "/pa/pittsburgh/index.html" },
+    { "source": "/((?!api/|pa/).*)",  "destination": "/index.html" }
   ]
 }

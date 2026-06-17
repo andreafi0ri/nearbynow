@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 1200px; height: 630px; overflow: hidden; }
+    body {
+      background: #1A1412;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    /* Subtle grid texture */
+    body::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(212,168,67,0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(212,168,67,0.06) 1px, transparent 1px);
+      background-size: 48px 48px;
+    }
+
+    .card {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 0;
+    }
+
+    .pin-wrap {
+      margin-bottom: 28px;
+    }
+
+    .wordmark {
+      font-size: 64px;
+      font-weight: 700;
+      color: #F5F0E6;
+      letter-spacing: -1.5px;
+      line-height: 1;
+      margin-bottom: 16px;
+    }
+    .wordmark span { color: #E0392A; }
+
+    .tagline {
+      font-size: 24px;
+      color: #B8AFA7;
+      letter-spacing: 0.2px;
+      margin-bottom: 36px;
+    }
+
+    .pills {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 900px;
+    }
+    .pill {
+      background: rgba(245,240,230,0.08);
+      border: 1.5px solid rgba(212,168,67,0.3);
+      border-radius: 100px;
+      padding: 8px 20px;
+      font-size: 15px;
+      color: #D4A843;
+      font-weight: 600;
+    }
+
+    .url {
+      margin-top: 40px;
+      font-size: 18px;
+      color: #6B5E56;
+      letter-spacing: 0.5px;
+    }
+    .url strong { color: #F5F0E6; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="pin-wrap">
+      <svg width="60" height="84" viewBox="0 0 50 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="25" cy="28" r="23" fill="none" stroke="#D4A843" stroke-width="3"/>
+        <circle cx="25" cy="28" r="19" fill="#E0392A"/>
+        <polygon points="8,44 42,44 25,68" fill="#E0392A"/>
+        <circle cx="25" cy="28" r="9" fill="#D4A843"/>
+        <circle cx="25" cy="28" r="3.5" fill="#1A1412"/>
+      </svg>
+    </div>
+
+    <div class="wordmark">Nearby<span> &amp; </span>Now</div>
+    <div class="tagline">What's happening near you</div>
+
+    <div class="pills">
+      <span class="pill">Concerts</span>
+      <span class="pill">Meetups</span>
+      <span class="pill">Library Events</span>
+      <span class="pill">Live Music</span>
+      <span class="pill">Community</span>
+      <span class="pill">Trivia Nights</span>
+      <span class="pill">Festivals</span>
+    </div>
+
+    <div class="url"><strong>nearbyandnow.com</strong> · Free · No sign-up</div>
+  </div>
+</body>
+</html>

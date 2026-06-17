@@ -1,42 +1,42 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://www.nearbyandnow.com/</loc>
+    <loc>https://nearbyandnow.com/</loc>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://www.nearbyandnow.com/pa/lancaster</loc>
+    <loc>https://nearbyandnow.com/pa/lancaster</loc>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.nearbyandnow.com/pa/york</loc>
+    <loc>https://nearbyandnow.com/pa/york</loc>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://www.nearbyandnow.com/pa/harrisburg</loc>
+    <loc>https://nearbyandnow.com/pa/harrisburg</loc>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://www.nearbyandnow.com/pa/philadelphia</loc>
+    <loc>https://nearbyandnow.com/pa/philadelphia</loc>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://www.nearbyandnow.com/pa/pittsburgh</loc>
+    <loc>https://nearbyandnow.com/pa/pittsburgh</loc>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://www.nearbyandnow.com/privacy</loc>
+    <loc>https://nearbyandnow.com/privacy</loc>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://www.nearbyandnow.com/terms</loc>
+    <loc>https://nearbyandnow.com/terms</loc>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
   </url>

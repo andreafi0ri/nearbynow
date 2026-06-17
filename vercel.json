@@ -2,6 +2,14 @@
   "framework": null,
   "buildCommand": "npx expo export -p web && node scripts/inject-html-tags.mjs",
   "outputDirectory": "dist",
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "www.nearbyandnow.com" }],
+      "destination": "https://nearbyandnow.com/:path*",
+      "permanent": true
+    }
+  ],
   "functions": {
     "api/viator-search.js":      { "memory": 128, "maxDuration": 15 },
     "api/viator-products.js":    { "memory": 128, "maxDuration": 15 },

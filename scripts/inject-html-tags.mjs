@@ -41,10 +41,10 @@ const tags = `
 
   <!-- Open Graph -->
   <meta property="og:type"         content="website" />
-  <meta property="og:url"          content="https://www.nearbyandnow.com/" />
+  <meta property="og:url"          content="https://nearbyandnow.com/" />
   <meta property="og:title"        content="Nearby &amp; Now — What’s Happening Near You" />
   <meta property="og:description"  content="Local events, news and recommendations from across the web — all in one feed. Free, no sign-up required." />
-  <meta property="og:image"        content="https://www.nearbyandnow.com/og-image.png" />
+  <meta property="og:image"        content="https://nearbyandnow.com/og-image.png" />
   <meta property="og:image:width"  content="1200" />
   <meta property="og:image:height" content="630" />
   <meta property="og:image:alt"    content="Nearby &amp; Now — What’s happening near you" />
@@ -55,10 +55,10 @@ const tags = `
   <meta name="twitter:card"        content="summary_large_image" />
   <meta name="twitter:title"       content="Nearby &amp; Now — What’s Happening Near You" />
   <meta name="twitter:description" content="Local events, news and recommendations from across the web — all in one free feed." />
-  <meta name="twitter:image"       content="https://www.nearbyandnow.com/og-image.png" />
+  <meta name="twitter:image"       content="https://nearbyandnow.com/og-image.png" />
 
   <!-- Canonical + geo -->
-  <link rel="canonical" href="https://www.nearbyandnow.com/" />
+  <link rel="canonical" href="https://nearbyandnow.com/" />
   <meta name="geo.region"    content="US-PA" />
   <meta name="geo.placename" content="Pennsylvania" />
   <meta name="ICBM"          content="40.9967,-77.6088" />
@@ -89,7 +89,7 @@ const tags = `
     "@type": ["WebApplication","SoftwareApplication"],
     "name": "Nearby & Now",
     "alternateName": "NearbyAndNow",
-    "url": "https://www.nearbyandnow.com",
+    "url": "https://nearbyandnow.com",
     "description": "Nearby & Now is a free hyperlocal event discovery app that pulls events, meetups, concerts, library programs, live music, trivia nights, community activities and local news from 15+ sources into one location-aware feed. No download or sign-up required. Available across Pennsylvania.",
     "applicationCategory": "LifestyleApplication",
     "applicationSubCategory": "EventsApplication",
@@ -105,7 +105,7 @@ const tags = `
       "Community meetups",
       "Push notifications for local events"
     ],
-    "screenshot": "https://www.nearbyandnow.com/og-image.png",
+    "screenshot": "https://nearbyandnow.com/og-image.png",
     "author": { "@type": "Organization", "name": "Andronikos Consulting LLC" },
     "areaServed": { "@type": "State", "name": "Pennsylvania", "addressCountry": "US" }
   }
@@ -117,8 +117,8 @@ const tags = `
     "@context": "https://schema.org",
     "@type": "Organization",
     "name": "Nearby & Now",
-    "url": "https://www.nearbyandnow.com",
-    "logo": "https://www.nearbyandnow.com/icons/icon-512x512.png",
+    "url": "https://nearbyandnow.com",
+    "logo": "https://nearbyandnow.com/icons/icon-512x512.png",
     "description": "Nearby & Now aggregates local events, news and recommendations from across the web into one free location-aware feed — covering Pennsylvania and expanding.",
     "foundingDate": "2024",
     "areaServed": "Pennsylvania, United States",

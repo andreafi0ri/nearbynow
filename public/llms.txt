@@ -1,5 +1,4 @@
 # Nearby & Now
-
 > What's happening near you. Local events, news and recommendations from across the web — all in one feed.
 
 Nearby & Now (nearbyandnow.com) is a free hyperlocal event discovery web app (PWA) covering Pennsylvania, expanding to all US cities.

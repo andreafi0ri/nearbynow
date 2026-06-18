@@ -147,7 +147,7 @@ export default function TabLayout() {
   return (
     <Tabs
       tabBar={props => <FloatingTabBar {...props} />}
-      screenOptions={{ headerShown: false }}
+      screenOptions={{ headerShown: false, lazy: true }}
     >
       <Tabs.Screen name="feed"    options={{ title: "Feed" }} />
       <Tabs.Screen name="map"     options={{ title: "Map" }} />

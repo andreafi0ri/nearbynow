@@ -1,6 +1,8 @@
-// Post-build: inject <head> tags that Expo's static renderer drops.
+// Post-build: inject SEO <head> tags that Expo's static renderer drops.
 // Run after `expo export -p web` via the Vercel buildCommand.
-import { readFileSync, writeFileSync } from "fs";
+// PWA (manifest, icons), GA, SW, GSC, and fonts live in app/+html.tsx —
+// this script only adds SEO/GEO signals and the entry-bundle preload hint.
+import { readFileSync, writeFileSync, readdirSync } from "fs";
 
 const indexPath = "dist/index.html";
 let html = readFileSync(indexPath, "utf8");
@@ -8,7 +10,6 @@ let html = readFileSync(indexPath, "utf8");
 // Guard — idempotent: skip if SEO tags already injected
 if (html.includes("og:type")) {
   console.log("✓ Tags already present — skipping inject");
-  writeFileSync(indexPath, html, "utf8");
   process.exit(0);
 }
 
@@ -25,7 +26,7 @@ html = html.replace(
 // ── Title ───────────────────────────────────────────────────────────────────
 html = html.replace(
   /<title>[^<]*<\/title>/,
-  "<title>Nearby &amp; Now — What’s Happening Near You | Local Events Pennsylvania</title>"
+  "<title>Nearby &amp; Now — What's Happening Near You | Local Events Pennsylvania</title>"
 );
 
 // ── Replace bare Expo description with full SEO version ─────────────────────
@@ -34,26 +35,35 @@ html = html.replace(
   '<meta name="description" content="Discover local events, meetups, concerts, library programs and community happenings near you. Nearby &amp; Now pulls from 15+ sources into one free feed — no sign-up needed. Covering Pennsylvania and expanding." />'
 );
 
+// ── Entry bundle preload — tell the browser to fetch the main JS ASAP ───────
+let preloadTag = "";
+try {
+  const files = readdirSync("dist/_expo/static/js/web");
+  const entry = files.find(f => f.startsWith("entry-") && f.endsWith(".js"));
+  if (entry) preloadTag = `\n  <link rel="modulepreload" href="/_expo/static/js/web/${entry}" as="script" />`;
+} catch {}
+
 // ── All injected head tags ───────────────────────────────────────────────────
-const tags = `
+const tags = `${preloadTag}
+
   <!-- Primary SEO -->
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
 
   <!-- Open Graph -->
   <meta property="og:type"         content="website" />
   <meta property="og:url"          content="https://nearbyandnow.com/" />
-  <meta property="og:title"        content="Nearby &amp; Now — What’s Happening Near You" />
+  <meta property="og:title"        content="Nearby &amp; Now — What's Happening Near You" />
   <meta property="og:description"  content="Local events, news and recommendations from across the web — all in one feed. Free, no sign-up required." />
   <meta property="og:image"        content="https://nearbyandnow.com/og-image.png" />
   <meta property="og:image:width"  content="1200" />
   <meta property="og:image:height" content="630" />
-  <meta property="og:image:alt"    content="Nearby &amp; Now — What’s happening near you" />
+  <meta property="og:image:alt"    content="Nearby &amp; Now — What's happening near you" />
   <meta property="og:locale"       content="en_US" />
   <meta property="og:site_name"    content="Nearby &amp; Now" />
 
   <!-- Twitter / X -->
   <meta name="twitter:card"        content="summary_large_image" />
-  <meta name="twitter:title"       content="Nearby &amp; Now — What’s Happening Near You" />
+  <meta name="twitter:title"       content="Nearby &amp; Now — What's Happening Near You" />
   <meta name="twitter:description" content="Local events, news and recommendations from across the web — all in one free feed." />
   <meta name="twitter:image"       content="https://nearbyandnow.com/og-image.png" />
 
@@ -62,25 +72,6 @@ const tags = `
   <meta name="geo.region"    content="US-PA" />
   <meta name="geo.placename" content="Pennsylvania" />
   <meta name="ICBM"          content="40.9967,-77.6088" />
-
-  <!-- GSC + PWA -->
-  <meta name="google-site-verification" content="m7iJAREJhSRrNVZ2UJbdNmzE9DXqijeOrqhEeXEsozI" />
-  <link rel="manifest" href="/manifest.json" />
-  <link rel="icon" type="image/svg+xml" href="/nearbynow-icon.svg" />
-  <link rel="icon" type="image/png" sizes="192x192" href="/nearbynow-icon-192.png" />
-  <link rel="apple-touch-icon" href="/nearbynow-apple-icon.png" />
-
-  <!-- Google Analytics -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-6ENK256D12"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-6ENK256D12');
-  </script>
-
-  <!-- Service Worker -->
-  <script>if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js'));</script>
 
   <!-- Schema.org: WebApplication -->
   <script type="application/ld+json">
@@ -186,4 +177,4 @@ const tags = `
 
 html = html.replace("</head>", `${tags}\n</head>`);
 writeFileSync(indexPath, html, "utf8");
-console.log("✓ Injected SEO meta, schema.org JSON-LD, PWA tags, and Analytics into dist/index.html");
+console.log("✓ Injected SEO meta and schema.org JSON-LD into dist/index.html");

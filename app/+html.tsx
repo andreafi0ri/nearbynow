@@ -14,17 +14,22 @@ export default function Root({ children }: { children: React.ReactNode }) {
         {/* PWA */}
         <link rel="manifest" href="/manifest.json" />
         <link rel="apple-touch-icon" href="/nearbynow-apple-icon.png" />
-        {/* JetBrains Mono — used by source badge pills */}
+        {/* Fonts — preconnect first, then CSS with display=swap so text renders immediately */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* Inter — main app font; load before JS bundle so FCP has real text */}
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet" />
+        {/* JetBrains Mono — source badge pills */}
         <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet" />
-        {/* Google Analytics */}
-        <script async src="https://www.googletagmanager.com/gtag/js?id=G-6ENK256D12" />
+        {/* Google Analytics — deferred 3s so it never competes with first paint */}
+        <script defer src="https://www.googletagmanager.com/gtag/js?id=G-6ENK256D12" />
         <script dangerouslySetInnerHTML={{ __html: `
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-          gtag('config', 'G-6ENK256D12');
+          setTimeout(function() {
+            gtag('js', new Date());
+            gtag('config', 'G-6ENK256D12');
+          }, 3000);
         `}} />
         {/* Service worker */}
         <script dangerouslySetInnerHTML={{ __html: `

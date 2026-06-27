@@ -341,16 +341,24 @@ export async function searchSerpEvents(
     clearTimeout(timeout);
 
     if (!res.ok) {
-      console.warn(`[Serper] Proxy returned ${res.status}`);
+      const errBody = await res.text().catch(() => "");
+      console.warn(`[Serper] Proxy returned ${res.status}:`, errBody.slice(0, 300));
       return [];
     }
 
     const data: SerperResponse = await res.json();
+    // DEBUG — remove after confirming events flow
+    console.log(`[Serper] Raw proxy response keys:`, Object.keys(data),
+      `events:${(data.events ?? []).length}`,
+      `events_results:${(data.events_results ?? []).length}`,
+      `organic:${((data as any).organic ?? []).length}`,
+    );
+
     // Serper returns { events: [...] }; fall back to SerpAPI shape if needed
     const events = data.events ?? data.events_results ?? [];
 
     if (events.length === 0) {
-      console.info(`[Serper] No events for "${area}"`);
+      console.warn(`[Serper] No events for "${area}" — response keys: ${Object.keys(data).join(", ")}`);
       serpCache.set(cacheKey, { data: [], expiresAt: Date.now() + CACHE_TTL });
       return [];
     }

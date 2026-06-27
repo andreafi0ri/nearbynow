@@ -55,10 +55,17 @@ type SerpEvent = {
   thumbnail?: string;
 };
 
+type SerperOrganic = {
+  title?:   string;
+  link?:    string;
+  snippet?: string;
+  date?:    string;
+};
+
 type SerperResponse = {
   events?:         SerpEvent[];
   events_results?: SerpEvent[];   // SerpAPI fallback shape
-  organic?:        Array<{ title?: string; snippet?: string; link?: string }>;
+  organic?:        SerperOrganic[];
 };
 
 // ─── Known-source filter ──────────────────────────────────────────────────────
@@ -183,6 +190,52 @@ function buildEventTags(event: SerpEvent): string[] {
     event.ticket_info?.[0]?.source ?? null,
     event.venue?.rating ? `★ ${event.venue.rating}` : null,
   ].filter((t): t is string => t !== null).slice(0, 3);
+}
+
+// ─── Organic-result event detection ──────────────────────────────────────────
+// Serper's /search doesn't always return a structured `events` array —
+// it depends on whether Google shows an events panel for that query.
+// When events is empty, fall back to organic results that look event-like.
+
+const EVENT_KEYWORDS = /\b(event|festival|concert|show|performance|exhibit|fair|market|meetup|conference|workshop|gala|parade|race|game|match|tournament|screening|opening|launch|expo|summit|hackathon|trivia|karaoke|comedy|opera|ballet|lecture)\b/i;
+
+function isEventLike(title: string, snippet: string): boolean {
+  return EVENT_KEYWORDS.test(title) || EVENT_KEYWORDS.test(snippet);
+}
+
+function mapSerperOrganic(result: SerperOrganic, area: string): EventItem | null {
+  if (!result.title || !result.link) return null;
+
+  // Skip known aggregator domains — we already pull from them directly
+  const linkLower = result.link.toLowerCase();
+  if (KNOWN_SOURCE_DOMAINS.some(d => linkLower.includes(d))) return null;
+
+  const today    = new Date().toISOString().split("T")[0];
+  const category = detectCategory(result.title, result.snippet ?? "");
+
+  return {
+    id:        hashString(`serper-org-${result.title}-${result.link}`),
+    type:      "event",
+    title:     result.title.slice(0, 80),
+    desc:      (result.snippet ?? result.title).slice(0, 200),
+    longDesc:  result.snippet?.slice(0, 600) ?? result.title,
+    time:      "See website for times",
+    date:      today,
+    startIso:  `${today}T00:00:00`,
+    location:  area,
+    lat:       undefined,
+    lng:       undefined,
+    source:    "Google Events",
+    category,
+    catColor:  mapCategoryColor(category),
+    catDot:    mapCategoryDot(category),
+    saves:     0,
+    img:       mapCategoryEmoji(category),
+    booking:   { label: "View event", url: result.link, affiliate: false as const },
+    tags:      [],
+    isCanceled: false,
+    imageUrl:  undefined,
+  };
 }
 
 // ─── Date parsing ─────────────────────────────────────────────────────────────
@@ -347,35 +400,39 @@ export async function searchSerpEvents(
     }
 
     const data: SerperResponse = await res.json();
-    // DEBUG — remove after confirming events flow
-    console.log(`[Serper] Raw proxy response keys:`, Object.keys(data),
-      `events:${(data.events ?? []).length}`,
-      `events_results:${(data.events_results ?? []).length}`,
-      `organic:${((data as any).organic ?? []).length}`,
-    );
 
-    // Serper returns { events: [...] }; fall back to SerpAPI shape if needed
+    // Serper returns { events: [...] } when Google shows an events panel;
+    // otherwise falls back to organic web results (event listing pages).
     const events = data.events ?? data.events_results ?? [];
 
-    if (events.length === 0) {
-      console.warn(`[Serper] No events for "${area}" — response keys: ${Object.keys(data).join(", ")}`);
-      serpCache.set(cacheKey, { data: [], expiresAt: Date.now() + CACHE_TTL });
-      return [];
+    if (events.length > 0) {
+      const newOnly  = events.filter(e => !isKnownSource(e));
+      const filtered = events.length - newOnly.length;
+      console.log(
+        `[Serper] "${area}" — ${events.length} structured events, ` +
+        `${filtered} filtered, ${newOnly.length} new`
+      );
+      const items = newOnly
+        .map(e => mapSerpEvent(e, area))
+        .filter((item): item is EventItem => item !== null);
+      serpCache.set(cacheKey, { data: items, expiresAt: Date.now() + CACHE_TTL });
+      return items;
     }
 
-    const newOnly  = events.filter(e => !isKnownSource(e));
-    const filtered = events.length - newOnly.length;
-    console.log(
-      `[Serper] "${area}" — ${events.length} total, ` +
-      `${filtered} from known sources filtered, ${newOnly.length} new`
-    );
-
-    const items = newOnly
-      .map(e => mapSerpEvent(e, area))
+    // No structured events panel — fall back to organic results
+    const organic = data.organic ?? [];
+    const organicEvents = organic
+      .filter(r => isEventLike(r.title ?? "", r.snippet ?? ""))
+      .map(r => mapSerperOrganic(r, area))
       .filter((item): item is EventItem => item !== null);
 
-    serpCache.set(cacheKey, { data: items, expiresAt: Date.now() + CACHE_TTL });
-    return items;
+    console.log(
+      `[Serper] "${area}" — no events panel, ${organic.length} organic results, ` +
+      `${organicEvents.length} event-like`
+    );
+
+    serpCache.set(cacheKey, { data: organicEvents, expiresAt: Date.now() + CACHE_TTL });
+    return organicEvents;
 
   } catch (err: any) {
     clearTimeout(timeout);

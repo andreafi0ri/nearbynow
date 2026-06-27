@@ -225,7 +225,8 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
   ];
 
   // ── Step 2: GP recommendations + Serper keyword search ───────────────────
-  const allRaw = [...seed, ...live];
+  const allRaw     = [...seed, ...live];
+  const eventItems = allRaw.filter(item => item.type === "event");
 
   let googlePlacesItems: EventItem[] = [];
 

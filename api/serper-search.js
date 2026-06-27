@@ -54,6 +54,13 @@ module.exports = async function handler(req, res) {
 
     const data = await upstream.json();
 
+    const eventCount = (data.events ?? []).length;
+    const organicCount = (data.organic ?? []).length;
+    console.log(
+      `[serper-search] q="${q}" → events:${eventCount}, organic:${organicCount}`,
+      "keys:", Object.keys(data).join(", ")
+    );
+
     res.setHeader("Content-Type", "application/json");
     return res.status(200).json({
       events:         data.events         ?? [],

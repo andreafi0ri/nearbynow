@@ -16,6 +16,7 @@
     "api/facebook-events.js":    { "memory": 128, "maxDuration": 20 },
     "api/meetup-search.js":      { "maxDuration": 10 },
     "api/serp-events.js":        { "maxDuration": 10 },
+    "api/serper-search.js":      { "maxDuration": 10 },
     "api/lititz-events.js":      { "maxDuration": 10 },
     "api/foursquare-search.js":  { "maxDuration": 10 },
     "api/fetch-page.js":         { "maxDuration": 10 }

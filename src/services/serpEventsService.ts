@@ -331,11 +331,10 @@ export async function searchSerpEvents(
       method:  "POST",
       headers: { "Content-Type": "application/json" },
       body:    JSON.stringify({
-        q:    buildSearchQuery(area),
-        gl:   "us",
-        hl:   "en",
-        num:  10,
-        type: "events",
+        q:   buildSearchQuery(area),
+        gl:  "us",
+        hl:  "en",
+        num: 10,
       }),
       signal: controller.signal,
     });
@@ -416,7 +415,7 @@ export async function searchSerpKeywords(area: string): Promise<EventItem[]> {
     const res = await fetch(`${PROXY_BASE}/api/serper-search`, {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ q, gl: "us", hl: "en", num: 10, type: "events" }),
+      body:    JSON.stringify({ q, gl: "us", hl: "en", num: 10 }),
       signal:  controller.signal,
     });
     clearTimeout(timeout);

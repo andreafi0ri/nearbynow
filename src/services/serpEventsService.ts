@@ -83,14 +83,12 @@ const KNOWN_SOURCE_DOMAINS = [
 ];
 
 function isKnownSource(event: SerpEvent): boolean {
+  // Check only the primary event link — not ticket_info links.
+  // Many local-venue events sell tickets via Eventbrite/Ticketmaster;
+  // that doesn't make them Eventbrite events. Only filter when the
+  // event page itself lives on a known aggregator.
   const linkLower = (event.link ?? "").toLowerCase();
-  const ticketLinks = (event.ticket_info ?? [])
-    .map((t: SerpTicketInfo) => (t.link ?? "").toLowerCase());
-
-  return KNOWN_SOURCE_DOMAINS.some(domain =>
-    linkLower.includes(domain) ||
-    ticketLinks.some(tl => tl.includes(domain))
-  );
+  return KNOWN_SOURCE_DOMAINS.some(domain => linkLower.includes(domain));
 }
 
 // ─── Cache ────────────────────────────────────────────────────────────────────

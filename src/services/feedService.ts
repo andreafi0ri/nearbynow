@@ -22,7 +22,7 @@ import { getNearbyActivities, getWellnessVenues } from "./activitiesService";
 import { searchSerpEvents, searchSerpKeywords } from "./serpEventsService";
 import { getNightlife } from "./nightlifeService";
 import { getParksAndOutdoors } from "./parksService";
-import { SEARCH_CONFIG, shouldFetchGooglePlaces, metresToMiles } from "../config/searchConfig";
+import { SEARCH_CONFIG, metresToMiles } from "../config/searchConfig";
 import { geocodeArea, type Coords } from "./recommendationsService";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { notifyNewEvents } from "../utils/notificationHelpers";
@@ -224,39 +224,20 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
     ...extract(serpResult),         // Google Events via Serper — always-on, new sources only
   ];
 
-  // ── Step 2: GP recommendations + Serper keyword gap-fill ─────────────────
-  //
-  // getRecommendations runs unconditionally — it powers both the "You might
-  // also like" footer (profile toggle) and the Google Places source filter.
-  // Gating it on event count meant the toggle and filter appeared broken in
-  // any city with ≥ 20 events.
-  //
-  // searchSerpEvents is now always-on (moved to Step 1 parallel fetches).
-  // searchSerpKeywords remains threshold-gated — separate quota consideration.
-  const allRaw     = [...seed, ...live];
-  const eventItems = allRaw.filter(item => item.type === "event");
-  const shouldFetch = shouldFetchGooglePlaces(eventItems.length);
+  // ── Step 2: GP recommendations + Serper keyword search ───────────────────
+  const allRaw = [...seed, ...live];
 
   let googlePlacesItems: EventItem[] = [];
 
-  // GP recommendations — always fetch regardless of event count
-  const gpResult = await getRecommendations(area, resolvedCoords).catch(err => {
-    console.warn("[Feed] GP recommendations failed:", err);
-    return [] as EventItem[];
-  });
-  googlePlacesItems = gpResult;
+  const [gpResult, serpKwResult] = await Promise.allSettled([
+    getRecommendations(area, resolvedCoords),
+    searchSerpKeywords(area),
+  ]);
 
-  // Keyword search — threshold-gated to conserve Serper quota.
-  let serpKeywordItems: EventItem[] = [];
-  if (shouldFetch) {
-    const [serpKwResult] = await Promise.allSettled([
-      searchSerpKeywords(area),
-    ]);
-    serpKeywordItems = serpKwResult.status === "fulfilled" ? serpKwResult.value : [];
-    if (serpKeywordItems.length > 0) {
-      console.log(`[Feed] Serper keywords: ${serpKeywordItems.length} activity events`);
-    }
-  }
+  googlePlacesItems = gpResult.status === "fulfilled" ? gpResult.value : [];
+  if (gpResult.status === "rejected") console.warn("[Feed] GP recommendations failed:", gpResult.reason);
+
+  const serpKeywordItems = serpKwResult.status === "fulfilled" ? serpKwResult.value : [];
 
   // ── Step 3: Merge, deduplicate, sort ─────────────────────────────────────
   const allItems = [...allRaw, ...serpKeywordItems, ...googlePlacesItems];
@@ -289,7 +270,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
   console.log(`  Activities:       ${extract(activitiesResult).length} (always-on, shown in All)`);
   console.log(`  Wellness:         ${extract(wellnessResult).length} (always-on, filter-only)`);
   console.log(`  Google Events:    ${extract(serpResult).length} (SerpAPI, always-on)`);
-  console.log(`  Serper keywords:  ${serpKeywordItems.length} (activity keywords)`);
+  console.log(`  Serper keywords:  ${serpKeywordItems.length} (always-on)`);
   console.log(`  GP Recs:          ${googlePlacesItems.length} (recommendations footer)`);
   console.log("Deduplication stats:");
   console.log(`  Input:                 ${stats.inputCount} items`);

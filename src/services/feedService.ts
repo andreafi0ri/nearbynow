@@ -165,6 +165,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
     parksResult,
     activitiesResult,
     wellnessResult,
+    serpResult,
   ] = await Promise.allSettled([
     Promise.all(subreddits.map(sub => fetchRedditPosts(sub, SEARCH_CONFIG.REDDIT_MAX_RESULTS))).then(r => r.flat()),
     searchRedditKeywords(area),   // keyword search — free, no quota
@@ -179,14 +180,15 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
     isLancaster ? fetchFigLancasterEvents()            : Promise.resolve([]),
     isLancaster ? fetchLancasterLibrariesEvents()      : Promise.resolve([]),
     fetchStructuredEvents(area, resolvedCoords),  // schema.org JSON-LD (Tellús360 etc.) — name OR 20mi
-    fetchFoodPlaces(area, resolvedCoords),       // always-on → Food & Drink filter
-    fetchCinemas(area, resolvedCoords),          // always-on → Cinema filter
+    fetchFoodPlaces(area, resolvedCoords),        // always-on → Food & Drink filter
+    fetchCinemas(area, resolvedCoords),           // always-on → Cinema filter
     searchViatorExperiences(area, resolvedCoords), // always-on → Viator/Nearby
-    getShowtimes(area, resolvedCoords),          // always-on → AMC filter
-    getNightlife(area, resolvedCoords),          // always-on → Nightlife filter (hidden from All)
-    getParksAndOutdoors(area, resolvedCoords),   // always-on → Outdoors filter  (hidden from All)
-    getNearbyActivities(area, resolvedCoords),   // always-on → Activities filter (shown in All)
-    getWellnessVenues(area, resolvedCoords),     // always-on → Wellness filter  (hidden from All)
+    getShowtimes(area, resolvedCoords),           // always-on → AMC filter
+    getNightlife(area, resolvedCoords),           // always-on → Nightlife filter (hidden from All)
+    getParksAndOutdoors(area, resolvedCoords),    // always-on → Outdoors filter  (hidden from All)
+    getNearbyActivities(area, resolvedCoords),    // always-on → Activities filter (shown in All)
+    getWellnessVenues(area, resolvedCoords),      // always-on → Wellness filter  (hidden from All)
+    searchSerpEvents(area, resolvedCoords),       // always-on → Google Events via Serper (2,500/mo)
   ]);
 
   const seed = mockEventsForArea(area);
@@ -219,23 +221,23 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
     ...extract(parksResult),        // Outdoor Places   — hidden from All via FILTER_ONLY_SOURCE_MAP
     ...extract(activitiesResult),   // Activity Places — hidden from All, shown under Activities filter
     ...extract(wellnessResult),     // Wellness Places  — hidden from All via FILTER_ONLY_SOURCE_MAP
+    ...extract(serpResult),         // Google Events via Serper — always-on, new sources only
   ];
 
-  // ── Step 2: GP recommendations + SerpAPI gap-fill ────────────────────────
+  // ── Step 2: GP recommendations + Serper keyword gap-fill ─────────────────
   //
   // getRecommendations runs unconditionally — it powers both the "You might
   // also like" footer (profile toggle) and the Google Places source filter.
   // Gating it on event count meant the toggle and filter appeared broken in
   // any city with ≥ 20 events.
   //
-  // searchSerpEvents remains threshold-gated to conserve the free tier quota
-  // (100 searches/month). Only fires in sparse areas.
+  // searchSerpEvents is now always-on (moved to Step 1 parallel fetches).
+  // searchSerpKeywords remains threshold-gated — separate quota consideration.
   const allRaw     = [...seed, ...live];
   const eventItems = allRaw.filter(item => item.type === "event");
   const shouldFetch = shouldFetchGooglePlaces(eventItems.length);
 
   let googlePlacesItems: EventItem[] = [];
-  let serpItems:         EventItem[] = [];
 
   // GP recommendations — always fetch regardless of event count
   const gpResult = await getRecommendations(area, resolvedCoords).catch(err => {
@@ -244,28 +246,20 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
   });
   googlePlacesItems = gpResult;
 
-  // SerpAPI gap-fill + keyword search — only when events are sparse.
-  // Both gated by the same threshold to conserve the free tier quota.
+  // Keyword search — threshold-gated to conserve Serper quota.
   let serpKeywordItems: EventItem[] = [];
   if (shouldFetch) {
-    const [serpResult, serpKwResult] = await Promise.allSettled([
-      searchSerpEvents(area, resolvedCoords),
+    const [serpKwResult] = await Promise.allSettled([
       searchSerpKeywords(area),
     ]);
-    serpItems        = serpResult.status   === "fulfilled" ? serpResult.value   : [];
     serpKeywordItems = serpKwResult.status === "fulfilled" ? serpKwResult.value : [];
-    if (serpItems.length > 0) {
-      console.log(`[Feed] Google Events gap-fill: ${serpItems.length} new-source events`);
-    }
     if (serpKeywordItems.length > 0) {
-      console.log(`[Feed] Google Events keywords: ${serpKeywordItems.length} activity events`);
+      console.log(`[Feed] Serper keywords: ${serpKeywordItems.length} activity events`);
     }
   }
 
   // ── Step 3: Merge, deduplicate, sort ─────────────────────────────────────
-  // SerpAPI items before GP recommendations — curated event listings rank higher
-  // than venue recommendations in the feed.
-  const allItems = [...allRaw, ...serpItems, ...serpKeywordItems, ...googlePlacesItems];
+  const allItems = [...allRaw, ...serpKeywordItems, ...googlePlacesItems];
   const { events: deduplicated, stats } = deduplicateFeed(allItems);
   const items = sortByDate(deduplicated);
 
@@ -294,8 +288,8 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
   console.log(`  Outdoor Places:   ${extract(parksResult).length} (always-on, filter-only)`);
   console.log(`  Activities:       ${extract(activitiesResult).length} (always-on, shown in All)`);
   console.log(`  Wellness:         ${extract(wellnessResult).length} (always-on, filter-only)`);
-  console.log(`  Google Events:    ${serpItems.length} (gap-fill, new sources only)`);
-  console.log(`  SerpAPI keywords: ${serpKeywordItems.length} (activity keywords)`);
+  console.log(`  Google Events:    ${extract(serpResult).length} (Serper, always-on)`);
+  console.log(`  Serper keywords:  ${serpKeywordItems.length} (activity keywords)`);
   console.log(`  GP Recs:          ${googlePlacesItems.length} (recommendations footer)`);
   console.log("Deduplication stats:");
   console.log(`  Input:                 ${stats.inputCount} items`);

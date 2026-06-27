@@ -1,25 +1,18 @@
-// Google Events via Serper.dev
+// Google Events — split source strategy:
 //
-// Surfaces the "long tail" of local events that other sources miss —
-// community calendars, local newspapers, library events, municipal
-// parks, and small independent venues.
+// searchSerpEvents  → SerpAPI  (api/serp-events.js, engine: google_events)
+//   Returns the same structured events as Google's udm=54 search tab.
+//   Always-on (no threshold gate). 30-min cache per area.
+//   Free tier: 100 searches/month. Monitor: serpapi.com/dashboard
 //
-// Same Google Events results as SerpAPI but uses SERPER_KEY
-// (2,500 free queries vs SerpAPI's 100).
+// searchSerpKeywords → Serper.dev (api/serper-search.js, organic results)
+//   Compound OR query for activity keywords (karaoke, trivia, yoga…).
+//   Threshold-gated — only fires in sparse areas. 1-hr cache.
+//   Falls back to organic event-like results when no events panel.
+//   Free tier: 2,500 queries/month. Monitor: serper.dev/dashboard
 //
-// 30-minute cache per area — all users in the same area share the
-// same cached result, so 50 Lancaster users count as 1 API call.
-//
-// Free tier: 2,500 queries — monitor at serper.dev/dashboard
-// After free tier: $1/1,000 queries
-//
-// Quota math (always-on):
-//   2,500 free ÷ 30 days = 83/day budget
-//   3 active cities × 1 call/30min cache = ~144 max/day theoretical
-//   In practice with shared cache: 10–20 calls/day at beta scale ✅
-//
-// API key security: SERPER_KEY lives ONLY in the Vercel proxy
-// (api/serper-search.js). Never prefixed EXPO_PUBLIC_.
+// Key security: SERPAPI_KEY and SERPER_KEY live only in Vercel proxies.
+// Neither is prefixed EXPO_PUBLIC_.
 
 import { Platform } from "react-native";
 import { EventItem } from "../data/mockEvents";
@@ -107,7 +100,7 @@ const CACHE_TTL = 30 * 60 * 1_000; // 30 minutes
 
 function getCacheKey(area: string): string {
   const today = new Date().toISOString().split("T")[0];
-  return `serper-${area.toLowerCase().trim()}-${today}`;
+  return `serp-${area.toLowerCase().trim()}-${today}`;
 }
 
 // ─── ID generation ────────────────────────────────────────────────────────────
@@ -352,15 +345,14 @@ const PROXY_BASE = Platform.OS === "web"
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 /**
- * Searches Google Events via Serper.dev for local events in the given area.
+ * Searches Google Events via SerpAPI (google_events engine) for local events.
  *
  * Always-on — runs in parallel with all other feed sources.
- * Serper's 2,500 free queries vs SerpAPI's 100 makes always-on viable.
- * Results from known aggregator sources are filtered so only long-tail
- * sources reach the feed.
+ * Returns the same structured events shown in Google's udm=54 tab.
+ * Known aggregator sources (Ticketmaster, Meetup, etc.) are filtered out
+ * so only long-tail sources reach the feed.
  *
- * Results are cached 30 minutes per area — all users in the same area share
- * one cached call, keeping actual query count well within the free tier.
+ * 30-min cache per area. Free tier: 100 searches/month on SerpAPI.
  *
  * @param area   Human-readable area name e.g. "Lancaster, PA"
  * @param coords Optional — not used by the query but kept for API consistency
@@ -372,74 +364,54 @@ export async function searchSerpEvents(
   const cacheKey = getCacheKey(area);
   const cached   = serpCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
-    console.log(`[Serper] Cache hit for "${area}" — ${cached.data.length} events`);
+    console.log(`[SerpAPI] Cache hit for "${area}" — ${cached.data.length} events`);
     return cached.data;
   }
 
+  const params = new URLSearchParams({ q: buildSearchQuery(area), gl: "us", hl: "en" });
   const controller = new AbortController();
   const timeout    = setTimeout(() => controller.abort(), 8_000);
 
   try {
-    const res = await fetch(`${PROXY_BASE}/api/serper-search`, {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({
-        q:   buildSearchQuery(area),
-        gl:  "us",
-        hl:  "en",
-        num: 10,
-      }),
+    const res = await fetch(`${PROXY_BASE}/api/serp-events?${params}`, {
       signal: controller.signal,
     });
     clearTimeout(timeout);
 
     if (!res.ok) {
-      const errBody = await res.text().catch(() => "");
-      console.warn(`[Serper] Proxy returned ${res.status}:`, errBody.slice(0, 300));
+      console.warn(`[SerpAPI] Proxy returned ${res.status}`);
       return [];
     }
 
     const data: SerperResponse = await res.json();
+    const events = data.events_results ?? [];
 
-    // Serper returns { events: [...] } when Google shows an events panel;
-    // otherwise falls back to organic web results (event listing pages).
-    const events = data.events ?? data.events_results ?? [];
-
-    if (events.length > 0) {
-      const newOnly  = events.filter(e => !isKnownSource(e));
-      const filtered = events.length - newOnly.length;
-      console.log(
-        `[Serper] "${area}" — ${events.length} structured events, ` +
-        `${filtered} filtered, ${newOnly.length} new`
-      );
-      const items = newOnly
-        .map(e => mapSerpEvent(e, area))
-        .filter((item): item is EventItem => item !== null);
-      serpCache.set(cacheKey, { data: items, expiresAt: Date.now() + CACHE_TTL });
-      return items;
+    if (events.length === 0) {
+      console.info(`[SerpAPI] No events for "${area}"`);
+      serpCache.set(cacheKey, { data: [], expiresAt: Date.now() + CACHE_TTL });
+      return [];
     }
 
-    // No structured events panel — fall back to organic results
-    const organic = data.organic ?? [];
-    const organicEvents = organic
-      .filter(r => isEventLike(r.title ?? "", r.snippet ?? ""))
-      .map(r => mapSerperOrganic(r, area))
-      .filter((item): item is EventItem => item !== null);
-
+    const newOnly  = events.filter(e => !isKnownSource(e));
+    const filtered = events.length - newOnly.length;
     console.log(
-      `[Serper] "${area}" — no events panel, ${organic.length} organic results, ` +
-      `${organicEvents.length} event-like`
+      `[SerpAPI] "${area}" — ${events.length} total, ` +
+      `${filtered} from known sources filtered, ${newOnly.length} new`
     );
 
-    serpCache.set(cacheKey, { data: organicEvents, expiresAt: Date.now() + CACHE_TTL });
-    return organicEvents;
+    const items = newOnly
+      .map(e => mapSerpEvent(e, area))
+      .filter((item): item is EventItem => item !== null);
+
+    serpCache.set(cacheKey, { data: items, expiresAt: Date.now() + CACHE_TTL });
+    return items;
 
   } catch (err: any) {
     clearTimeout(timeout);
     if (err.name === "AbortError") {
-      console.warn("[Serper] Timed out after 8s");
+      console.warn("[SerpAPI] Timed out after 8s");
     } else {
-      console.warn("[Serper] Fetch failed:", err.message);
+      console.warn("[SerpAPI] Fetch failed:", err.message);
     }
     return [];
   }
@@ -493,13 +465,25 @@ export async function searchSerpKeywords(area: string): Promise<EventItem[]> {
     const data: SerperResponse = await res.json();
     const events = data.events ?? data.events_results ?? [];
 
-    const items = events
-      .map(e => mapSerpEvent(e, area))
+    if (events.length > 0) {
+      const items = events
+        .map(e => mapSerpEvent(e, area))
+        .filter((i): i is EventItem => i !== null);
+      serpKeywordCache.set(cacheKey, { data: items, expiresAt: Date.now() + KEYWORD_CACHE_TTL });
+      console.log(`[Serper keywords] ${items.length} structured events for "${area}"`);
+      return items;
+    }
+
+    // Compound keyword queries rarely trigger an events panel — parse organic instead
+    const organic = data.organic ?? [];
+    const organicItems = organic
+      .filter(r => isEventLike(r.title ?? "", r.snippet ?? ""))
+      .map(r => mapSerperOrganic(r, area))
       .filter((i): i is EventItem => i !== null);
 
-    serpKeywordCache.set(cacheKey, { data: items, expiresAt: Date.now() + KEYWORD_CACHE_TTL });
-    console.log(`[Serper keywords] ${items.length} results for "${area}" (compound query)`);
-    return items;
+    serpKeywordCache.set(cacheKey, { data: organicItems, expiresAt: Date.now() + KEYWORD_CACHE_TTL });
+    console.log(`[Serper keywords] ${organicItems.length} organic results for "${area}" (no events panel)`);
+    return organicItems;
   } catch (err: any) {
     clearTimeout(timeout);
     if (err.name === "AbortError") console.warn("[Serper keywords] timed out after 8s");

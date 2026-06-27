@@ -288,7 +288,7 @@ export async function getFeed(area: string, coords?: Coords): Promise<FeedResult
   console.log(`  Outdoor Places:   ${extract(parksResult).length} (always-on, filter-only)`);
   console.log(`  Activities:       ${extract(activitiesResult).length} (always-on, shown in All)`);
   console.log(`  Wellness:         ${extract(wellnessResult).length} (always-on, filter-only)`);
-  console.log(`  Google Events:    ${extract(serpResult).length} (Serper, always-on)`);
+  console.log(`  Google Events:    ${extract(serpResult).length} (SerpAPI, always-on)`);
   console.log(`  Serper keywords:  ${serpKeywordItems.length} (activity keywords)`);
   console.log(`  GP Recs:          ${googlePlacesItems.length} (recommendations footer)`);
   console.log("Deduplication stats:");

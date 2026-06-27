@@ -22,16 +22,18 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const apiKey = process.env.SERPER_KEY;
+  const apiKey = process.env.SERPER_KEY ?? process.env.SERPER_API_KEY;
   if (!apiKey) {
-    console.error("[serper-search] SERPER_KEY not set in environment");
+    console.error("[serper-search] Neither SERPER_KEY nor SERPER_API_KEY set in environment");
     return res.status(500).json({ error: "API key not configured" });
   }
 
-  const { q, ...rest } = req.body ?? {};
+  const body = req.body ?? {};
+  const { q, ...rest } = body;
+  console.log(`[serper-search] Received body keys: ${Object.keys(body).join(", ")} | q="${q}" | key set: ${!!apiKey}`);
 
   if (!q) {
-    return res.status(400).json({ error: "Missing body field q" });
+    return res.status(400).json({ error: "Missing body field q", received: Object.keys(body) });
   }
 
   try {

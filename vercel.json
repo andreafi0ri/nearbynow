@@ -21,6 +21,9 @@
     "api/foursquare-search.js":  { "maxDuration": 10 },
     "api/fetch-page.js":         { "maxDuration": 10 }
   },
+  "crons": [
+    { "path": "/api/keep-alive", "schedule": "0 12 */5 * *" }
+  ],
   "rewrites": [
     { "source": "/privacy",           "destination": "/privacy/index.html" },
     { "source": "/terms",             "destination": "/terms/index.html" },

@@ -46,6 +46,13 @@ try {
 // ── All injected head tags ───────────────────────────────────────────────────
 const tags = `${preloadTag}
 
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="apple-touch-icon" href="/nearbynow-apple-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Nearby &amp; Now" />
+
   <!-- Primary SEO -->
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
 

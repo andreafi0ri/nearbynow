@@ -11,9 +11,13 @@
 //
 // Wired behind the isLancaster gate in feedService (Lancaster areas only).
 
+import { Platform } from "react-native";
 import { EventItem } from "../data/mockEvents";
 
-const ENDPOINT = "https://figlancaster.com/wp-json/tribe/events/v1/events";
+// figlancaster.com blocks cross-origin requests — route through Vercel proxy on web.
+const ENDPOINT = Platform.OS === "web"
+  ? "/api/fig-lancaster"
+  : "https://figlancaster.com/wp-json/tribe/events/v1/events";
 
 // ─── TEC REST types (subset we use) ─────────────────────────────────────────────
 

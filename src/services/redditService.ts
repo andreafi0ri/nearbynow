@@ -1,5 +1,12 @@
+import { Platform } from "react-native";
 import { EventItem } from "../data/mockEvents";
 import { SEARCH_CONFIG } from "../config/searchConfig";
+
+// Reddit blocks cross-origin requests from browsers — proxy through Vercel on web.
+const redditUrl = (url: string) =>
+  Platform.OS === "web"
+    ? `/api/reddit-proxy?url=${encodeURIComponent(url)}`
+    : url;
 import { REDDIT_KEYWORD_QUERY, ALL_KEYWORDS_FLAT } from "../config/keywordSearchConfig";
 
 const REDDIT_COLOR = "#FF4500";
@@ -181,7 +188,7 @@ function isRecent(p: RedditPost): boolean {
 // ─── Fetch helpers ────────────────────────────────────────────────────────────
 
 async function fetchPosts(url: string): Promise<RedditPost[]> {
-  const res = await fetch(url, { headers: { "User-Agent": "NearbyAndNow/1.0" } });
+  const res = await fetch(redditUrl(url), { headers: { "User-Agent": "NearbyAndNow/1.0" } });
   if (!res.ok) throw new Error(`Reddit ${res.status}: ${url}`);
   const json = await res.json();
   return (json.data?.children ?? []).map((c: { data: RedditPost }) => c.data);
@@ -375,7 +382,7 @@ export async function searchRedditKeywords(area: string): Promise<EventItem[]> {
 
   try {
     const res = await fetch(
-      `https://www.reddit.com/r/${sub}/search.json?${params}`,
+      redditUrl(`https://www.reddit.com/r/${sub}/search.json?${params}`),
       { headers: { "User-Agent": "NearbyAndNow/1.0" }, signal: controller.signal },
     );
     clearTimeout(timeout);

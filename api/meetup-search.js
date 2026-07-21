@@ -30,17 +30,25 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: "Missing query" });
     }
 
+    const headers = {
+      "Content-Type": "application/json",
+      "Accept":       "application/json",
+    };
+
+    // Include Bearer token if set — Meetup may require auth even for public queries
+    const meetupKey = process.env.MEETUP_KEY ?? process.env.EXPO_PUBLIC_MEETUP_KEY;
+    if (meetupKey) {
+      headers["Authorization"] = `Bearer ${meetupKey}`;
+    }
+
     const upstream = await fetch("https://api.meetup.com/gql2", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept":       "application/json",
-        // No Authorization header — public event queries do not require OAuth
-      },
+      headers,
       body: JSON.stringify({ query, variables }),
     });
 
     const text = await upstream.text();
+    console.log(`[meetup-search] status=${upstream.status} keySet=${!!meetupKey} body=${text.slice(0, 300)}`);
     res.setHeader("Content-Type", "application/json");
     res.status(upstream.status).send(text);
   } catch (err) {

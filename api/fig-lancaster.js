@@ -18,15 +18,27 @@ module.exports = async function handler(req, res) {
 
   try {
     const upstream = await fetch(`${ENDPOINT}?${params}`, {
-      headers: { "User-Agent": "NearbyAndNow/1.0", Accept: "application/json" },
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; NearbyNow/1.0; +https://www.nearbyandnow.com)",
+        Accept: "application/json, text/plain, */*",
+      },
+      redirect: "follow",
     });
 
+    const text = await upstream.text();
+    console.log(`[fig-lancaster] status=${upstream.status} body=${text.slice(0, 400)}`);
+
     if (!upstream.ok) {
-      console.error(`[fig-lancaster] upstream ${upstream.status}`);
       return res.status(upstream.status).json({ error: `FIG returned ${upstream.status}` });
     }
 
-    const data = await upstream.json();
+    let data;
+    try { data = JSON.parse(text); }
+    catch {
+      console.error("[fig-lancaster] response is not JSON:", text.slice(0, 200));
+      return res.status(502).json({ error: "FIG returned non-JSON", body: text.slice(0, 200) });
+    }
+
     res.setHeader("Content-Type", "application/json");
     res.setHeader("Cache-Control", "s-maxage=3600, stale-while-revalidate=1800");
     return res.status(200).json(data);

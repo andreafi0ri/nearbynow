@@ -192,7 +192,8 @@ export async function fetchFigLancasterEvents(): Promise<EventItem[]> {
     const res = await fetch(`${ENDPOINT}?${params}`, { signal: controller.signal });
     clearTimeout(timer);
     if (!res.ok) {
-      console.warn(`[FIG] API returned ${res.status}`);
+      const errBody = await res.text().catch(() => "");
+      console.warn(`[FIG] API returned ${res.status}:`, errBody.slice(0, 300));
       return [];
     }
 

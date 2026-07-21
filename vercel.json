@@ -13,7 +13,6 @@
   "functions": {
     "api/viator-search.js":      { "memory": 128, "maxDuration": 15 },
     "api/viator-products.js":    { "memory": 128, "maxDuration": 15 },
-    "api/facebook-events.js":    { "memory": 128, "maxDuration": 20 },
     "api/meetup-search.js":      { "maxDuration": 10 },
     "api/serp-events.js":        { "maxDuration": 10 },
     "api/serper-search.js":      { "maxDuration": 10 },

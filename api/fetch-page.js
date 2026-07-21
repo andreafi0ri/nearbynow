@@ -34,7 +34,7 @@ const ALLOWED_HOSTS = new Set([
   "sfstandard.com", "wbur.org", "www.austinchronicle.com", "www.barbican.org.uk",
   "www.bfi.org.uk", "www.brixtonbuzz.com", "www.brooklynartscouncil.org",
   "www.brooklynmuseum.org", "www.brownstoner.com", "www.chicagoparkdistrict.com",
-  "www.eventbrite.com", "www.lancasterhistory.org", "www.lancasterpa.com",
+  "www.eventbrite.com", "figlancaster.com", "www.lancasterhistory.org", "www.lancasterpa.com",
   "www.london.gov.uk", "www.mickeysblackbox.com", "www.mylondon.news",
   "www.nationaltrust.org.uk", "www.nycgovparks.org", "www.prospectpark.org",
   "www.royalparks.org.uk", "www.southbankcentre.co.uk", "www.timeout.com",

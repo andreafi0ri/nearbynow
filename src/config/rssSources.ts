@@ -561,6 +561,15 @@ export const RSS_SOURCES: RSSSource[] = [
   // Tellús360 moved to structuredDataService.ts
   // (schema.org JSON-LD yields ~47 upcoming events vs 10 via this RSS feed)
   {
+    url:      "https://figlancaster.com/events/feed/",
+    name:     "FIG Lancaster",
+    area:     "lancaster",
+    category: "Events",
+    catColor: "#2860C8", catDot: "#5A90F8",
+    img:      "🎟️", type: "event",
+    tags:     ["Lancaster", "Events"],
+  },
+  {
     url:      "https://www.mickeysblackbox.com/events/feed/",
     name:     "Mickey's Black Box",
     area:     "lancaster",
